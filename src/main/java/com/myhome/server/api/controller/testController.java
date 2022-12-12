@@ -15,7 +15,7 @@ public class testController {
     UserService service = new UserServiceImpl();
     @GetMapping("/test/{number}")
     public String testfun(@PathVariable int number){
-        UserEntity entity = service.findByFnumber(number);
+        UserEntity entity = service.findByUserId(number);
         return entity.toString();
     }
 }
