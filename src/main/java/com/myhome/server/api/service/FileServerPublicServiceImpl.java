@@ -34,9 +34,9 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     }
 
     @Override
-    public boolean existsByFileServerPublicEntity(FileServerPublicEntity entity) {
-//        boolean result = repository.existsByFileServerPublicEntity(entity);
-        return false;
+    public boolean existsByPath(String path) {
+        boolean result = repository.existByPath(path);
+        return result;
     }
 
 //    @Transactional
@@ -46,14 +46,43 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         if(ObjectUtils.isEmpty(entity)){
             return -1;
         }
-        String testInPath = "C:\\Users\\SonJunHyeok\\Desktop\\a.txt";
-        String testOutPath = "C:\\Users\\SonJunHyeok\\Desktop\\test\\a.txt";
+        String testInPath = "C:\\Users\\SonJunHyeok\\Desktop\\a.txt"; // test filePath
+        String filePath = testInPath;
+        //        String filePath = entity.getPath();
+
+        File file = new File(filePath);
+
+        if(file.exists()){ // check file exist
+            if(file.delete()){ // if file exist, delete file
+                System.out.println("delete success");
+            }
+            else{
+                System.out.println("delete failed");
+            }
+        }
+        long result = repository.deleteByPath(path); // delete file info from DB
+        return result;
+    }
+
+    @Override
+    public int moveFile(String path, String location) {
+        FileServerPublicEntity entity = repository.findByPath(path);
+        if(ObjectUtils.isEmpty(entity)){
+            return -1;
+        }
+        String testInPath = "C:\\Users\\SonJunHyeok\\Desktop\\a.txt"; // test filePath
+        String testOutPath = "C:\\Users\\SonJunHyeok\\Desktop\\test\\a.txt"; // test move location
+        String filePath = testInPath;
+        String movePath = testOutPath;
+//        String filePath = entity.getPath();
+//        String movePath = location;
+
         try{
-            File in = new File(testInPath);
-            File out = new File(testOutPath);
-            FileCopyUtils.copy(in, out);
-            if(in.exists()){
-                if(in.delete()){
+            File in = new File(filePath);
+            File out = new File(movePath);
+            FileCopyUtils.copy(in, out); // copy file from origin location to new location
+            if(in.exists()){ // check origin file exist
+                if(in.delete()){ // if file exist
                     System.out.println("delete success");
                 }
                 else{
@@ -65,14 +94,26 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
             e.printStackTrace();
             return -1;
         }
-        long result = repository.deleteByPath(path);
+        int result = repository.updateLocation(path, location); // update file location info from DB
         return result;
     }
 
     @Override
     public int updateByFileServerPublicEntity(FileServerPublicEntity entity) {
-//        int result = repository.updateByFileServerPublicEntity(entity);
-        return 0;
+        if(existsByPath(entity.getPath())){
+            System.out.println("already exist file in location");
+            return -1;
+        }
+        else{
+            FileServerPublicEntity resultEntity = repository.save(entity);
+            if(ObjectUtils.isEmpty(resultEntity)){ // error during change info on DB
+                System.out.println("Error during change info on DB");
+                return -2;
+            }
+            else{ // success update file info
+                return 0;
+            }
+        }
     }
 
     @Override
