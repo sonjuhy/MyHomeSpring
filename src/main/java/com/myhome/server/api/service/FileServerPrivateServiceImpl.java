@@ -40,7 +40,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
 
     @Override
     public boolean existsByPath(String path) {
-        boolean result = repository.existByPath(path);
+        boolean result = repository.existsByPath(path);
         return result;
     }
 

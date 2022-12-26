@@ -13,7 +13,7 @@ public interface FileServerPublicRepository extends JpaRepository<FileServerPubl
 //    @Lock(LockModeType.PESSIMISTIC_FORCE_INCREMENT)
     FileServerPublicEntity findByPath(String path);
     List<FileServerPublicEntity> findByLocation(String location);
-    boolean existByPath(String path);
+    boolean existsByPath(String path);
     @Transactional
     long deleteByPath(String path);
     @Transactional

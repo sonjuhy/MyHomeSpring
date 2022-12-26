@@ -35,7 +35,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
 
     @Override
     public boolean existsByPath(String path) {
-        boolean result = repository.existByPath(path);
+        boolean result = repository.existsByPath(path);
         return result;
     }
 

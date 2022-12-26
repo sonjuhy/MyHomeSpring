@@ -13,7 +13,7 @@ public interface FileServerPrivateRepository extends JpaRepository<FileServerPri
     FileServerPrivateEntity findByPath(String path);
     List<FileServerPrivateEntity> findByLocation(String location);
     List<FileServerPrivateEntity> findByOwner(String owner);
-    boolean existByPath(String path);
+    boolean existsByPath(String path);
     @Transactional
     long deleteByPath(String path);
     @Transactional
