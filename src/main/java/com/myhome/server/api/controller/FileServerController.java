@@ -8,6 +8,7 @@ import com.myhome.server.api.service.FileServerPublicServiceImpl;
 import com.myhome.server.db.entity.FileServerPrivateEntity;
 import com.myhome.server.db.entity.FileServerPublicEntity;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ContentDisposition;
@@ -33,12 +34,15 @@ import java.util.UUID;
 public class FileServerController {
     /**
      * file server public
-     * upload : O (Need to add feature : choice upload folder)
+     * upload : O
      * download : O
      * move : O
      * update : O
      * delete : O
      * */
+
+    @Value("${part4.upload.path}")
+    private String defaultUploadPath;
 
     @Autowired
     FileServerPublicService service = new FileServerPublicServiceImpl();
@@ -77,23 +81,27 @@ public class FileServerController {
         return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
     }
     @PostMapping("/uploadPublicFile") // upload files
-    public ResponseEntity<List<String>> uploadPublicFileInfo(@RequestParam MultipartFile[] uploadFile, Model model)
+    public ResponseEntity<List<String>> uploadPublicFileInfo(@RequestParam MultipartFile[] uploadFile, @RequestParam String path, Model model)
     {
+        String fileLocation = defaultUploadPath+File.separator+path+File.separator;
+        System.out.println("path : " + path);
         List<FileServerPublicEntity> list = new ArrayList<>();
         for(MultipartFile file : uploadFile){
             if(!file.isEmpty()){
                 try{
                     FileServerPublicEntity entity = new FileServerPublicEntity(
-                            "testPath", // file path (need to change)
+                            fileLocation+file.getOriginalFilename(), // file path (need to change)
                             file.getOriginalFilename(), // file name
                             UUID.randomUUID().toString(), // file name to change UUID
                             file.getContentType(), // file type (need to check ex: txt file -> text/plan)
                             (float)file.getSize(), // file size(KB)
-                            "testLocation" // file folder path (need to change)
+                            fileLocation // file folder path (need to change)
                     );
+                    System.out.println(file.getResource());
                     list.add(entity);
-                    File newFile = new File(entity.getUuidName()+"_"+entity.getName());
-                    file.transferTo(newFile); // file name change
+                    String saveName = fileLocation+entity.getName();
+                    Path savePath = Paths.get(saveName);
+                    file.transferTo(savePath);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -163,24 +171,26 @@ public class FileServerController {
         return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
     }
     @PostMapping("/uploadPrivateFile/{owner}") // upload PrivateFiles
-    public ResponseEntity<List<String>> uploadPrivateFileInfo(@RequestParam MultipartFile[] uploadFile, Model model, @PathVariable String owner)
+    public ResponseEntity<List<String>> uploadPrivateFileInfo(@RequestParam MultipartFile[] uploadFile, @RequestParam String path, Model model, @PathVariable String owner)
     {
+        String fileLocation = defaultUploadPath+File.separator+path+File.separator;
         List<FileServerPrivateEntity> list = new ArrayList<>();
         for(MultipartFile file : uploadFile){
             if(!file.isEmpty()){
                 try{
                     FileServerPrivateEntity entity = new FileServerPrivateEntity(
-                            "testPath", // file path (need to change)
+                            fileLocation+file.getOriginalFilename(), // file path (need to change)
                             file.getOriginalFilename(), // file name
                             UUID.randomUUID().toString(), // file name to change UUID
                             file.getContentType(), // file type (need to check ex: txt file -> text/plan)
                             (float)file.getSize(), // file size(KB),
                             owner,
-                            "testLocation" // file folder path (need to change)
+                            fileLocation // file folder path (need to change)
                     );
                     list.add(entity);
-                    File newFile = new File(entity.getUuidName()+"_"+entity.getName());
-                    file.transferTo(newFile); // file name change
+                    String saveName = fileLocation+entity.getName();
+                    Path savePath = Paths.get(saveName);
+                    file.transferTo(savePath);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
