@@ -1,6 +1,7 @@
 package com.myhome.server.api.controller;
 
 import com.myhome.server.api.dto.LocationDto;
+import com.myhome.server.api.dto.WeatherDto;
 import com.myhome.server.api.service.WeatherService;
 import com.myhome.server.api.service.WeatherServiceImpl;
 import org.springframework.web.bind.annotation.*;
@@ -10,6 +11,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 
 @RestController
 @RequestMapping("/weather")
@@ -54,9 +56,9 @@ public class WeatherController {
         }
     }
 
-    @PostMapping("/testPost")
-    public void testPost(@RequestBody LocationDto locationDto){
-        System.out.println("location : "+locationDto);
-        weatherService.getWeather(0, locationDto);
+    @PostMapping("/testPost/{mode}")
+    public ArrayList<WeatherDto> testPost(@RequestBody LocationDto locationDto, @PathVariable int mode){
+        System.out.println("location : "+locationDto+", mode : " + mode);
+        return weatherService.getWeather(mode, locationDto);
     }
 }
