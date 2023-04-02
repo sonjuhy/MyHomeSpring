@@ -8,11 +8,15 @@ import java.util.ArrayList;
 
 public interface WeatherService {
     String getKey();
+    String getLinkUltraNcst();
+    String getLinkUltraFcst();
+    String getLinkVilageFcst();
     String calVEC(String value);
-    WeatherDto JsonParsing(JsonArray jsonArray, int mode);
-    String fnJson(String Data, int mode);
-    String getWeatherInfo(String value, String numOfRows, String baseDate, String baseTime, String placeX, String placeY);
-    ArrayList<WeatherDto> getWeather(int mode, LocationDto locationDto);
+    ArrayList<WeatherDto> JsonParsing(JsonArray jsonArray, int mode);
+    JsonArray fnJson(String Data);
+    ArrayList<WeatherDto> getUtlraNcst(LocationDto locationDto); // 초단기실황조회
+    ArrayList<WeatherDto> getUtlraFcst(LocationDto locationDto); // 초단기예보조회
+    ArrayList<WeatherDto> getVilageFcst(LocationDto locationDto); // 단기예보조회
     String ApiTime();
     String ApiTimeChange(String time);
 }

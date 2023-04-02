@@ -4,6 +4,8 @@ import com.myhome.server.api.dto.LocationDto;
 import com.myhome.server.api.dto.WeatherDto;
 import com.myhome.server.api.service.WeatherService;
 import com.myhome.server.api.service.WeatherServiceImpl;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.BufferedReader;
@@ -59,6 +61,32 @@ public class WeatherController {
     @PostMapping("/testPost/{mode}")
     public ArrayList<WeatherDto> testPost(@RequestBody LocationDto locationDto, @PathVariable int mode){
         System.out.println("location : "+locationDto+", mode : " + mode);
-        return weatherService.getWeather(mode, locationDto);
+//        ArrayList<WeatherDto> list = weatherService.getWeather(mode, locationDto);
+//        return list;
+        return null;
+    }
+
+    @PostMapping("/getUltraNcst")
+    public ResponseEntity<ArrayList<WeatherDto>> getUltraNcst(@RequestBody LocationDto locationDto){
+        System.out.println("getUltraNcst location : " + locationDto);
+        ArrayList<WeatherDto> list = weatherService.getUtlraNcst(locationDto);
+
+        return new ResponseEntity<>(list, HttpStatus.OK);
+    }
+
+    @PostMapping("/getUltraFcst")
+    public ResponseEntity<ArrayList<WeatherDto>> getUltraFcst(@RequestBody LocationDto locationDto){
+        System.out.println("getUltraFcst location : " + locationDto);
+        ArrayList<WeatherDto> list = weatherService.getUtlraFcst(locationDto);
+
+        return new ResponseEntity<>(list, HttpStatus.OK);
+    }
+
+    @PostMapping("/getVilageFcst")
+    public ResponseEntity<ArrayList<WeatherDto>> getVilageFcst(@RequestBody LocationDto locationDto){
+        System.out.println("getVilageFcst location : " + locationDto);
+        ArrayList<WeatherDto> list = weatherService.getVilageFcst(locationDto);
+
+        return new ResponseEntity<>(list, HttpStatus.OK);
     }
 }
