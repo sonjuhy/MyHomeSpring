@@ -67,11 +67,11 @@ public class WeatherController {
     }
 
     @PostMapping("/getUltraNcst")
-    public ResponseEntity<ArrayList<WeatherDto>> getUltraNcst(@RequestBody LocationDto locationDto){
+    public ResponseEntity<WeatherDto> getUltraNcst(@RequestBody LocationDto locationDto){
         System.out.println("getUltraNcst location : " + locationDto);
-        ArrayList<WeatherDto> list = weatherService.getUtlraNcst(locationDto);
+        WeatherDto dto = weatherService.getUtlraNcst(locationDto);
 
-        return new ResponseEntity<>(list, HttpStatus.OK);
+        return new ResponseEntity<>(dto, HttpStatus.OK);
     }
 
     @PostMapping("/getUltraFcst")

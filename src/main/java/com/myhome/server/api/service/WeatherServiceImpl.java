@@ -8,6 +8,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -103,8 +104,9 @@ public class WeatherServiceImpl implements WeatherService{
         ArrayList<WeatherDto> tmp_weathers = new ArrayList<>();
 
         try {
+            WeatherDto tmp_weather = null;
+            String tmpTime = "";
             for (int i = 0; i < jsonArray.size(); i++) {
-                WeatherDto tmp_weather = new WeatherDto();
 
                 WeatherData = (JsonObject) jsonArray.get(i);
                 info = WeatherData.get("category").getAsString();
@@ -115,13 +117,16 @@ public class WeatherServiceImpl implements WeatherService{
                 if("00:00".equals(fsct_time)){
                     fsct_time = "24:00";
                 }
+
                 fsct_date = WeatherData.get("fcstDate").getAsString();
-                tmp_weather.setFcstDate(fsct_date);
-                tmp_weather.setFcstTime(fsct_time);
 
                 switch (mode) {
                     case 1: //T1H, RN1, SKY, UUU, VVV, REH, PTY, LGT, VEC, WSD
                     {
+                        tmp_weather = new WeatherDto();
+                        tmp_weather.setFcstDate(fsct_date);
+                        tmp_weather.setFcstTime(fsct_time);
+
                         if (info.equals("LGT")) {
                             info = "낙뢰";
                             tmp_weather.setType("LGT");
@@ -200,7 +205,31 @@ public class WeatherServiceImpl implements WeatherService{
                     }
                     case 2:// *POP, *PTY, *R06, *REH, *S06, *SKY, *T3H, *TMN, *TMX, *UUU, *VVV, *WAV, *VEC, *WSD
                     {
-                        tmp_weather = new WeatherDto();
+//                        System.out.println("time diff : " + tmpTime.equals(fsct_time)+", tmp : " + tmpTime+", time : " + fsct_time);
+                        if(!tmpTime.equals(fsct_time)) {
+                            if(tmp_weather != null) tmp_weathers.add(tmp_weather);
+                            tmp_weather = new WeatherDto();
+                        }
+                        tmpTime = fsct_time;
+
+                        tmp_weather.setFcstDate(fsct_date);
+                        tmp_weather.setFcstTime(fsct_time);
+
+                        if (info.equals("PCP")) {
+                            info = "1시간 강수량";
+                            tmp_weather.setType("PCP");
+                            tmp_weather.setPCP(DataValue);
+                        }
+                        if (info.equals("SNO")) {
+                            info = "1시간 신적설";
+                            tmp_weather.setType("SNO");
+                            tmp_weather.setSNO(DataValue);
+                        }
+                        if (info.equals("TMP")) {
+                            info = "1시간 기온";
+                            tmp_weather.setType("TMP");
+                            tmp_weather.setTMP(DataValue);
+                        }
                         if (info.equals("POP")) {
                             info = "강수확률";
                             tmp_weather.setType("POP");
@@ -235,16 +264,6 @@ public class WeatherServiceImpl implements WeatherService{
                             tmp_weather.setType("VVV");
                             tmp_weather.setVVV(DataValue);
                         }
-                        if (info.equals("R06")) {
-                            info = "6시간강수량";
-                            tmp_weather.setType("R06");
-                            tmp_weather.setR06(DataValue);
-                        }
-                        if (info.equals("S06")) {
-                            info = "6시간적설량";
-                            tmp_weather.setType("S06");
-                            tmp_weather.setS06(DataValue);
-                        }
                         if (info.equals("PTY")) {
                             info = "강수형태";
                             tmp_weather.setType("PTY");
@@ -270,11 +289,11 @@ public class WeatherServiceImpl implements WeatherService{
                             DataValue = calVEC(DataValue);
                             tmp_weather.setVEC(DataValue);
                         }
-                            /*if (info.equals("WAV")) {
-                                info = "파고";
-                                DataValue = DataValue + " M";
-                                weather.setWSD(DataValue);
-                            }*/
+                        if (info.equals("WAV")) {
+                            info = "파고";
+                            tmp_weather.setType("WAV");
+                            tmp_weather.setWAV(DataValue);
+                        }
                         if(info.equals("TMN")) {
                             info = "아침최저기온";
                             tmp_weather.setType("TMN");
@@ -290,7 +309,6 @@ public class WeatherServiceImpl implements WeatherService{
                             tmp_weather.setType("WSD");
                             tmp_weather.setWSD(DataValue);
                         }
-                        tmp_weathers.add(tmp_weather);
                         break;
                     }
                 }
@@ -332,8 +350,7 @@ public class WeatherServiceImpl implements WeatherService{
     }
 
     @Override
-    public ArrayList<WeatherDto> getUtlraNcst(LocationDto locationDto) {
-        ArrayList<WeatherDto> list = new ArrayList<>();
+    public WeatherDto getUtlraNcst(LocationDto locationDto) {
 
         StringTokenizer st = new StringTokenizer(ApiTime());
         String date = st.nextToken();
@@ -341,10 +358,10 @@ public class WeatherServiceImpl implements WeatherService{
         int mm = Integer.parseInt(timeBefore.substring(2,4));
 
         String time = "";
-        System.out.println("time sub : "+timeBefore.substring(0,2)+", mm : " + mm);
         if(mm < 30) {
             int timeInt = Integer.parseInt(timeBefore.substring(0,2)) - 1;
             if(timeInt < 10) time = "0"+timeInt+"00";
+            else time = timeInt+"00";
         }
         else{
             time = timeBefore.substring(0,2)+"00";
@@ -358,6 +375,8 @@ public class WeatherServiceImpl implements WeatherService{
         URLConnection conn;
         String pageNo = "1";
 
+        WeatherDto dto = new WeatherDto();
+
         weatherUltra = new ArrayList<>();
         url_main = url_UltraNcst + "?serviceKey=" + key + "&pageNo=" + pageNo + "&numOfRows=" + numOfRows + "&dataType=JSON&base_date=" + date + "&base_time=" + time + "&nx=" + Xcode + "&ny=" + Ycode;
 
@@ -365,8 +384,9 @@ public class WeatherServiceImpl implements WeatherService{
             URL url = new URL(url_main);
             System.out.println("url : " + url_main);
             conn = url.openConnection();
-            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
             String ResData = br.readLine();
+
 
             if (ResData == null) {
                 System.out.println("응답데이터 == NULL");
@@ -381,9 +401,6 @@ public class WeatherServiceImpl implements WeatherService{
                     WeatherData = (JsonObject) array.get(i);
                     info = WeatherData.get("category").getAsString();
                     DataValue = WeatherData.get("obsrValue").getAsString();
-                    System.out.println("info value : " + info);
-                    System.out.println("Data value : " + DataValue);
-                    WeatherDto dto = new WeatherDto();
 
                     if (info.equals("WSD")) {
                         info = "풍속";
@@ -440,14 +457,14 @@ public class WeatherServiceImpl implements WeatherService{
                         DataValue = calVEC(DataValue);
                         dto.setVEC(DataValue);
                     }
-                    list.add(dto);
                 }
+
             }
             br.close();
         } catch (Exception e) {
             System.out.println("getUltraNcst error : " + e.getMessage());
         }
-        return list;
+        return dto;
     }
 
     @Override
@@ -465,6 +482,7 @@ public class WeatherServiceImpl implements WeatherService{
         if(mm < 30) {
             int timeInt = Integer.parseInt(timeBefore.substring(0,2)) - 1;
             if(timeInt < 10) time = "0"+timeInt+"00";
+            else time = timeInt+"00";
         }
         else{
             time = timeBefore.substring(0,2)+"00";
@@ -478,7 +496,7 @@ public class WeatherServiceImpl implements WeatherService{
             URL url = new URL(url_main);
             System.out.println("url : " + url_main);
             conn = url.openConnection();
-            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
 
             String ResData = br.readLine();
 
@@ -517,7 +535,7 @@ public class WeatherServiceImpl implements WeatherService{
             URL url = new URL(url_main);
             System.out.println("url : " + url_main);
             conn = url.openConnection();
-            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
 
             String ResData = br.readLine();
 
@@ -525,6 +543,7 @@ public class WeatherServiceImpl implements WeatherService{
                 System.out.println("응답데이터 == NULL");
             } else {
                 JsonArray array = fnJson(ResData);
+                if(array == null) return null;
                 ArrayList<WeatherDto> list = JsonParsing(array, 2);
 
                 return list;
