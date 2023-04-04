@@ -3,6 +3,10 @@ package com.myhome.server.api.service;
 import com.google.gson.*;
 import com.myhome.server.api.dto.LocationDto;
 import com.myhome.server.api.dto.WeatherDto;
+import com.myhome.server.db.entity.WeatherKeyEntity;
+import com.myhome.server.db.repository.WeatherRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -14,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.StringTokenizer;
 
+@Service
 public class WeatherServiceImpl implements WeatherService{
 
     private String key;
@@ -22,12 +27,13 @@ public class WeatherServiceImpl implements WeatherService{
     private String url_VilageFcst = "";// need key, pageNo, numOfRows, dataType, base_date, base_time, x, y | 동네예보조회
     private String url_main = null;
 
-    private WeatherDto weather;
-    private ArrayList<WeatherDto> weatherVilage, weatherUltra;
+    @Autowired
+    WeatherRepository repository;
 
     @Override
     public String getKey() {
-        String keyData = "8uiEDcNjEfxFOoq%2BIjRY2M7MAEKuW7AwNs9%2FyHFZUqmzm4Ci2hyvtfZdgZ7vGHBI6RjxsgBlnq%2BogcZfanSA%2Bw%3D%3D";
+        WeatherKeyEntity entity = repository.findByIdWeatherApi(1);
+        String keyData = entity.getKey();
         return keyData;
     }
 
@@ -205,7 +211,6 @@ public class WeatherServiceImpl implements WeatherService{
                     }
                     case 2:// *POP, *PTY, *R06, *REH, *S06, *SKY, *T3H, *TMN, *TMX, *UUU, *VVV, *WAV, *VEC, *WSD
                     {
-//                        System.out.println("time diff : " + tmpTime.equals(fsct_time)+", tmp : " + tmpTime+", time : " + fsct_time);
                         if(!tmpTime.equals(fsct_time)) {
                             if(tmp_weather != null) tmp_weathers.add(tmp_weather);
                             tmp_weather = new WeatherDto();
@@ -377,7 +382,7 @@ public class WeatherServiceImpl implements WeatherService{
 
         WeatherDto dto = new WeatherDto();
 
-        weatherUltra = new ArrayList<>();
+        ArrayList<WeatherDto> weatherUltra = new ArrayList<>();
         url_main = url_UltraNcst + "?serviceKey=" + key + "&pageNo=" + pageNo + "&numOfRows=" + numOfRows + "&dataType=JSON&base_date=" + date + "&base_time=" + time + "&nx=" + Xcode + "&ny=" + Ycode;
 
         try {
