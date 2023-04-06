@@ -39,19 +39,26 @@ public class WeatherServiceImpl implements WeatherService{
 
     @Override
     public String getLinkUltraNcst() {
-        String linkData = "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst";
+        WeatherKeyEntity entity = repository.findByIdWeatherApi(1);
+        String linkData = entity.getUltraNcst();
+//        String linkData = "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst";
+
         return linkData;
     }
 
     @Override
     public String getLinkUltraFcst() {
-        String linkData = "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtFcst";
+        WeatherKeyEntity entity = repository.findByIdWeatherApi(1);
+        String linkData = entity.getUltraFcst();
+//        String linkData = "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtFcst";
         return linkData;
     }
 
     @Override
     public String getLinkVilageFcst() {
-        String linkData = "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst";
+        WeatherKeyEntity entity = repository.findByIdWeatherApi(1);
+        String linkData = entity.getVilageFcst();
+//        String linkData = "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst";
         return linkData;
     }
 
