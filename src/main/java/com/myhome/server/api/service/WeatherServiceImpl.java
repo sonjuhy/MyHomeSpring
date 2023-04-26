@@ -6,6 +6,8 @@ import com.myhome.server.api.dto.WeatherDto;
 import com.myhome.server.db.entity.WeatherKeyEntity;
 import com.myhome.server.db.repository.WeatherRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
@@ -16,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Objects;
 import java.util.StringTokenizer;
 
 @Service
@@ -216,7 +219,7 @@ public class WeatherServiceImpl implements WeatherService{
                         tmp_weathers.add(tmp_weather);
                         break;
                     }
-                    case 2:// *POP, *PTY, *R06, *REH, *S06, *SKY, *T3H, *TMN, *TMX, *UUU, *VVV, *WAV, *VEC, *WSD
+                    case 2:// *POP, *PTY, *R06, *REH, *S06, *SKY, *TMN, *TMX, *UUU, *VVV, *WAV, *VEC, *WSD
                     {
                         if(!tmpTime.equals(fsct_time)) {
                             if(tmp_weather != null) tmp_weathers.add(tmp_weather);
@@ -289,11 +292,6 @@ public class WeatherServiceImpl implements WeatherService{
                                 DataValue = "눈";
                             }
                             tmp_weather.setPTY(DataValue);
-                        }
-                        if (info.equals("T3H")) {
-                            info = "3시간기온";
-                            tmp_weather.setType("T3H");
-                            tmp_weather.setT3H(DataValue);
                         }
                         if (info.equals("VEC")) {
                             info = "풍향";
@@ -389,7 +387,6 @@ public class WeatherServiceImpl implements WeatherService{
 
         WeatherDto dto = new WeatherDto();
 
-        ArrayList<WeatherDto> weatherUltra = new ArrayList<>();
         url_main = url_UltraNcst + "?serviceKey=" + key + "&pageNo=" + pageNo + "&numOfRows=" + numOfRows + "&dataType=JSON&base_date=" + date + "&base_time=" + time + "&nx=" + Xcode + "&ny=" + Ycode;
 
         try {
@@ -537,16 +534,24 @@ public class WeatherServiceImpl implements WeatherService{
         StringTokenizer st = new StringTokenizer(ApiTime());
         String date = st.nextToken();
         String time = ApiTimeChange(st.nextToken());
+        if(Objects.equals(time, "2300")){
+            int dateInt = Integer.parseInt(date);
+            date = String.valueOf(dateInt-1);
+        }
         String Xcode = Integer.toString(locationDto.getX_code()), Ycode = Integer.toString(locationDto.getY_code());
 
-        url_main = url_VilageFcst + "?serviceKey=" + key + "&pageNo=" + "2" + "&numOfRows=" + "216" + "&dataType=JSON&base_date=" + date + "&base_time=" + time + "&nx=" + Xcode + "&ny=" + Ycode;
+        url_main = url_VilageFcst + "?serviceKey=" + key + "&pageNo=" + "1" + "&numOfRows=" + "216" + "&dataType=JSON&base_date=" + date + "&base_time=" + time + "&nx=" + Xcode + "&ny=" + Ycode;
 
         URLConnection conn;
 
         try {
             URL url = new URL(url_main);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Accept","*/*;q=0.9");
             System.out.println("url : " + url_main);
             conn = url.openConnection();
+
             BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
 
             String ResData = br.readLine();
@@ -577,6 +582,7 @@ public class WeatherServiceImpl implements WeatherService{
 
     @Override
     public String ApiTimeChange(String time) {
+        System.out.println("time : " + time);
         String hh = time.substring(0,2);
         int mm = Integer.parseInt(time.substring(2,4));
         if(mm < 10){
@@ -593,40 +599,40 @@ public class WeatherServiceImpl implements WeatherService{
             case "02":
             case "03":
             case "04":
-                baseTime = "0500";
+                baseTime = "0200";
                 break;
             case "05":
             case "06":
             case "07":
-                baseTime = "0800";
+                baseTime = "0500";
                 break;
             case "08":
             case "09":
             case "10":
-                baseTime = "1100";
+                baseTime = "0800";
                 break;
             case "11":
             case "12":
             case "13":
-                baseTime = "1400";
+                baseTime = "1100";
                 break;
             case "14":
             case "15":
             case "16":
-                baseTime = "1700";
+                baseTime = "1400";
                 break;
             case "17":
             case "18":
             case "19":
-                baseTime = "2000";
+                baseTime = "1700";
                 break;
             case "20":
             case "21":
             case "22":
-                baseTime = "2300";
+                baseTime = "2000";
                 break;
             default:
-                baseTime = "0200";
+                baseTime = "2300";
 
         }
         return baseTime;
