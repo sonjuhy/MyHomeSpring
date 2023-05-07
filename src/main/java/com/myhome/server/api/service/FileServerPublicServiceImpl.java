@@ -1,16 +1,19 @@
 package com.myhome.server.api.service;
 
+import com.myhome.server.api.dto.FileServerPublicDto;
 import com.myhome.server.db.entity.FileServerPublicEntity;
 import com.myhome.server.db.repository.FileServerPublicRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.FileCopyUtils;
 import org.springframework.util.ObjectUtils;
 
-import javax.transaction.Transactional;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class FileServerPublicServiceImpl implements FileServerPublicService {
@@ -28,6 +31,12 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     }
 
     @Override
+    public FileServerPublicEntity findByUuidName(String uuid) {
+        FileServerPublicEntity entity = repository.findByUuidName(uuid);
+        return entity;
+    }
+
+    @Override
     public List<FileServerPublicEntity> findByLocation(String location) {
         List<FileServerPublicEntity> list = repository.findByLocation(location);
         return list;
@@ -39,7 +48,6 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         return result;
     }
 
-//    @Transactional
     @Override
     public long deleteByPath(String path) {
         FileServerPublicEntity entity = repository.findByPath(path);
@@ -54,6 +62,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
 
         if(file.exists()){ // check file exist
             if(file.delete()){ // if file exist, delete file
+                repository.deleteByPath(filePath);
                 System.out.println("delete success");
             }
             else{
@@ -64,14 +73,15 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         return result;
     }
 
+    @Transactional
     @Override
     public int moveFile(String path, String location) {
         FileServerPublicEntity entity = repository.findByPath(path);
         if(ObjectUtils.isEmpty(entity)){
             return -1;
         }
-        String testInPath = "C:\\Users\\SonJunHyeok\\Desktop\\a.txt"; // test filePath
-        String testOutPath = "C:\\Users\\SonJunHyeok\\Desktop\\test\\a.txt"; // test move location
+        String testInPath = "C:\\Users\\SonJunHyeok\\Desktop\\test\\a.txt"; // test filePath
+        String testOutPath = "C:\\Users\\SonJunHyeok\\Desktop\\test\\test2\\a.txt"; // test move location
         String filePath = testInPath;
         String movePath = testOutPath;
 //        String filePath = entity.getPath();
@@ -94,8 +104,8 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
             e.printStackTrace();
             return -1;
         }
-        int result = repository.updateLocation(path, location); // update file location info from DB
-        return result;
+        entity.changePathAndLocation(movePath, location); // Dirty check
+        return 0;
     }
 
     @Override
@@ -120,5 +130,49 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     public boolean save(FileServerPublicEntity entity) {
 
         return !ObjectUtils.isEmpty(repository.save(entity));
+    }
+
+    @Override
+    public void publicFileStateCheck() {
+        String tmpPath = "C:\\\\Users\\\\SonJunHyeok\\\\Desktop\\\\";
+        repository.updateAllStateToOne();
+        traversalFolder(tmpPath);
+        repository.deleteByState(0);
+    }
+
+    private void traversalFolder(String path){
+        System.out.println("This is Path : " + path);
+        File dir = new File(path);
+        File[] files = dir.listFiles();
+        assert files != null;
+        ArrayList<String> dirList = new ArrayList<>();
+        System.out.println("Files size : " + files.length);
+        for(File file : files){
+            String type="";
+            if(file.isDirectory()) {
+                type = "dir : ";
+                dirList.add(file.getName());
+            }
+            else {
+                type = "file : ";
+                FileServerPublicEntity entity = repository.findByPath(file.getPath()+File.separator+file.getName());
+                if(entity == null){
+                    FileServerPublicDto dto = new FileServerPublicDto(
+                        file.getPath()+file.getName(), // file path (need to change)
+                        file.getName(), // file name
+                        UUID.randomUUID().toString(), // file name to change UUID
+                        file.getName().substring(file.getName().lastIndexOf(".") + 1), // file type (need to check ex: txt file -> text/plan)
+                        (float)(file.length()/1024), // file size(KB)
+                        file.getPath(), // file folder path (need to change)
+                        1
+                    );
+                    repository.save(new FileServerPublicEntity(dto));
+                }
+            }
+            System.out.println(file.getPath()+", "+type+file.getName());
+        }
+        for(String folder : dirList){
+            traversalFolder(path+File.separator+folder);
+        }
     }
 }

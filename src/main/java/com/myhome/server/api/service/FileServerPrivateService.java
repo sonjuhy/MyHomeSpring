@@ -15,4 +15,5 @@ public interface FileServerPrivateService {
     int moveFile(String path, String location);
     int updateByFileServerPublicEntity(FileServerPrivateEntity entity);
     boolean save(FileServerPrivateEntity entity);
+    void privateFileCheck();
 }

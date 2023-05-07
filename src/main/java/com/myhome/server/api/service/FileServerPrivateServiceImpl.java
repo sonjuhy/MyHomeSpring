@@ -1,5 +1,7 @@
 package com.myhome.server.api.service;
 
+import com.myhome.server.api.dto.FileServerPrivateDto;
+import com.myhome.server.api.dto.FileServerPublicDto;
 import com.myhome.server.db.entity.FileServerPrivateEntity;
 import com.myhome.server.db.entity.FileServerPublicEntity;
 import com.myhome.server.db.repository.FileServerPrivateRepository;
@@ -10,7 +12,9 @@ import org.springframework.util.ObjectUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class FileServerPrivateServiceImpl implements FileServerPrivateService {
@@ -98,8 +102,9 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
             e.printStackTrace();
             return -1;
         }
-        int result = repository.updateLocation(path, location); // update file location info from DB
-        return result;
+//        int result = repository.updateLocation(path, location); // update file location info from DB
+        entity.changePathAndLocation(movePath, location); // Dirty check
+        return 0;
     }
 
     @Override
@@ -123,5 +128,49 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
     @Override
     public boolean save(FileServerPrivateEntity entity) {
         return !ObjectUtils.isEmpty(repository.save(entity));
+    }
+
+    @Override
+    public void privateFileCheck() {
+        String tmpPath = "C:\\\\Users\\\\SonJunHyeok\\\\Desktop\\\\";
+        repository.updateAllStateToOne();
+        traversalFolder(tmpPath);
+        repository.deleteByState(0);
+    }
+    private void traversalFolder(String path){
+        System.out.println("This is Path : " + path);
+        File dir = new File(path);
+        File[] files = dir.listFiles();
+        assert files != null;
+        ArrayList<String> dirList = new ArrayList<>();
+        System.out.println("Files size : " + files.length);
+        for(File file : files){
+            String type="";
+            if(file.isDirectory()) {
+                type = "dir : ";
+                dirList.add(file.getName());
+            }
+            else {
+                type = "file : ";
+                FileServerPrivateEntity entity = repository.findByPath(file.getPath()+File.separator+file.getName());
+                if(entity == null){
+                    FileServerPrivateDto dto = new FileServerPrivateDto(
+                            file.getPath()+file.getName(), // file path (need to change)
+                            file.getName(), // file name
+                            UUID.randomUUID().toString(), // file name to change UUID
+                            file.getName().substring(file.getName().lastIndexOf(".") + 1), // file type (need to check ex: txt file -> text/plan)
+                            (float)(file.length()/1024), // file size(KB)
+                            "owner",
+                            file.getPath(), // file folder path (need to change)
+                            1
+                    );
+                    repository.save(new FileServerPrivateEntity(dto));
+                }
+            }
+            System.out.println(file.getPath()+", "+type+file.getName());
+        }
+        for(String folder : dirList){
+            traversalFolder(path+File.separator+folder);
+        }
     }
 }

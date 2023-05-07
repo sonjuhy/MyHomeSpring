@@ -1,10 +1,12 @@
 package com.myhome.server.api.dto;
 
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import javax.persistence.Column;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -16,4 +18,17 @@ public class FileServerPrivateDto {
     private float size;
     private String owner;
     private String location;
+    private int state;
+
+    @Builder
+    public FileServerPrivateDto(String path, String name, String uuidName, String type, float size, String owner, String location, int state){
+        this.path = path;
+        this.name = name;
+        this.uuidName = uuidName;
+        this.type = type;
+        this.size = size;
+        this.owner = owner;
+        this.location = location;
+        this.state = state;
+    }
 }

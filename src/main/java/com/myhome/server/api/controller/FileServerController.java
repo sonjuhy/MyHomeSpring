@@ -3,6 +3,7 @@ package com.myhome.server.api.controller;
 import com.myhome.server.api.dto.FileServerPrivateDto;
 import com.myhome.server.api.dto.FileServerPublicDto;
 import com.myhome.server.api.service.FileServerPrivateService;
+import com.myhome.server.api.service.FileServerPrivateServiceImpl;
 import com.myhome.server.api.service.FileServerPublicService;
 import com.myhome.server.api.service.FileServerPublicServiceImpl;
 import com.myhome.server.db.entity.FileServerPrivateEntity;
@@ -27,9 +28,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
-@RestController
+@RestController()
 @RequestMapping("/file")
 public class FileServerController {
     /**
@@ -46,6 +48,16 @@ public class FileServerController {
 
     @Autowired
     FileServerPublicService service = new FileServerPublicServiceImpl();
+
+    @Autowired
+    FileServerPrivateService privateService = new FileServerPrivateServiceImpl();
+
+    @GetMapping("/checkFileState")
+    public ResponseEntity<Void> checkFileState(){
+        service.publicFileStateCheck();
+        privateService.privateFileCheck();
+        return new ResponseEntity<>(null, HttpStatus.OK);
+    }
 
     @GetMapping("/getPublicFileInfo/{path}") // get PublicFile info
     public ResponseEntity<FileServerPublicEntity> getPublicFileInfo(@PathVariable String path){
@@ -64,13 +76,32 @@ public class FileServerController {
     }
     @PostMapping("/downloadPublicFile")
     public ResponseEntity<Resource> downloadPublicFile(@RequestBody FileServerPublicDto dto){
-        Path path = Paths.get(dto.getLocation()+"/"+dto.getUuidName()+"_"+dto.getName()); // file path setting
+        Path path = Paths.get(dto.getLocation()+File.separator+dto.getName()); // file path setting
         try{
             String contentType = Files.probeContentType(path); // content type setting
             HttpHeaders httpHeaders = new HttpHeaders();
             httpHeaders.setContentDisposition(ContentDisposition
                     .builder("attachment") //builder type
                     .filename(dto.getName(), StandardCharsets.UTF_8) // filename setting by utf-8
+                    .build());
+            httpHeaders.add(HttpHeaders.CONTENT_TYPE, contentType);
+            Resource resource = new InputStreamResource(Files.newInputStream(path)); // save file resource
+            return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+    }
+    @GetMapping("/downloadPublicMedia/{uuid}")
+    public ResponseEntity<Resource> downloadPublicMedia(@PathVariable String uuid){
+        FileServerPublicEntity entity = service.findByUuidName(uuid);
+        Path path = Paths.get(entity.getLocation()+File.separator+entity.getName());
+        try{
+            String contentType = Files.probeContentType(path); // content type setting
+            HttpHeaders httpHeaders = new HttpHeaders();
+            httpHeaders.setContentDisposition(ContentDisposition
+                    .builder("attachment") //builder type
+                    .filename(entity.getName(), StandardCharsets.UTF_8) // filename setting by utf-8
                     .build());
             httpHeaders.add(HttpHeaders.CONTENT_TYPE, contentType);
             Resource resource = new InputStreamResource(Files.newInputStream(path)); // save file resource
@@ -89,17 +120,18 @@ public class FileServerController {
         for(MultipartFile file : uploadFile){
             if(!file.isEmpty()){
                 try{
-                    FileServerPublicEntity entity = new FileServerPublicEntity(
+                    FileServerPublicDto dto = new FileServerPublicDto(
                             fileLocation+file.getOriginalFilename(), // file path (need to change)
                             file.getOriginalFilename(), // file name
                             UUID.randomUUID().toString(), // file name to change UUID
-                            file.getContentType(), // file type (need to check ex: txt file -> text/plan)
+                            Objects.requireNonNull(file.getOriginalFilename()).substring(file.getOriginalFilename().lastIndexOf(".") + 1), // file type (need to check ex: txt file -> text/plan)
                             (float)file.getSize(), // file size(KB)
-                            fileLocation // file folder path (need to change)
+                            fileLocation, // file folder path (need to change)
+                            0
                     );
                     System.out.println(file.getResource());
-                    list.add(entity);
-                    String saveName = fileLocation+entity.getName();
+                    list.add(new FileServerPublicEntity(dto));
+                    String saveName = fileLocation+dto.getName();
                     Path savePath = Paths.get(saveName);
                     file.transferTo(savePath);
                 } catch (IOException e) {
@@ -135,8 +167,6 @@ public class FileServerController {
      * delete : O
      * */
 
-    @Autowired
-    FileServerPrivateService privateService;
     @GetMapping("/getPrivateFileInfo/{path}") // get PrivateFile info
     public ResponseEntity<FileServerPrivateEntity> getPrivateFileInfo(@PathVariable String path){
         FileServerPrivateEntity fileServerPublicService = privateService.findByPath(path);
@@ -154,13 +184,32 @@ public class FileServerController {
     }
     @PostMapping("/downloadPrivateFile")
     public ResponseEntity<Resource> downloadPrivateFile(@RequestBody FileServerPrivateDto dto){
-        Path path = Paths.get(dto.getLocation()+"/"+dto.getUuidName()+"_"+dto.getName()); // file path setting
+        Path path = Paths.get(dto.getLocation()+File.separator+dto.getName()); // file path setting
         try{
             String contentType = Files.probeContentType(path); // content type setting
             HttpHeaders httpHeaders = new HttpHeaders();
             httpHeaders.setContentDisposition(ContentDisposition
                     .builder("attachment") //builder type
                     .filename(dto.getName(), StandardCharsets.UTF_8) // filename setting by utf-8
+                    .build());
+            httpHeaders.add(HttpHeaders.CONTENT_TYPE, contentType);
+            Resource resource = new InputStreamResource(Files.newInputStream(path)); // save file resource
+            return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+    }
+    @GetMapping("/downloadPrivateMedia/{uuid}")
+    public ResponseEntity<Resource> downloadPrivateMedia(@PathVariable String uuid){
+        FileServerPublicEntity entity = service.findByUuidName(uuid);
+        Path path = Paths.get(entity.getLocation()+File.separator+entity.getName());
+        try{
+            String contentType = Files.probeContentType(path); // content type setting
+            HttpHeaders httpHeaders = new HttpHeaders();
+            httpHeaders.setContentDisposition(ContentDisposition
+                    .builder("attachment") //builder type
+                    .filename(entity.getName(), StandardCharsets.UTF_8) // filename setting by utf-8
                     .build());
             httpHeaders.add(HttpHeaders.CONTENT_TYPE, contentType);
             Resource resource = new InputStreamResource(Files.newInputStream(path)); // save file resource
@@ -178,17 +227,18 @@ public class FileServerController {
         for(MultipartFile file : uploadFile){
             if(!file.isEmpty()){
                 try{
-                    FileServerPrivateEntity entity = new FileServerPrivateEntity(
+                    FileServerPrivateDto dto = new FileServerPrivateDto(
                             fileLocation+file.getOriginalFilename(), // file path (need to change)
                             file.getOriginalFilename(), // file name
                             UUID.randomUUID().toString(), // file name to change UUID
                             file.getContentType(), // file type (need to check ex: txt file -> text/plan)
                             (float)file.getSize(), // file size(KB),
                             owner,
-                            fileLocation // file folder path (need to change)
+                            fileLocation, // file folder path (need to change)
+                            0
                     );
-                    list.add(entity);
-                    String saveName = fileLocation+entity.getName();
+                    list.add(new FileServerPrivateEntity(dto));
+                    String saveName = fileLocation+dto.getName();
                     Path savePath = Paths.get(saveName);
                     file.transferTo(savePath);
                 } catch (IOException e) {

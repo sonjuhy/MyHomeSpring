@@ -5,10 +5,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
+import javax.persistence.*;
 
 @Getter
 @Entity
@@ -16,28 +13,21 @@ import javax.persistence.Table;
 @NoArgsConstructor
 public class FileServerPublicEntity {
     @Id
+    @Column(name = "uuid_name")
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    private String uuidName;
     @Column(name = "path")
     private String path;
     @Column(name = "name")
     private String name;
-    @Column(name = "uuid_name")
-    private String uuidName;
     @Column(name = "type")
     private String type;
     @Column(name = "size")
     private float size;
     @Column(name = "location")
     private String location;
-
-    @Builder
-    public FileServerPublicEntity(String path, String name, String uuidName, String type, float size, String location){
-        this.path = path;
-        this.name = name;
-        this.uuidName = uuidName;
-        this.type = type;
-        this.size = size;
-        this.location = location;
-    }
+    @Column(name = "state")
+    private int state;
 
     @Builder
     public FileServerPublicEntity(FileServerPublicDto dto){
@@ -46,5 +36,12 @@ public class FileServerPublicEntity {
         this.type = dto.getType();
         this.size = dto.getSize();
         this.location = dto.getLocation();
+        this.state = dto.getState();
+        this.uuidName = dto.getUuidName();
+    }
+
+    public void changePathAndLocation(String path, String location){
+        this.path = path;
+        this.location = location;
     }
 }

@@ -7,6 +7,7 @@ import java.util.List;
 
 public interface FileServerPublicService {
     FileServerPublicEntity findByPath(String path);
+    FileServerPublicEntity findByUuidName(String uuid);
     List<FileServerPublicEntity> findByLocation(String location);
     boolean existsByPath(String path);
     @Transactional
@@ -14,4 +15,5 @@ public interface FileServerPublicService {
     int moveFile(String path, String location);
     int updateByFileServerPublicEntity(FileServerPublicEntity entity);
     boolean save(FileServerPublicEntity entity);
+    void publicFileStateCheck();
 }
