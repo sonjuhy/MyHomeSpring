@@ -14,7 +14,7 @@ import javax.persistence.*;
 public class FileServerPublicEntity {
     @Id
     @Column(name = "uuid_name")
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+//    @GeneratedValue(generator = "USER_GENERATOR")
     private String uuidName;
     @Column(name = "path")
     private String path;
