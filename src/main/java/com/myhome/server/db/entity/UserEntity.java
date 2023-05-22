@@ -14,27 +14,25 @@ import java.util.Set;
 
 @Getter
 @Entity
-@Table(name = "User")
+@Table(name = "USER_TB'")
 @ToString
 @NoArgsConstructor
 public class UserEntity implements UserDetails {
 
-    @Column(name = "user_id")
-//    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long userId;
-
-    @Column(name = "name")
-    private String name;
     @Id
-    @Column(name = "id")
+    @Column(name = "USER_PK")
     private String id;
-    @Column(name = "password")
+    @Column(name = "USER_INT")
+    private long userId;
+    @Column(name = "NAME_CHAR")
+    private String name;
+    @Column(name = "PASSWORD_CHAR")
     private String password;
-    @Column(name = "access_token")
+    @Column(name = "ACCESS_CHAR")
     private String accessToken;
-    @Column(name = "refresh_token")
+    @Column(name = "REFRESH_CHAR")
     private String refreshToken;
-    @Column(name="auth")
+    @Column(name="AUTH_CHAR")
     private String auth;
 
     @Override

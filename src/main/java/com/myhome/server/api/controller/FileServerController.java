@@ -95,7 +95,8 @@ public class FileServerController {
                             UUID.randomUUID().toString(), // file name to change UUID
                             file.getContentType(), // file type (need to check ex: txt file -> text/plan)
                             (float)file.getSize(), // file size(KB)
-                            fileLocation // file folder path (need to change)
+                            fileLocation, // file folder path (need to change)
+                            0
                     );
                     System.out.println(file.getResource());
                     list.add(entity);
@@ -185,7 +186,8 @@ public class FileServerController {
                             file.getContentType(), // file type (need to check ex: txt file -> text/plan)
                             (float)file.getSize(), // file size(KB),
                             owner,
-                            fileLocation // file folder path (need to change)
+                            fileLocation, // file folder path (need to change)
+                            0
                     );
                     list.add(entity);
                     String saveName = fileLocation+entity.getName();

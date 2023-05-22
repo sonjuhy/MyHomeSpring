@@ -18,6 +18,6 @@ public interface FileServerPrivateRepository extends JpaRepository<FileServerPri
     long deleteByPath(String path);
     @Transactional
     @Modifying(clearAutomatically = true)
-    @Query(value = "UPDATE fileserver_private SET location=:location WHERE path=:path", nativeQuery = true)
+    @Query(value = "UPDATE FILE_PRIVATE_TB SET LOCATION_CHAR=:location WHERE PATH_CHAR=:path", nativeQuery = true)
     int updateLocation(@Param("path") String path, @Param("location") String location);
 }
