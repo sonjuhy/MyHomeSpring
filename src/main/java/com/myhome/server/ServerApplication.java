@@ -1,14 +1,7 @@
 package com.myhome.server;
 
-import com.myhome.server.config.mqtt.MQTTConfig;
-import org.eclipse.paho.client.mqttv3.IMqttActionListener;
-import org.eclipse.paho.client.mqttv3.IMqttClient;
-import org.eclipse.paho.client.mqttv3.MqttException;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.event.EventListener;
 import org.springframework.integration.annotation.IntegrationComponentScan;
 
 @SpringBootApplication
