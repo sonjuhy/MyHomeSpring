@@ -1,10 +1,11 @@
 package com.myhome.server;
 
-import org.jasypt.encryption.pbe.StandardPBEStringEncryptor;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.integration.annotation.IntegrationComponentScan;
 
 @SpringBootApplication
+@IntegrationComponentScan
 public class ServerApplication {
 
 	public static void main(String[] args) {
@@ -24,5 +25,4 @@ public class ServerApplication {
 //		String des = pbe.decrypt(enc);
 //		System.out.println("des : " + des);
 	}
-
 }
