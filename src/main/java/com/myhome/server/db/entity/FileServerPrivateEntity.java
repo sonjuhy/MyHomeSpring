@@ -13,27 +13,29 @@ import javax.persistence.Table;
 
 @Getter
 @Entity
-@Table(name = "fileserver_private")
+@Table(name = "FILE_PRIVATE_TB")
 @NoArgsConstructor
 public class FileServerPrivateEntity {
     @Id
-    @Column(name = "path")
-    private String path;
-    @Column(name = "name")
-    private String name;
-    @Column(name = "uuid_name")
+    @Column(name = "UUID_PK")
     private String uuidName;
-    @Column(name = "type")
+    @Column(name = "PATH_CHAR")
+    private String path;
+    @Column(name = "NAME_CHAR")
+    private String name;
+    @Column(name = "TYPE_CHAR")
     private String type;
-    @Column(name = "size")
+    @Column(name = "SIZE_FLOAT")
     private float size;
-    @Column(name = "owner")
+    @Column(name = "OWNER_CHAR")
     private String owner;
-    @Column(name = "location")
+    @Column(name = "LOCATION_CHAR")
     private String location;
+    @Column(name = "STATE_INT")
+    private int state;
 
     @Builder
-    public FileServerPrivateEntity(String path, String name, String uuidName, String type, float size, String owner, String location){
+    public FileServerPrivateEntity(String path, String name, String uuidName, String type, float size, String owner, String location, int state){
         this.path = path;
         this.name = name;
         this.uuidName = uuidName;
@@ -41,6 +43,7 @@ public class FileServerPrivateEntity {
         this.size = size;
         this.owner = owner;
         this.location = location;
+        this.state = state;
     }
 
     @Builder
@@ -51,5 +54,6 @@ public class FileServerPrivateEntity {
         this.size = dto.getSize();
         this.owner = dto.getOwner();
         this.location = dto.getLocation();
+        this.state = dto.getState();
     }
 }
