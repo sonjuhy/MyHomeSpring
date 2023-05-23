@@ -11,19 +11,19 @@ import javax.persistence.Table;
 
 @Getter
 @Entity
-@Table(name = "room_light")
+@Table(name = "LIGHT_ROOM_TB")
 @ToString
 @NoArgsConstructor
 public class LightEntity {
     @Id
-    @Column(name = "Room")
+    @Column(name = "LIGHT_ROOM_PK")
     private String room;
-    @Column(name = "State")
+    @Column(name = "STATE_CHAR")
     private String state;
-    @Column(name = "Kor")
+    @Column(name = "ROOMKOR_CHAR")
     private String kor;
-    @Column(name = "category")
+    @Column(name = "CATEGORY_CHAR")
     private String category;
-    @Column(name = "Connect")
+    @Column(name = "CONNECT_CHAR")
     private String connect;
 }

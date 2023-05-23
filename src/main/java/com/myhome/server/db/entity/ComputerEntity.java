@@ -11,18 +11,18 @@ import javax.persistence.Table;
 
 @Getter
 @Entity
-@Table(name = "Computer")
+@Table(name = "COMPUTER_TB")
 @ToString
 @NoArgsConstructor
 public class ComputerEntity {
     @Id
-    @Column(name = "id")
+    @Column(name = "COMPUTER_PK")
     private int id;
-    @Column(name="computer_name")
+    @Column(name="NAME_CHAR")
     private String computerName;
-    @Column(name = "mac_address")
+    @Column(name = "MAC_CHAR")
     private String macAddress;
-    @Column(name = "ip_address")
+    @Column(name = "IP_CHAR")
     private String ipAddress;
 
 }

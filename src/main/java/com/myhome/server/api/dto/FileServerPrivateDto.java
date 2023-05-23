@@ -16,4 +16,5 @@ public class FileServerPrivateDto {
     private float size;
     private String owner;
     private String location;
+    private int state;
 }

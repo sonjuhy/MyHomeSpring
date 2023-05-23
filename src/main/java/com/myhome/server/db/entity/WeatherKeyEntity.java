@@ -11,21 +11,21 @@ import javax.persistence.Table;
 
 @Getter
 @Entity
-@Table(name = "weather_api")
+@Table(name = "WEATHER_TB")
 @ToString
 @NoArgsConstructor
 public class WeatherKeyEntity {
 
     @Id
-    @Column(name = "idweather_api")
-    long idWeatherApi;
-    @Column(name = "key")
+    @Column(name = "WEATHER_PK")
+    int weatherPK;
+    @Column(name = "KEY_CHAR")
     String key;
-    @Column(name = "ultra_ncst")
+    @Column(name = "ULTRANCST_CHAR")
     String ultraNcst;
-    @Column(name = "ultra_fcst")
+    @Column(name = "ULTRAFCST_CHAR")
     String ultraFcst;
-    @Column(name = "vilage_fcst")
+    @Column(name = "VILAGEFCST_CHAR")
     String vilageFcst;
 
 }

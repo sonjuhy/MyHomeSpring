@@ -14,27 +14,26 @@ import java.util.Set;
 
 @Getter
 @Entity
-@Table(name = "User")
+@Table(name = "USER_TB")
 @ToString
 @NoArgsConstructor
 public class UserEntity implements UserDetails {
 
-    @Column(name = "user_id")
-//    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long userId;
-
-    @Column(name = "name")
-    private String name;
     @Id
-    @Column(name = "id")
-    private String id;
-    @Column(name = "password")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "USER_PK")
+    private long Id;
+    @Column(name = "ID_CHAR")
+    private String userId;
+    @Column(name = "NAME_CHAR")
+    private String name;
+    @Column(name = "PASSWORD_CHAR")
     private String password;
-    @Column(name = "access_token")
+    @Column(name = "ACCESS_CHAR")
     private String accessToken;
-    @Column(name = "refresh_token")
+    @Column(name = "REFRESH_CHAR")
     private String refreshToken;
-    @Column(name="auth")
+    @Column(name="AUTH_CHAR")
     private String auth;
 
     @Override
@@ -82,11 +81,11 @@ public class UserEntity implements UserDetails {
 
     @Builder
     public UserEntity(UserDto userDto){
-        this.userId = userDto.getUserId();
+        this.Id = userDto.getId();
         this.accessToken = userDto.getAccessToken();
         this.refreshToken = userDto.getRefreshToken();
         this.name = userDto.getName();
-        this.id = userDto.getId();
+        this.userId = userDto.getUserId();
         this.password = userDto.getPassword();
         this.auth = userDto.getAuth();
     }

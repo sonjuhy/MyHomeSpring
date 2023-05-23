@@ -72,23 +72,24 @@ public class AuthController {
 
     @PostMapping("/signIn") // sign in
     public ResponseEntity<String> signIn(@RequestBody UserDto userDto){
+        System.out.println("sign in : " + userDto.toString());
         Gson gson = new Gson();
         JsonObject jsonObject = new JsonObject();
-        if(service.findById(userDto.getId()).isEmpty()){ // not user in this service
+        if(service.findById(userDto.getUserId()).isEmpty()){ // not user in this service
             jsonObject.addProperty("error","this Id is not user");
         }
         else {
-            boolean loginResult = service.checkPassword(userDto.getPassword(), userDto.getId()); // check login info
+            boolean loginResult = service.checkPassword(userDto.getPassword(), userDto.getUserId()); // check login info
             if(loginResult){ // password match result is correct
-                String accessToken = jwtTokenProvider.createToken(userDto.getId(), userDto.getAuthList(), true);
-                String refreshToken = jwtTokenProvider.createToken(userDto.getId(), userDto.getAuthList(), false);
+                String accessToken = jwtTokenProvider.createToken(userDto.getUserId(), userDto.getAuthList(), true);
+                String refreshToken = jwtTokenProvider.createToken(userDto.getUserId(), userDto.getAuthList(), false);
                 jsonObject.addProperty("accessToken", accessToken);
                 jsonObject.addProperty("refreshToken", refreshToken);
                 userDto.setAccessToken(accessToken);
                 userDto.setRefreshToken(accessToken);
                 userDto.setPassword(null);
                 try{
-                    service.updateTokens(accessToken, refreshToken, userDto.getId()); // update token data
+                    service.updateTokens(accessToken, refreshToken, userDto.getUserId()); // update token data
                 }
                 catch(Exception e){
                     e.printStackTrace();
@@ -108,14 +109,14 @@ public class AuthController {
     public ResponseEntity<String> signUp(@RequestBody UserDto userDto){
         Gson gson = new Gson();
         JsonObject jsonObject = new JsonObject();
-        Optional<UserEntity> entity = service.findById(userDto.getId()); // search user info with userDto data
+        Optional<UserEntity> entity = service.findById(userDto.getUserId()); // search user info with userDto data
         if(entity.isPresent()){ // already exist user data
             jsonObject.addProperty("error","already exist user");
         }
         else{
             try{
-                String accessToken = jwtTokenProvider.createToken(userDto.getId(), userDto.getAuthList(), true);
-                String refreshToken = jwtTokenProvider.createToken(userDto.getId(), userDto.getAuthList(), false);
+                String accessToken = jwtTokenProvider.createToken(userDto.getUserId(), userDto.getAuthList(), true);
+                String refreshToken = jwtTokenProvider.createToken(userDto.getUserId(), userDto.getAuthList(), false);
                 userDto.setAccessToken(accessToken);
                 userDto.setRefreshToken(refreshToken);
                 BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder();

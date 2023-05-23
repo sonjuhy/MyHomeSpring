@@ -15,9 +15,9 @@ import java.util.List;
 @NoArgsConstructor
 @ToString
 public class UserDto {
-    private long userId;
+    private long Id;
+    private String userId;
     private String name;
-    private String id;
     private String password;
     private String accessToken;
     private String refreshToken;

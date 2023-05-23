@@ -14,4 +14,5 @@ public class FileServerPublicDto {
     private String type;
     private float size;
     private String location;
+    private int state;
 }

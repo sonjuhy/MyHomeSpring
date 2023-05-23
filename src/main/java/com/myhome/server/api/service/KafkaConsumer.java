@@ -10,4 +10,6 @@ public class KafkaConsumer {
     public void consume(String message) throws Exception {
         System.out.println("Consume message : " + message);
     }
+
+
 }
