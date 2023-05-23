@@ -21,13 +21,13 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 
     @Override
     public UserEntity findByUserId(long userId) {
-        UserEntity entity = repository.findByUserId(userId);
+        UserEntity entity = repository.findById(userId);
         return entity;
     }
 
     @Override
     public Optional<UserEntity> findById(String id) {
-        Optional<UserEntity> entity = repository.findById(id);
+        Optional<UserEntity> entity = repository.findByUserId(id);
         return entity;
     }
 
@@ -53,7 +53,7 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String id) throws UsernameNotFoundException {
-        System.out.println("loadUserByUserName : " + repository.findById(id));
-        return repository.findById(id).orElseThrow(()->new UsernameNotFoundException(id));
+        System.out.println("loadUserByUserName : " + repository.findByUserId(id));
+        return repository.findByUserId(id).orElseThrow(()->new UsernameNotFoundException(id));
     }
 }

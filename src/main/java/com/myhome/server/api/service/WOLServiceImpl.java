@@ -71,7 +71,7 @@ public class WOLServiceImpl implements  WOLService{
 
     @Override
     public ComputerEntity getComputerInfo(String name) {
-        ComputerEntity computerEntity = repository.findByName(name);
+        ComputerEntity computerEntity = repository.findByComputerName(name);
         return computerEntity;
     }
 

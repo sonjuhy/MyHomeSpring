@@ -14,16 +14,17 @@ import java.util.Set;
 
 @Getter
 @Entity
-@Table(name = "USER_TB'")
+@Table(name = "USER_TB")
 @ToString
 @NoArgsConstructor
 public class UserEntity implements UserDetails {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "USER_PK")
-    private String id;
-    @Column(name = "USER_INT")
-    private long userId;
+    private long Id;
+    @Column(name = "ID_CHAR")
+    private String userId;
     @Column(name = "NAME_CHAR")
     private String name;
     @Column(name = "PASSWORD_CHAR")
@@ -80,11 +81,11 @@ public class UserEntity implements UserDetails {
 
     @Builder
     public UserEntity(UserDto userDto){
-        this.userId = userDto.getUserId();
+        this.Id = userDto.getId();
         this.accessToken = userDto.getAccessToken();
         this.refreshToken = userDto.getRefreshToken();
         this.name = userDto.getName();
-        this.id = userDto.getId();
+        this.userId = userDto.getUserId();
         this.password = userDto.getPassword();
         this.auth = userDto.getAuth();
     }

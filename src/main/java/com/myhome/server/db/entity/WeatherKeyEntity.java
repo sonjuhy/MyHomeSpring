@@ -18,7 +18,7 @@ public class WeatherKeyEntity {
 
     @Id
     @Column(name = "WEATHER_PK")
-    long idWeatherApi;
+    int weatherPK;
     @Column(name = "KEY_CHAR")
     String key;
     @Column(name = "ULTRANCST_CHAR")

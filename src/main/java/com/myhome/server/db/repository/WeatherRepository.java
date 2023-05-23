@@ -5,6 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 
-public interface WeatherRepository extends JpaRepository<WeatherKeyEntity, Integer>, JpaSpecificationExecutor<WeatherKeyEntity> {
-    WeatherKeyEntity findByIdWeatherPk(long id);
+public interface WeatherRepository extends JpaRepository<WeatherKeyEntity, Integer>{
+    WeatherKeyEntity findByWeatherPK(int weatherPK);
 }
