@@ -35,8 +35,6 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
 
-	// https://mvnrepository.com/artifact/org.eclipse.paho/org.eclipse.paho.client.mqttv3
-	implementation 'org.springframework.integration:spring-integration-mqtt:5.5.14'
 	// for apache kafka
 	implementation 'org.springframework.kafka:spring-kafka'
 	//jasypt
