@@ -14,16 +14,16 @@ import java.util.Set;
 
 @Getter
 @Entity
-@Table(name = "USER_TB'")
+@Table(name = "USER_TB")
 @ToString
 @NoArgsConstructor
 public class UserEntity implements UserDetails {
 
     @Id
     @Column(name = "USER_PK")
-    private String id;
-    @Column(name = "USER_INT")
     private long userId;
+    @Column(name = "ID_CHAR")
+    private String id;
     @Column(name = "NAME_CHAR")
     private String name;
     @Column(name = "PASSWORD_CHAR")

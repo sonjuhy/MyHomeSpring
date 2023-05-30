@@ -86,7 +86,7 @@ public class WOLServiceImpl implements  WOLService{
         List<ComputerEntity> list = repository.findAll();
         List<String> computerList = new ArrayList<>();
         for(ComputerEntity entity : list){
-            computerList.add(entity.getComputerName());
+            computerList.add(entity.getName());
         }
         return computerList;
     }
