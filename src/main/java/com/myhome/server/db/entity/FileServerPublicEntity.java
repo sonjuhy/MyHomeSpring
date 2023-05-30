@@ -51,4 +51,9 @@ public class FileServerPublicEntity {
         this.location = dto.getLocation();
         this.state = dto.getState();
     }
+
+    public void changePathAndLocation(String movePath, String location) {
+        this.path = movePath;
+        this.location = location;
+    }
 }
