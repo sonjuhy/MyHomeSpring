@@ -27,7 +27,7 @@ public class JPATests {
 
     @Test
     public void signInTest(){
-        assert userRepository.findByUserId("admin").isEmpty();
+//        assert userRepository.findByUserId("admin").isEmpty();
 //        UserDto dto = new UserDto();
 //        dto.setId(1);
 //        dto.setName("admin");

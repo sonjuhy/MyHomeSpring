@@ -10,8 +10,8 @@ import javax.transaction.Transactional;
 import java.util.Optional;
 
 public interface UserRepository extends JpaRepository <UserEntity, Long>{
-    UserEntity findById(long Id);
-    Optional<UserEntity> findByUserId(String userId);
+    UserEntity findByUserId(long Id);
+    Optional<UserEntity> findById(String userId);
     @Transactional
     @Modifying(clearAutomatically = true)
     @Query(value = "update USER_TB set ACCESS_CHAR=:accessToken, REFRESH_CHAR=:refreshToken where ID_CHAR=:Id", nativeQuery = true)
