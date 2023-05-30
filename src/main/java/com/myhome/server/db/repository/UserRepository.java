@@ -14,7 +14,7 @@ public interface UserRepository extends JpaRepository <UserEntity, Integer>{
     Optional<UserEntity> findById(String id);
     @Transactional
     @Modifying(clearAutomatically = true)
-    @Query(value = "update User set access_token=:accessToken, refresh_token=:refreshToken where id=:Id", nativeQuery = true)
+    @Query(value = "update USER_TB set ACCESS_CHAR=:accessToken, REFRESH_CHAR=:refreshToken where ID_CHAR=:Id", nativeQuery = true)
     void updateTokens(@Param("accessToken") String accessToken, @Param("refreshToken") String refreshToken, @Param("Id") String Id);
 //    int save(UserEntity entity);
 }
