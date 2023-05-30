@@ -15,20 +15,11 @@ import java.util.List;
 @NoArgsConstructor
 @ToString
 public class UserDto {
-    private long Id;
-    private String userId;
+    private long userId;
+    private String id;
     private String name;
     private String password;
     private String accessToken;
     private String refreshToken;
     private String auth;
-
-    public List<String> getAuthList(){
-        List<String> list = new ArrayList<>();
-        String[] strings = this.auth.split(",");
-        System.out.println("getAuthList : "+this.auth);
-        Collections.addAll(list, strings);
-        return list;
-    }
-
 }

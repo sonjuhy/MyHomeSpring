@@ -20,11 +20,10 @@ import java.util.Set;
 public class UserEntity implements UserDetails {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "USER_PK")
-    private long Id;
+    private long userId;
     @Column(name = "ID_CHAR")
-    private String userId;
+    private String id;
     @Column(name = "NAME_CHAR")
     private String name;
     @Column(name = "PASSWORD_CHAR")
@@ -81,11 +80,11 @@ public class UserEntity implements UserDetails {
 
     @Builder
     public UserEntity(UserDto userDto){
-        this.Id = userDto.getId();
+        this.userId = userDto.getUserId();
         this.accessToken = userDto.getAccessToken();
         this.refreshToken = userDto.getRefreshToken();
         this.name = userDto.getName();
-        this.userId = userDto.getUserId();
+        this.id = userDto.getId();
         this.password = userDto.getPassword();
         this.auth = userDto.getAuth();
     }
