@@ -19,7 +19,7 @@ public class ComputerEntity {
     @Column(name = "COMPUTER_PK")
     private int id;
     @Column(name="NAME_CHAR")
-    private String computerName;
+    private String name;
     @Column(name = "MAC_CHAR")
     private String macAddress;
     @Column(name = "IP_CHAR")
