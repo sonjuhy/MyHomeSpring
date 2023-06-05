@@ -1,12 +1,10 @@
 package com.myhome.server.api.dto;
 
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 @Getter
 @Setter
+@ToString
 @NoArgsConstructor
 public class FileServerPublicDto {
     private String path;

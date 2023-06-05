@@ -2,12 +2,10 @@ package com.myhome.server.api.controller;
 
 import com.myhome.server.api.dto.FileServerPrivateDto;
 import com.myhome.server.api.dto.FileServerPublicDto;
-import com.myhome.server.api.service.FileServerPrivateService;
-import com.myhome.server.api.service.FileServerPrivateServiceImpl;
-import com.myhome.server.api.service.FileServerPublicService;
-import com.myhome.server.api.service.FileServerPublicServiceImpl;
+import com.myhome.server.api.service.*;
 import com.myhome.server.db.entity.FileServerPrivateEntity;
 import com.myhome.server.db.entity.FileServerPublicEntity;
+import com.myhome.server.db.entity.FileServerThumbNailEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.InputStreamResource;
@@ -31,6 +29,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+
 @RestController()
 @RequestMapping("/file")
 public class FileServerController {
@@ -50,22 +49,42 @@ public class FileServerController {
     FileServerPublicService service = new FileServerPublicServiceImpl();
 
     @Autowired
+    FileServerThumbNailService thumbNailService = new FileServerThumbNailServiceImpl();
+
+    @Autowired
     FileServerPrivateService privateService = new FileServerPrivateServiceImpl();
 
     @GetMapping("/checkFileState")
     public ResponseEntity<Void> checkFileState(){
         service.publicFileStateCheck();
-        privateService.privateFileCheck();
+//        privateService.privateFileCheck();
         return new ResponseEntity<>(null, HttpStatus.OK);
     }
 
-    @GetMapping("/getPublicFileInfo/{path}") // get PublicFile info
-    public ResponseEntity<FileServerPublicEntity> getPublicFileInfo(@PathVariable String path){
+    @GetMapping("/downloadThumbNail/{uuid}")
+    public ResponseEntity<Resource> downloadThumbNail(@PathVariable String uuid){
+        FileServerThumbNailEntity entity = thumbNailService.findByUUID(uuid);
+        if(entity != null){
+            Path path = Paths.get(entity.getPath());
+            try{
+                HttpHeaders httpHeaders = service.getHttpHeader(path, entity.getOriginName());
+                Resource resource = new InputStreamResource(Files.newInputStream(path)); // save file resource
+                return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+    }
+
+    @GetMapping("/getPublicFileInfo") // get PublicFile info
+    public ResponseEntity<FileServerPublicEntity> getPublicFileInfo(@RequestParam String path){
         FileServerPublicEntity fileServerPublicService = service.findByPath(path);
         return new ResponseEntity<>(fileServerPublicService, HttpStatus.OK);
     }
-    @GetMapping("/getPublicFilesInfo/{location}") // get PublicFiles info list
-    public ResponseEntity<List<FileServerPublicEntity>> getPublicFilesInfo(@PathVariable String location){
+    @GetMapping("/getPublicFilesInfo") // get PublicFiles info list
+    public ResponseEntity<List<FileServerPublicEntity>> getPublicFilesInfo(@RequestParam String location){
+
         List<FileServerPublicEntity> list = service.findByLocation(location);
         return new ResponseEntity<>(list, HttpStatus.OK);
     }
@@ -76,76 +95,42 @@ public class FileServerController {
     }
     @PostMapping("/downloadPublicFile")
     public ResponseEntity<Resource> downloadPublicFile(@RequestBody FileServerPublicDto dto){
-        Path path = Paths.get(dto.getLocation()+File.separator+dto.getName()); // file path setting
-        try{
-            String contentType = Files.probeContentType(path); // content type setting
-            HttpHeaders httpHeaders = new HttpHeaders();
-            httpHeaders.setContentDisposition(ContentDisposition
-                    .builder("attachment") //builder type
-                    .filename(dto.getName(), StandardCharsets.UTF_8) // filename setting by utf-8
-                    .build());
-            httpHeaders.add(HttpHeaders.CONTENT_TYPE, contentType);
-            Resource resource = new InputStreamResource(Files.newInputStream(path)); // save file resource
-            return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
-        } catch (IOException e) {
-            e.printStackTrace();
+        System.out.println("downloadPublic : " + dto.toString());
+        FileServerPublicEntity entity = service.findByUuidName(dto.getUuidName());
+        if(entity != null){
+            Path path = Paths.get(entity.getPath()); // file path setting
+            try{
+                HttpHeaders httpHeaders = service.getHttpHeader(path, dto.getName());
+                Resource resource = new InputStreamResource(Files.newInputStream(path)); // save file resource
+                return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
     }
+
+    @CrossOrigin(origins = "*")
     @GetMapping("/downloadPublicMedia/{uuid}")
     public ResponseEntity<Resource> downloadPublicMedia(@PathVariable String uuid){
         FileServerPublicEntity entity = service.findByUuidName(uuid);
-        Path path = Paths.get(entity.getLocation()+File.separator+entity.getName());
-        try{
-            String contentType = Files.probeContentType(path); // content type setting
-            HttpHeaders httpHeaders = new HttpHeaders();
-            httpHeaders.setContentDisposition(ContentDisposition
-                    .builder("attachment") //builder type
-                    .filename(entity.getName(), StandardCharsets.UTF_8) // filename setting by utf-8
-                    .build());
-            httpHeaders.add(HttpHeaders.CONTENT_TYPE, contentType);
-            Resource resource = new InputStreamResource(Files.newInputStream(path)); // save file resource
-            return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
-        } catch (IOException e) {
-            e.printStackTrace();
+        if(entity != null){
+            Path path = Paths.get(entity.getPath());
+            try{
+                HttpHeaders httpHeaders = service.getHttpHeader(path, entity.getName());
+                Resource resource = new InputStreamResource(Files.newInputStream(path)); // save file resource
+                return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
     }
     @PostMapping("/uploadPublicFile") // upload files
-    public ResponseEntity<List<String>> uploadPublicFileInfo(@RequestParam MultipartFile[] uploadFile, @RequestParam String path, Model model)
+    public ResponseEntity<List<String>> uploadPublicFile(@RequestParam MultipartFile[] uploadFile, @RequestParam String path, Model model)
     {
-        String fileLocation = defaultUploadPath+File.separator+path+File.separator;
-        System.out.println("path : " + path);
-        List<FileServerPublicEntity> list = new ArrayList<>();
-        for(MultipartFile file : uploadFile){
-            if(!file.isEmpty()){
-                try{
-                    FileServerPublicDto dto = new FileServerPublicDto(
-                            fileLocation+file.getOriginalFilename(), // file path (need to change)
-                            file.getOriginalFilename(), // file name
-                            UUID.randomUUID().toString(), // file name to change UUID
-                            Objects.requireNonNull(file.getOriginalFilename()).substring(file.getOriginalFilename().lastIndexOf(".") + 1), // file type (need to check ex: txt file -> text/plan)
-                            (float)file.getSize(), // file size(KB)
-                            fileLocation, // file folder path (need to change)
-                            0
-                    );
-                    System.out.println(file.getResource());
-                    list.add(new FileServerPublicEntity(dto));
-                    String saveName = fileLocation+dto.getName();
-                    Path savePath = Paths.get(saveName);
-                    file.transferTo(savePath);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-        model.addAttribute("files", list);
-        List<String> resultArr = new ArrayList<>();
-        for(int i=0;i<list.size();i++){
-            if(service.save(list.get(i))){
-                resultArr.add(list.get(i).getName());
-            }
-        }
+        System.out.println("uploadPublicFile : " + path);
+        List<String> resultArr = service.uploadFiles(uploadFile, path, model);
         return new ResponseEntity<>(resultArr, HttpStatus.OK); // return filename that success to insert file name in DB
     }
     @PutMapping("/updatePublicFileInfo")
@@ -186,13 +171,7 @@ public class FileServerController {
     public ResponseEntity<Resource> downloadPrivateFile(@RequestBody FileServerPrivateDto dto){
         Path path = Paths.get(dto.getLocation()+File.separator+dto.getName()); // file path setting
         try{
-            String contentType = Files.probeContentType(path); // content type setting
-            HttpHeaders httpHeaders = new HttpHeaders();
-            httpHeaders.setContentDisposition(ContentDisposition
-                    .builder("attachment") //builder type
-                    .filename(dto.getName(), StandardCharsets.UTF_8) // filename setting by utf-8
-                    .build());
-            httpHeaders.add(HttpHeaders.CONTENT_TYPE, contentType);
+            HttpHeaders httpHeaders = privateService.getHttpHeaders(path, dto.getName());
             Resource resource = new InputStreamResource(Files.newInputStream(path)); // save file resource
             return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
         } catch (IOException e) {
@@ -200,18 +179,14 @@ public class FileServerController {
         }
         return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
     }
+
+    @CrossOrigin(origins = "*")
     @GetMapping("/downloadPrivateMedia/{uuid}")
     public ResponseEntity<Resource> downloadPrivateMedia(@PathVariable String uuid){
         FileServerPublicEntity entity = service.findByUuidName(uuid);
         Path path = Paths.get(entity.getLocation()+File.separator+entity.getName());
         try{
-            String contentType = Files.probeContentType(path); // content type setting
-            HttpHeaders httpHeaders = new HttpHeaders();
-            httpHeaders.setContentDisposition(ContentDisposition
-                    .builder("attachment") //builder type
-                    .filename(entity.getName(), StandardCharsets.UTF_8) // filename setting by utf-8
-                    .build());
-            httpHeaders.add(HttpHeaders.CONTENT_TYPE, contentType);
+            HttpHeaders httpHeaders = privateService.getHttpHeaders(path, entity.getName());
             Resource resource = new InputStreamResource(Files.newInputStream(path)); // save file resource
             return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
         } catch (IOException e) {
@@ -219,40 +194,10 @@ public class FileServerController {
         }
         return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
     }
-    @PostMapping("/uploadPrivateFile/{owner}") // upload PrivateFiles
-    public ResponseEntity<List<String>> uploadPrivateFileInfo(@RequestParam MultipartFile[] uploadFile, @RequestParam String path, Model model, @PathVariable String owner)
+    @PostMapping("/uploadPrivateFile/{token}") // upload PrivateFiles
+    public ResponseEntity<List<String>> uploadPrivateFileInfo(@RequestParam MultipartFile[] uploadFile, @RequestParam String path, Model model, @PathVariable String token)
     {
-        String fileLocation = defaultUploadPath+File.separator+path+File.separator;
-        List<FileServerPrivateEntity> list = new ArrayList<>();
-        for(MultipartFile file : uploadFile){
-            if(!file.isEmpty()){
-                try{
-                    FileServerPrivateDto dto = new FileServerPrivateDto(
-                            fileLocation+file.getOriginalFilename(), // file path (need to change)
-                            file.getOriginalFilename(), // file name
-                            UUID.randomUUID().toString(), // file name to change UUID
-                            file.getContentType(), // file type (need to check ex: txt file -> text/plan)
-                            (float)file.getSize(), // file size(KB),
-                            owner,
-                            fileLocation, // file folder path (need to change)
-                            0
-                    );
-                    list.add(new FileServerPrivateEntity(dto));
-                    String saveName = fileLocation+dto.getName();
-                    Path savePath = Paths.get(saveName);
-                    file.transferTo(savePath);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-        model.addAttribute("files", list);
-        List<String> resultArr = new ArrayList<>();
-        for(int i=0;i<list.size();i++){
-            if(privateService.save(list.get(i))){
-                resultArr.add(list.get(i).getName());
-            }
-        }
+        List<String> resultArr = privateService.uploadFiles(uploadFile, path, token, model);
         return new ResponseEntity<>(resultArr, HttpStatus.OK); // return filename that success to insert file name in DB
     }
     @PutMapping("/updatePrivateFileInfo")

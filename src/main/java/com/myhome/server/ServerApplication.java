@@ -1,12 +1,9 @@
 package com.myhome.server;
 
-import org.jasypt.encryption.pbe.StandardPBEStringEncryptor;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.integration.annotation.IntegrationComponentScan;
-import org.springframework.transaction.annotation.EnableTransactionManagement;
 
-@EnableTransactionManagement
 @SpringBootApplication
 @IntegrationComponentScan
 public class ServerApplication {
@@ -20,5 +17,4 @@ public class ServerApplication {
 //		String enc = pbe.encrypt("sonjuhy_home");
 
 	}
-
 }

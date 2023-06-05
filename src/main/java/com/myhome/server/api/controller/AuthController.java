@@ -37,11 +37,7 @@ public class AuthController {
             String userId = jwtTokenProvider.getUserPk(refreshToken); // get userId from refreshToken
             Optional<UserEntity> entity = service.findById(userId); // get userInfo with refreshToken for getting authList
 
-            List<String> list = new ArrayList<>();
-            String[] strings = entity.get().getAuth().split(",");
-            Collections.addAll(list, strings); // Collection auth list
-
-            String newAccessToken = jwtTokenProvider.createToken(userId, list, true); // re-create AccessToken
+            String newAccessToken = jwtTokenProvider.createToken(userId, entity.get().getAuth(), true); // re-create AccessToken
             jsonObject.addProperty("accessToken", newAccessToken); //save accessToken
         }
         else{
@@ -70,6 +66,80 @@ public class AuthController {
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
 
+    @GetMapping("/validateAuth/{accessToken}")
+    public ResponseEntity<String> validateAuth(@PathVariable String accessToken){
+        String newAccessToken = "";
+        boolean auth = false, accessTokenValidate;
+        Gson gson = new Gson();
+        JsonObject jsonObject = new JsonObject();
+
+        String userId = jwtTokenProvider.getUserPk(accessToken); // get userId from accessToken
+        Optional<UserEntity> optionalUserEntity = service.findById(userId); // get userInfo with userId
+        UserEntity entity = optionalUserEntity.orElseThrow(()->new RuntimeException(userId)); // get UserEntity when Optional Entity is present
+        if(!entity.getAuth().equals("associate")){
+            auth = true;
+        }
+        accessTokenValidate = jwtTokenProvider.validateToken(accessToken);
+        if(!accessTokenValidate){
+            newAccessToken = jwtTokenProvider.createToken(entity.getId(), entity.getAuth(),true);
+        }
+
+        jsonObject.addProperty("authValidate", auth);
+        jsonObject.addProperty("accessTokenValidate", accessTokenValidate);
+        jsonObject.addProperty("newAccessToken", newAccessToken);
+
+        try{
+            service.updateTokens(newAccessToken, entity.getRefreshToken(), entity.getId());
+        }
+        catch(Exception e){
+            e.printStackTrace();
+            jsonObject.addProperty("error", "failed to update token info");
+        }
+        return new ResponseEntity<>(gson.toJson(jsonObject), HttpStatus.OK);
+    }
+
+    @GetMapping("/reissueAccessToken/{accessToken}")
+    public ResponseEntity<String> reissueAccessToken(@PathVariable String accessToken){
+        Gson gson = new Gson();
+        JsonObject jsonObject = new JsonObject();
+        String userId = jwtTokenProvider.getUserPk(accessToken); // get userId from accessToken
+        Optional<UserEntity> optionalUserEntity = service.findById(userId); // get userInfo with userId
+        UserEntity entity = optionalUserEntity.orElseThrow(()->new RuntimeException(userId)); // get UserEntity when Optional Entity is present
+        String newAccessToken = jwtTokenProvider.createToken(entity.getId(), entity.getAuth(),true);
+
+        try{
+            service.updateTokens(newAccessToken, entity.getRefreshToken(), entity.getId());
+            jsonObject.addProperty("accessToken", newAccessToken);
+        }
+        catch(Exception e){
+            e.printStackTrace();
+            jsonObject.addProperty("error", "failed");
+        }
+        return new ResponseEntity<>(gson.toJson(jsonObject), HttpStatus.OK);
+    }
+
+    @GetMapping("/reissueRefreshToken/{refreshToken}")
+    public ResponseEntity<String> reissueRefreshToken(@PathVariable String refreshToken){
+        Gson gson = new Gson();
+        JsonObject jsonObject = new JsonObject();
+        String userId = jwtTokenProvider.getUserPk(refreshToken); // get userId from accessToken
+        Optional<UserEntity> optionalUserEntity = service.findById(userId); // get userInfo with userId
+        UserEntity entity = optionalUserEntity.orElseThrow(()->new RuntimeException(userId)); // get UserEntity when Optional Entity is present
+        String newAccessToken = jwtTokenProvider.createToken(entity.getId(), entity.getAuth(),true);
+        String newRefreshToken = jwtTokenProvider.createToken(entity.getId(), entity.getAuth(),false);
+
+        try{
+            service.updateTokens(newAccessToken, newRefreshToken, entity.getId());
+            jsonObject.addProperty("accessToken", newAccessToken);
+            jsonObject.addProperty("refreshToken", newRefreshToken);
+        }
+        catch(Exception e){
+            e.printStackTrace();
+            jsonObject.addProperty("error", "failed");
+        }
+        return new ResponseEntity<>(gson.toJson(jsonObject), HttpStatus.OK);
+    }
+
     @PostMapping("/signIn") // sign in
     public ResponseEntity<String> signIn(@RequestBody UserDto userDto){
         Gson gson = new Gson();
@@ -80,8 +150,8 @@ public class AuthController {
         else {
             boolean loginResult = service.checkPassword(userDto.getPassword(), userDto.getId()); // check login info
             if(loginResult){ // password match result is correct
-                String accessToken = jwtTokenProvider.createToken(userDto.getId(), userDto.getAuthList(), true);
-                String refreshToken = jwtTokenProvider.createToken(userDto.getId(), userDto.getAuthList(), false);
+                String accessToken = jwtTokenProvider.createToken(userDto.getId(), userDto.getAuth(), true);
+                String refreshToken = jwtTokenProvider.createToken(userDto.getId(), userDto.getAuth(), false);
                 jsonObject.addProperty("accessToken", accessToken);
                 jsonObject.addProperty("refreshToken", refreshToken);
                 userDto.setAccessToken(accessToken);
@@ -114,8 +184,8 @@ public class AuthController {
         }
         else{
             try{
-                String accessToken = jwtTokenProvider.createToken(userDto.getId(), userDto.getAuthList(), true);
-                String refreshToken = jwtTokenProvider.createToken(userDto.getId(), userDto.getAuthList(), false);
+                String accessToken = jwtTokenProvider.createToken(userDto.getId(), userDto.getAuth(), true);
+                String refreshToken = jwtTokenProvider.createToken(userDto.getId(), userDto.getAuth(), false);
                 userDto.setAccessToken(accessToken);
                 userDto.setRefreshToken(refreshToken);
                 BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder();

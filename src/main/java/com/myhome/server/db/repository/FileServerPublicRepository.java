@@ -13,9 +13,11 @@ public interface FileServerPublicRepository extends JpaRepository<FileServerPubl
 //    @Lock(LockModeType.PESSIMISTIC_FORCE_INCREMENT)
     FileServerPublicEntity findByPath(String path);
 
-    FileServerPublicEntity findByUuidName(String uuid);
+    FileServerPublicEntity findByUuid(String uuid);
 
     List<FileServerPublicEntity> findByLocation(String location);
+
+    List<FileServerPublicEntity> findByState(int state);
 
     boolean existsByPath(String path);
 
@@ -24,7 +26,7 @@ public interface FileServerPublicRepository extends JpaRepository<FileServerPubl
 
     @Transactional
     @Modifying(clearAutomatically = true)
-    @Query(value = "DELETE FROM fileserver_public WHERE state=:state", nativeQuery = true)
+    @Query(value = "DELETE FROM FILE_PUBLIC_TB WHERE STATE_INT=:state", nativeQuery = true)
     int deleteByState(@Param("state") int state);
 
     @Transactional
@@ -34,11 +36,11 @@ public interface FileServerPublicRepository extends JpaRepository<FileServerPubl
 
     @Transactional
     @Modifying(clearAutomatically = true)
-    @Query(value = "UPDATE fileserver_public SET state=0", nativeQuery = true)
+    @Query(value = "UPDATE FILE_PUBLIC_TB SET STATE_INT=0", nativeQuery = true)
     int updateAllStateToZero();
 
     @Transactional
     @Modifying(clearAutomatically = true)
-    @Query(value = "UPDATE fileserver_public SET state=1", nativeQuery = true)
+    @Query(value = "UPDATE FILE_PUBLIC_TB SET STATE_INT=1", nativeQuery = true)
     int updateAllStateToOne();
 }

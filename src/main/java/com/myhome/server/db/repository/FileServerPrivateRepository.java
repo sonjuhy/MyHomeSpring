@@ -23,7 +23,7 @@ public interface FileServerPrivateRepository extends JpaRepository<FileServerPri
 
     @Transactional
     @Modifying(clearAutomatically = true)
-    @Query(value = "DELETE FROM fileserver_private WHERE state=:state", nativeQuery = true)
+    @Query(value = "DELETE FROM FILE_PRIVATE_TB WHERE STATE_INT=:state", nativeQuery = true)
     int deleteByState(@Param("state") int state);
 
     @Transactional
@@ -33,11 +33,11 @@ public interface FileServerPrivateRepository extends JpaRepository<FileServerPri
 
     @Transactional
     @Modifying(clearAutomatically = true)
-    @Query(value = "UPDATE fileserver_private SET state=0", nativeQuery = true)
+    @Query(value = "UPDATE FILE_PRIVATE_TB SET STATE_INT=0", nativeQuery = true)
     int updateAllStateToZero();
 
     @Transactional
     @Modifying(clearAutomatically = true)
-    @Query(value = "UPDATE fileserver_private SET state=1", nativeQuery = true)
+    @Query(value = "UPDATE FILE_PRIVATE_TB SET STATE_INT=1", nativeQuery = true)
     int updateAllStateToOne();
 }
