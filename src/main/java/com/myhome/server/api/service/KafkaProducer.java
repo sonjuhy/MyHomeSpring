@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class KafkaProducer {
     private static final String TOPIC = "exam-topic";
-    private static final String TOPIC_MQTT = "MyHome/Light";
+    private static final String TOPIC_MQTT = "iot-topic";
 
     @Autowired
     private final KafkaTemplate<String, String> kafkaTemplate;
