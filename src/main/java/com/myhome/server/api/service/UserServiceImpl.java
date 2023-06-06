@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import javax.persistence.EntityManager;
 import javax.transaction.Transactional;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -29,6 +30,12 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     public Optional<UserEntity> findById(String id) {
         Optional<UserEntity> entity = repository.findById(id);
         return entity;
+    }
+
+    @Override
+    public List<UserEntity> findAll() {
+        List<UserEntity> list = repository.findAll();
+        return list;
     }
 
     @Override

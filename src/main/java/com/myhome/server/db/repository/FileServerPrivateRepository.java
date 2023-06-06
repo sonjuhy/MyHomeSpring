@@ -12,7 +12,11 @@ import java.util.List;
 public interface FileServerPrivateRepository extends JpaRepository<FileServerPrivateEntity, String> {
     FileServerPrivateEntity findByPath(String path);
 
+    FileServerPrivateEntity findByUuid(String uuid);
+
     List<FileServerPrivateEntity> findByLocation(String location);
+
+    List<FileServerPrivateEntity> findByState(int state);
 
     List<FileServerPrivateEntity> findByOwner(String owner);
 

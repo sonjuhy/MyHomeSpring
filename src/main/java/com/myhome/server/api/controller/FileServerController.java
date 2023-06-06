@@ -57,7 +57,7 @@ public class FileServerController {
     @GetMapping("/checkFileState")
     public ResponseEntity<Void> checkFileState(){
         service.publicFileStateCheck();
-//        privateService.privateFileCheck();
+        privateService.privateFileCheck();
         return new ResponseEntity<>(null, HttpStatus.OK);
     }
 
@@ -138,6 +138,16 @@ public class FileServerController {
         int result = service.updateByFileServerPublicEntity(new FileServerPublicEntity(dto));
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
+    @PutMapping("/restorePublicFile")
+    public ResponseEntity<Integer> restorePublic(@RequestParam String uuid){
+        int result = service.restore(uuid);
+        return new ResponseEntity<>(result, HttpStatus.OK);
+    }
+    @DeleteMapping("/deletePublicFileToTrash")
+    public ResponseEntity<Long> deletePublicFileTrash(@RequestParam String uuid){
+        long result = service.moveTrash(uuid);
+        return new ResponseEntity<Long>(result, HttpStatus.OK);
+    }
     @DeleteMapping("/deletePublicFileInfo/{path}")
     public ResponseEntity<Long> deletePublicFileInfo(@PathVariable String path){
         long result = service.deleteByPath(path); // delete file
@@ -152,19 +162,19 @@ public class FileServerController {
      * delete : O
      * */
 
-    @GetMapping("/getPrivateFileInfo/{path}") // get PrivateFile info
-    public ResponseEntity<FileServerPrivateEntity> getPrivateFileInfo(@PathVariable String path){
+    @GetMapping("/getPrivateFileInfo") // get PrivateFile info
+    public ResponseEntity<FileServerPrivateEntity> getPrivateFileInfo(@RequestParam String path){
         FileServerPrivateEntity fileServerPublicService = privateService.findByPath(path);
         return new ResponseEntity<>(fileServerPublicService, HttpStatus.OK);
     }
-    @GetMapping("/getPrivateFilesInfo/{location}") // get PrivateFile info list
-    public ResponseEntity<List<FileServerPrivateEntity>> getPrivateFilesInfo(@PathVariable String location){
+    @GetMapping("/getPrivateFilesInfo") // get PrivateFile info list
+    public ResponseEntity<List<FileServerPrivateEntity>> getPrivateFilesInfo(@RequestParam String location){
         List<FileServerPrivateEntity> list = privateService.findByLocation(location);
         return new ResponseEntity<>(list, HttpStatus.OK);
     }
     @GetMapping("/movePrivateFileInfo")
     public ResponseEntity<Integer> movePrivateFileInfo(@RequestParam String path, @RequestParam String location){
-        int result = service.moveFile(path, location);
+        int result = privateService.moveFile(path, location);
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
     @PostMapping("/downloadPrivateFile")
@@ -183,14 +193,16 @@ public class FileServerController {
     @CrossOrigin(origins = "*")
     @GetMapping("/downloadPrivateMedia/{uuid}")
     public ResponseEntity<Resource> downloadPrivateMedia(@PathVariable String uuid){
-        FileServerPublicEntity entity = service.findByUuidName(uuid);
-        Path path = Paths.get(entity.getLocation()+File.separator+entity.getName());
-        try{
-            HttpHeaders httpHeaders = privateService.getHttpHeaders(path, entity.getName());
-            Resource resource = new InputStreamResource(Files.newInputStream(path)); // save file resource
-            return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
-        } catch (IOException e) {
-            e.printStackTrace();
+        FileServerPrivateEntity entity = privateService.findByUuid(uuid);
+        if(entity != null){
+            Path path = Paths.get(entity.getPath());
+            try{
+                HttpHeaders httpHeaders = privateService.getHttpHeaders(path, entity.getName());
+                Resource resource = new InputStreamResource(Files.newInputStream(path)); // save file resource
+                return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
     }
@@ -204,6 +216,16 @@ public class FileServerController {
     public ResponseEntity<Integer> updatePrivateFileInfo(@RequestBody FileServerPrivateDto dto){
         int result = privateService.updateByFileServerPublicEntity(new FileServerPrivateEntity(dto));
         return new ResponseEntity<>(result, HttpStatus.OK);
+    }
+    @PutMapping("/restorePrivateFile")
+    public ResponseEntity<Integer> restorePrivateFile(@RequestParam String uuid){
+        int result = privateService.restore(uuid);
+        return new ResponseEntity<>(result, HttpStatus.OK);
+    }
+    @DeleteMapping("/deletePrivateFileToTrash")
+    public ResponseEntity<Long> deletePrivateFileTrash(@RequestParam String uuid){
+        long result = privateService.moveTrash(uuid);
+        return new ResponseEntity<Long>(0L, HttpStatus.OK);
     }
     @DeleteMapping("/deletePrivateFileInfo/{path}")
     public ResponseEntity<Long> deletePrivateFileInfo(@PathVariable String path){

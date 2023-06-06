@@ -22,6 +22,8 @@ public interface FileServerPublicService {
     @Transactional
     long deleteByPath(String path);
     int moveFile(String path, String location);
+    int moveTrash(String uuid);
+    int restore(String uuid);
     int updateByFileServerPublicEntity(FileServerPublicEntity entity);
     boolean save(FileServerPublicEntity entity);
     void publicFileStateCheck();

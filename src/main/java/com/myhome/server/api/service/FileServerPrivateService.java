@@ -13,6 +13,7 @@ import java.util.List;
 
 public interface FileServerPrivateService {
     FileServerPrivateEntity findByPath(String path);
+    FileServerPrivateEntity findByUuid(String uuid);
     List<FileServerPrivateEntity> findByLocation(String location);
     List<FileServerPrivateEntity> findByOwner(String owner);
     HttpHeaders getHttpHeaders(Path path, String fileName) throws IOException;
@@ -21,6 +22,8 @@ public interface FileServerPrivateService {
     @Transactional
     long deleteByPath(String path);
     int moveFile(String path, String location);
+    int moveTrash(String uuid);
+    int restore(String uuid);
     int updateByFileServerPublicEntity(FileServerPrivateEntity entity);
     boolean save(FileServerPrivateEntity entity);
     void privateFileCheck();

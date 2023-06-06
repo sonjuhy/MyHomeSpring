@@ -1,9 +1,12 @@
 package com.myhome.server.api.service;
 
+import com.myhome.server.api.dto.FileServerPrivateDto;
+import com.myhome.server.api.dto.FileServerPrivateTrashDto;
 import com.myhome.server.api.dto.FileServerPublicDto;
-import com.myhome.server.db.entity.FileServerPublicEntity;
-import com.myhome.server.db.entity.FileServerThumbNailEntity;
+import com.myhome.server.api.dto.FileServerPublicTrashDto;
+import com.myhome.server.db.entity.*;
 import com.myhome.server.db.repository.FileServerPublicRepository;
+import com.myhome.server.db.repository.FileServerPublicTrashRepository;
 import com.myhome.server.db.repository.FileServerThumbNailRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -37,6 +40,9 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
 
     @Autowired
     FileServerPublicRepository fileServerRepository;
+
+    @Autowired
+    FileServerPublicTrashRepository trashRepository;
 
     @Autowired
     FileServerThumbNailRepository thumbNailRepository;
@@ -190,6 +196,78 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         }
         entity.changePathAndLocation(movePath, location); // Dirty check
         return 0;
+    }
+
+    @Transactional
+    @Override
+    public int moveTrash(String uuid) {
+        FileServerPublicEntity entity = fileServerRepository.findByUuid(uuid);
+        if(entity != null){
+            FileServerPublicTrashDto dto = new FileServerPublicTrashDto(entity);
+            FileServerPublicTrashEntity trashEntity = new FileServerPublicTrashEntity(dto);
+            trashRepository.save(trashEntity);
+
+//            String trashPath = trashPath+"trash";
+            String tmpTrashPath = "C:\\Users\\SonJunHyeok\\Desktop\\test\\trash\\" + trashEntity.getName();
+            try{
+                File in = new File(entity.getPath());
+                File out = new File(tmpTrashPath);
+                FileCopyUtils.copy(in, out); // copy file from origin location to new location
+                if(in.exists()){ // check origin file exist
+                    if(in.delete()){ // if file exist
+                        System.out.println("delete success");
+                        fileServerRepository.deleteByPath(entity.getPath());
+                        return 0;
+                    }
+                    else{
+                        System.out.println("delete failed");
+                    }
+                }
+            }
+            catch (IOException e) {
+                e.printStackTrace();
+                return -1;
+            }
+        }
+        return -1;
+    }
+
+    @Override
+    public int restore(String uuid) {
+        FileServerPublicTrashEntity trashEntity = trashRepository.findByUuid(uuid);
+        if(trashEntity != null){
+            FileServerPublicDto dto = new FileServerPublicDto(
+                    trashEntity.getPath(),
+                    trashEntity.getName(),
+                    trashEntity.getUuid(),
+                    trashEntity.getType(),
+                    trashEntity.getSize(),
+                    trashEntity.getLocation(),
+                    trashEntity.getState()
+            );
+            fileServerRepository.save(new FileServerPublicEntity(dto));
+            String trashPath = diskPath+"trash";
+            try{
+                File in = new File(trashPath);
+                File out = new File(dto.getPath());
+                FileCopyUtils.copy(in, out); // copy file from origin location to new location
+                if(in.exists()){ // check origin file exist
+                    if(in.delete()){ // if file exist
+                        System.out.println("delete success");
+                        trashRepository.deleteByUuid(dto.getUuidName());
+                        return 0;
+                    }
+                    else{
+                        System.out.println("delete failed");
+                    }
+                }
+            }
+            catch (IOException e) {
+                e.printStackTrace();
+                return -1;
+            }
+        }
+        return -1;
     }
 
     @Override
