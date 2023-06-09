@@ -7,6 +7,7 @@ import java.util.List;
 public interface NoticeService {
     int save(NoticeEntity entity);
     List<NoticeEntity> findAll();
-    NoticeEntity findByWriter(String writer);
+    List<NoticeEntity> findByWriter(String writer);
     NoticeEntity findTopNotice();
+    int delete(int id);
 }
