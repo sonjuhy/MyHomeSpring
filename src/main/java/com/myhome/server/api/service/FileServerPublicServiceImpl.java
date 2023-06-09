@@ -1,7 +1,5 @@
 package com.myhome.server.api.service;
 
-import com.myhome.server.api.dto.FileServerPrivateDto;
-import com.myhome.server.api.dto.FileServerPrivateTrashDto;
 import com.myhome.server.api.dto.FileServerPublicDto;
 import com.myhome.server.api.dto.FileServerPublicTrashDto;
 import com.myhome.server.db.entity.*;
@@ -72,6 +70,12 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     }
 
     @Override
+    public List<FileServerPublicTrashEntity> findTrashAll() {
+        List<FileServerPublicTrashEntity> list = trashRepository.findAll();
+        return list;
+    }
+
+    @Override
     public HttpHeaders getHttpHeader(Path path, String fileName) throws IOException {
         String contentType = Files.probeContentType(path); // content type setting
 
@@ -133,6 +137,31 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     }
 
     @Override
+    public void mkdir(String path) {
+        File file = new File(path);
+        file.mkdir();
+        System.out.println("Public mkdir : " + path);
+//        String[] paths = path.split(File.separator);
+        String[] paths = path.split("\\\\");
+        String name = paths[paths.length-1];
+        StringBuilder location = new StringBuilder();
+        for(int i=0;i<paths.length-1;i++){
+            location.append(paths[i]).append(File.separator);
+        }
+        System.out.println("Public mkdir location : " + location.toString());
+        FileServerPublicDto dto = new FileServerPublicDto(
+                path, // file path (need to change)
+                name, // file name
+                UUID.randomUUID().toString(), // file name to change UUID
+                "dir",
+                0, // file size(KB)
+                location.toString(), // file folder path (need to change)
+                0
+        );
+        fileServerRepository.save(new FileServerPublicEntity(dto));
+    }
+
+    @Override
     public boolean existsByPath(String path) {
         boolean result = fileServerRepository.existsByPath(path);
         return result;
@@ -146,21 +175,55 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         }
         String testInPath = "C:\\Users\\SonJunHyeok\\Desktop\\a.txt"; // test filePath
         String filePath = testInPath;
-        //        String filePath = entity.getPath();
 
-        File file = new File(filePath);
+//        File file = new File(filePath);
+        File file = new File(path);
 
         if(file.exists()){ // check file exist
-            if(file.delete()){ // if file exist, delete file
-                fileServerRepository.deleteByPath(filePath);
-                System.out.println("delete success");
+            if(file.isDirectory()){
+                deleteFolder(file.getPath());
             }
             else{
-                System.out.println("delete failed");
+                if(file.delete()){ // if file exist, delete file
+                    fileServerRepository.deleteByPath(filePath);
+                    System.out.println("delete success");
+                }
+                else{
+                    System.out.println("delete failed");
+                }
             }
         }
-        long result = fileServerRepository.deleteByPath(path); // delete file info from DB
-        return result;
+        return 0;
+    }
+    private void deleteFolder(String path){
+        File dir = new File(path);
+        File[] files = dir.listFiles();
+        FileServerPublicTrashEntity entity;
+        if(files != null){
+            for(File file : files){
+                if(file.isDirectory()){
+                    deleteFolder(file.getPath());
+                    if(file.delete()){
+                        entity = trashRepository.findByPath(path);
+                        if(entity != null) trashRepository.delete(trashRepository.findByPath(path));
+                        System.out.println("FileServerPublicServiceImpl delete folder Success");
+                    }
+                    else{
+                        System.out.println("FileServerPublicServiceImpl delete folder failed");
+                    }
+                }
+                else{
+                    if(file.delete()){
+                        entity = trashRepository.findByPath(path);
+                        if(entity != null) trashRepository.delete(trashRepository.findByPath(path));
+                        System.out.println("FileServerPublicServiceImpl delete file Success");
+                    }
+                    else{
+                        System.out.println("FileServerPublicServiceImpl delete file failed");
+                    }
+                }
+            }
+        }
     }
 
     @Transactional
@@ -203,68 +266,138 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     public int moveTrash(String uuid) {
         FileServerPublicEntity entity = fileServerRepository.findByUuid(uuid);
         if(entity != null){
+
             FileServerPublicTrashDto dto = new FileServerPublicTrashDto(entity);
             FileServerPublicTrashEntity trashEntity = new FileServerPublicTrashEntity(dto);
             trashRepository.save(trashEntity);
-
-//            String trashPath = trashPath+"trash";
             String tmpTrashPath = "C:\\Users\\SonJunHyeok\\Desktop\\test\\trash\\" + trashEntity.getName();
-            try{
-                File in = new File(entity.getPath());
-                File out = new File(tmpTrashPath);
-                FileCopyUtils.copy(in, out); // copy file from origin location to new location
-                if(in.exists()){ // check origin file exist
-                    if(in.delete()){ // if file exist
-                        System.out.println("delete success");
-                        fileServerRepository.deleteByPath(entity.getPath());
-                        return 0;
-                    }
-                    else{
-                        System.out.println("delete failed");
+            //            String trashPath = trashPath+"trash";
+
+            if(entity.getType().equals("dir")){
+                moveFolder(entity.getPath(), tmpTrashPath);
+            }
+            else{
+                try{
+                    File in = new File(entity.getPath());
+                    File out = new File(tmpTrashPath);
+                    FileCopyUtils.copy(in, out); // copy file from origin location to new location
+                    if(in.exists()){ // check origin file exist
+                        if(in.delete()){ // if file exist
+                            System.out.println("delete success");
+                            fileServerRepository.deleteByPath(entity.getPath());
+                            return 0;
+                        }
+                        else{
+                            System.out.println("delete failed");
+                        }
                     }
                 }
-            }
-            catch (IOException e) {
-                e.printStackTrace();
-                return -1;
+                catch (IOException e) {
+                    e.printStackTrace();
+                    return -1;
+                }
             }
         }
         return -1;
+    }
+    private void moveFolder(String path, String destPath){
+        File dir = new File(path);
+        File[] files = dir.listFiles();
+        if(files != null){
+            for(File file : files){
+                if(file.isDirectory()) {
+                    moveFolder(path+File.separator+file.getName(), destPath+File.separator+file.getName());
+                    String dirName = file.getName();
+                    FileServerPublicEntity entity = fileServerRepository.findByPath(path+File.separator+dirName);
+                    if(entity != null){
+                        FileServerPublicTrashDto trashDto = new FileServerPublicTrashDto(entity);
+                        FileServerPublicTrashEntity trashEntity = new FileServerPublicTrashEntity(trashDto);
+                        trashRepository.save(trashEntity);
+                    }
+                    else{
+                        FileServerPublicTrashDto trashDto = new FileServerPublicTrashDto();
+                        trashDto.setPath(path+File.separator+file.getName());
+                        trashDto.setLocation(path);
+                        trashDto.setName(file.getName());
+                        trashDto.setSize(0);
+                        trashDto.setState(0);
+                        trashDto.setType("dir");
+                        trashDto.setUuidName(UUID.randomUUID().toString());
+                        trashRepository.save(new FileServerPublicTrashEntity(trashDto));
+                    }
+                    if(file.delete()){
+                        System.out.println("FileServerPublicService Folder delete Success : "+file.getPath());
+                    }
+                    else{
+                        System.out.println("FileServerPublicService Folder delete Fail : "+file.getPath());
+                    }
+                }
+                else {
+                    try{
+                        FileServerPublicEntity entity = fileServerRepository.findByPath(path);
+                        File in = new File(entity.getPath());
+                        File out = new File(destPath);
+                        FileCopyUtils.copy(in, out); // copy file from origin location to new location
+                        if(in.exists()){ // check origin file exist
+                            if(in.delete()){ // if file exist
+                                System.out.println("delete success");
+                                fileServerRepository.deleteByPath(entity.getPath());
+                            }
+                            else{
+                                System.out.println("delete failed");
+                            }
+                        }
+                    }
+                    catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
     }
 
     @Override
     public int restore(String uuid) {
         FileServerPublicTrashEntity trashEntity = trashRepository.findByUuid(uuid);
+
         if(trashEntity != null){
-            FileServerPublicDto dto = new FileServerPublicDto(
-                    trashEntity.getPath(),
-                    trashEntity.getName(),
-                    trashEntity.getUuid(),
-                    trashEntity.getType(),
-                    trashEntity.getSize(),
-                    trashEntity.getLocation(),
-                    trashEntity.getState()
-            );
-            fileServerRepository.save(new FileServerPublicEntity(dto));
-            String trashPath = diskPath+"trash";
-            try{
-                File in = new File(trashPath);
-                File out = new File(dto.getPath());
-                FileCopyUtils.copy(in, out); // copy file from origin location to new location
-                if(in.exists()){ // check origin file exist
-                    if(in.delete()){ // if file exist
-                        System.out.println("delete success");
-                        trashRepository.deleteByUuid(dto.getUuidName());
-                        return 0;
-                    }
-                    else{
-                        System.out.println("delete failed");
+            String tmpTrashPath = "C:\\Users\\SonJunHyeok\\Desktop\\test\\trash\\"+trashEntity.getName();
+            String trashPath = tmpTrashPath;
+//            String trashPath = diskPath+"trash";
+            if(trashEntity.getType().equals("dir")){
+                moveFolder(trashPath, trashEntity.getPath());
+            }
+            else{
+                FileServerPublicDto dto = new FileServerPublicDto(
+                        trashEntity.getPath(),
+                        trashEntity.getName(),
+                        trashEntity.getUuid(),
+                        trashEntity.getType(),
+                        trashEntity.getSize(),
+                        trashEntity.getLocation(),
+                        trashEntity.getState()
+                );
+                fileServerRepository.save(new FileServerPublicEntity(dto));
+
+                try{
+                    File in = new File(trashPath);
+                    File out = new File(dto.getPath());
+                    FileCopyUtils.copy(in, out); // copy file from origin location to new location
+                    if(in.exists()){ // check origin file exist
+                        if(in.delete()){ // if file exist
+                            System.out.println("delete success");
+                            trashRepository.deleteByUuid(dto.getUuidName());
+                            return 0;
+                        }
+                        else{
+                            System.out.println("delete failed");
+                        }
                     }
                 }
-            }
-            catch (IOException e) {
-                e.printStackTrace();
-                return -1;
+                catch (IOException e) {
+                    e.printStackTrace();
+                    return -1;
+                }
             }
         }
         return -1;

@@ -3,9 +3,7 @@ package com.myhome.server.api.controller;
 import com.myhome.server.api.dto.FileServerPrivateDto;
 import com.myhome.server.api.dto.FileServerPublicDto;
 import com.myhome.server.api.service.*;
-import com.myhome.server.db.entity.FileServerPrivateEntity;
-import com.myhome.server.db.entity.FileServerPublicEntity;
-import com.myhome.server.db.entity.FileServerThumbNailEntity;
+import com.myhome.server.db.entity.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.InputStreamResource;
@@ -126,12 +124,22 @@ public class FileServerController {
         }
         return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
     }
+    @GetMapping("/getPublicTrashFiles")
+    public ResponseEntity<List<FileServerPublicTrashEntity>> getPublicTrashFiles(){
+        List<FileServerPublicTrashEntity> list = service.findTrashAll();
+        return new ResponseEntity<>(list, HttpStatus.OK);
+    }
     @PostMapping("/uploadPublicFile") // upload files
     public ResponseEntity<List<String>> uploadPublicFile(@RequestParam MultipartFile[] uploadFile, @RequestParam String path, Model model)
     {
         System.out.println("uploadPublicFile : " + path);
         List<String> resultArr = service.uploadFiles(uploadFile, path, model);
         return new ResponseEntity<>(resultArr, HttpStatus.OK); // return filename that success to insert file name in DB
+    }
+    @PostMapping("/mkdirPublic")
+    public ResponseEntity<Void> mkdirPublic(@RequestParam String path){
+        service.mkdir(path);
+        return new ResponseEntity<>(null, HttpStatus.OK);
     }
     @PutMapping("/updatePublicFileInfo")
     public ResponseEntity<Integer> updatePublicFileInfo(@RequestBody FileServerPublicDto dto){
@@ -206,12 +214,25 @@ public class FileServerController {
         }
         return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
     }
+    @GetMapping("/getPrivateTrashFiles")
+    public ResponseEntity<List<FileServerPrivateTrashEntity>> getPrivateTrashFiles(){
+        List<FileServerPrivateTrashEntity> list = privateService.findTrashAll();
+        return new ResponseEntity<>(list, HttpStatus.OK);
+    }
     @PostMapping("/uploadPrivateFile/{token}") // upload PrivateFiles
     public ResponseEntity<List<String>> uploadPrivateFileInfo(@RequestParam MultipartFile[] uploadFile, @RequestParam String path, Model model, @PathVariable String token)
     {
         List<String> resultArr = privateService.uploadFiles(uploadFile, path, token, model);
         return new ResponseEntity<>(resultArr, HttpStatus.OK); // return filename that success to insert file name in DB
     }
+
+    @PostMapping("/mkdirPrivate")
+    public ResponseEntity<Void> mkdirPrivate(@RequestParam String path, @RequestParam String token){
+        System.out.println("path : " + path + ", token : " + token);
+        privateService.mkdir(path, token);
+        return new ResponseEntity<>(null, HttpStatus.OK);
+    }
+
     @PutMapping("/updatePrivateFileInfo")
     public ResponseEntity<Integer> updatePrivateFileInfo(@RequestBody FileServerPrivateDto dto){
         int result = privateService.updateByFileServerPublicEntity(new FileServerPrivateEntity(dto));

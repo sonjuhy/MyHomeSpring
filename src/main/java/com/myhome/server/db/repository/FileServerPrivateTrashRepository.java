@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 public interface FileServerPrivateTrashRepository extends JpaRepository<FileServerPrivateTrashEntity, String> {
+    FileServerPrivateTrashEntity findByPath(String path);
     FileServerPrivateTrashEntity findByUuid(String uuid);
     List<FileServerPrivateTrashEntity> findAll();
     @Transactional

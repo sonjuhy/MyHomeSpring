@@ -8,6 +8,7 @@ import java.util.List;
 
 public interface FileServerPublicTrashRepository extends JpaRepository<FileServerPublicTrashEntity, String> {
     FileServerPublicTrashEntity findByUuid(String uuid);
+    FileServerPublicTrashEntity findByPath(String path);
     List<FileServerPublicTrashEntity> findAll();
     @Transactional
     int deleteByUuid(String uuid);
