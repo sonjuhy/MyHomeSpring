@@ -6,6 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface ComputerRepository extends JpaRepository<ComputerEntity, Integer> {
-    ComputerEntity findByName(String name);
+    ComputerEntity findByName(String Name);
     List<ComputerEntity> findAll();
 }

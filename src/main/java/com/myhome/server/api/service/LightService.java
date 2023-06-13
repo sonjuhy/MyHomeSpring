@@ -8,5 +8,5 @@ import java.util.List;
 public interface LightService {
     LightEntity findByRoom(String room);
     List<LightEntity> findAll();
-    void control(LightDto dto);
+    void control(LightDto dto, String user);
 }
