@@ -14,7 +14,7 @@ public interface FileServerPrivateRepository extends JpaRepository<FileServerPri
 
     FileServerPrivateEntity findByUuid(String uuid);
 
-    List<FileServerPrivateEntity> findByLocation(String location);
+    List<FileServerPrivateEntity> findByLocationAndDelete(String location, int delete);
 
     List<FileServerPrivateEntity> findByState(int state);
 

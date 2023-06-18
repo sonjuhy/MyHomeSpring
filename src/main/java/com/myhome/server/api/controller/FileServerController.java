@@ -31,14 +31,6 @@ import java.util.UUID;
 @RestController()
 @RequestMapping("/file")
 public class FileServerController {
-    /**
-     * file server public
-     * upload : O
-     * download : O
-     * move : O
-     * update : O
-     * delete : O
-     * */
 
     @Value("${part4.upload.path}")
     private String defaultUploadPath;
@@ -75,6 +67,15 @@ public class FileServerController {
         return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
     }
 
+    /**
+     * file server public
+     * upload : O
+     * download : O
+     * move : O
+     * update : O
+     * delete : O
+     * */
+
     @GetMapping("/getPublicFileInfo") // get PublicFile info
     public ResponseEntity<FileServerPublicEntity> getPublicFileInfo(@RequestParam String path){
         FileServerPublicEntity fileServerPublicService = service.findByPath(path);
@@ -83,13 +84,15 @@ public class FileServerController {
     @GetMapping("/getPublicFilesInfo") // get PublicFiles info list
     public ResponseEntity<List<FileServerPublicEntity>> getPublicFilesInfo(@RequestParam String location){
 
-        List<FileServerPublicEntity> list = service.findByLocation(location);
+        List<FileServerPublicEntity> list = service.findByLocation(location, 0);
         return new ResponseEntity<>(list, HttpStatus.OK);
     }
     @GetMapping("/movePublicFileInfo")
     public ResponseEntity<Integer> movePublicFileInfo(@RequestParam String path, @RequestParam String location){
-        int result = service.moveFile(path, location);
-        return new ResponseEntity<>(result, HttpStatus.OK);
+//        int result = service.moveFile(path, location);
+//        return new ResponseEntity<>(result, HttpStatus.OK);
+        System.out.println("MovePublicFileInfo : " + path + ", " + location);
+        return new ResponseEntity<>(0, HttpStatus.OK);
     }
     @PostMapping("/downloadPublicFile")
     public ResponseEntity<Resource> downloadPublicFile(@RequestBody FileServerPublicDto dto){
@@ -124,11 +127,13 @@ public class FileServerController {
         }
         return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
     }
+
     @GetMapping("/getPublicTrashFiles")
-    public ResponseEntity<List<FileServerPublicTrashEntity>> getPublicTrashFiles(){
-        List<FileServerPublicTrashEntity> list = service.findTrashAll();
+    public ResponseEntity<List<FileServerPublicEntity>> getPublicTrashFiles(@RequestParam String location){
+        List<FileServerPublicEntity> list = service.findByLocation(location, 1);
         return new ResponseEntity<>(list, HttpStatus.OK);
     }
+
     @PostMapping("/uploadPublicFile") // upload files
     public ResponseEntity<List<String>> uploadPublicFile(@RequestParam MultipartFile[] uploadFile, @RequestParam String path, Model model)
     {
@@ -136,26 +141,31 @@ public class FileServerController {
         List<String> resultArr = service.uploadFiles(uploadFile, path, model);
         return new ResponseEntity<>(resultArr, HttpStatus.OK); // return filename that success to insert file name in DB
     }
+
     @PostMapping("/mkdirPublic")
     public ResponseEntity<Void> mkdirPublic(@RequestParam String path){
         service.mkdir(path);
         return new ResponseEntity<>(null, HttpStatus.OK);
     }
+
     @PutMapping("/updatePublicFileInfo")
     public ResponseEntity<Integer> updatePublicFileInfo(@RequestBody FileServerPublicDto dto){
         int result = service.updateByFileServerPublicEntity(new FileServerPublicEntity(dto));
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
+
     @PutMapping("/restorePublicFile")
     public ResponseEntity<Integer> restorePublic(@RequestParam String uuid){
         int result = service.restore(uuid);
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
+
     @DeleteMapping("/deletePublicFileToTrash")
     public ResponseEntity<Long> deletePublicFileTrash(@RequestParam String uuid){
         long result = service.moveTrash(uuid);
         return new ResponseEntity<Long>(result, HttpStatus.OK);
     }
+
     @DeleteMapping("/deletePublicFileInfo/{path}")
     public ResponseEntity<Long> deletePublicFileInfo(@PathVariable String path){
         long result = service.deleteByPath(path); // delete file
@@ -177,7 +187,7 @@ public class FileServerController {
     }
     @GetMapping("/getPrivateFilesInfo") // get PrivateFile info list
     public ResponseEntity<List<FileServerPrivateEntity>> getPrivateFilesInfo(@RequestParam String location){
-        List<FileServerPrivateEntity> list = privateService.findByLocation(location);
+        List<FileServerPrivateEntity> list = privateService.findByLocation(location, 0);
         return new ResponseEntity<>(list, HttpStatus.OK);
     }
     @GetMapping("/movePrivateFileInfo")
@@ -215,8 +225,8 @@ public class FileServerController {
         return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
     }
     @GetMapping("/getPrivateTrashFiles")
-    public ResponseEntity<List<FileServerPrivateTrashEntity>> getPrivateTrashFiles(){
-        List<FileServerPrivateTrashEntity> list = privateService.findTrashAll();
+    public ResponseEntity<List<FileServerPrivateEntity>> getPrivateTrashFiles(@RequestParam String location){
+        List<FileServerPrivateEntity> list = privateService.findByLocation(location, 1);
         return new ResponseEntity<>(list, HttpStatus.OK);
     }
     @PostMapping("/uploadPrivateFile/{token}") // upload PrivateFiles

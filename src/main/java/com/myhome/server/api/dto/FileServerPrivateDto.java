@@ -17,9 +17,10 @@ public class FileServerPrivateDto {
     private String owner;
     private String location;
     private int state;
+    private int delete;
 
     @Builder
-    public FileServerPrivateDto(String path, String name, String uuidName, String type, float size, String owner, String location, int state){
+    public FileServerPrivateDto(String path, String name, String uuidName, String type, float size, String owner, String location, int state, int delete){
         this.path = path;
         this.name = name;
         this.uuidName = uuidName;
@@ -28,5 +29,6 @@ public class FileServerPrivateDto {
         this.owner = owner;
         this.location = location;
         this.state = state;
+        this.delete = delete;
     }
 }

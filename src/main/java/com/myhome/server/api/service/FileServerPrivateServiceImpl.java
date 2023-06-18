@@ -1,15 +1,10 @@
 package com.myhome.server.api.service;
 
 import com.myhome.server.api.dto.FileServerPrivateDto;
-import com.myhome.server.api.dto.FileServerPrivateTrashDto;
-import com.myhome.server.api.dto.FileServerPublicDto;
-import com.myhome.server.api.dto.FileServerPublicTrashDto;
 import com.myhome.server.config.jwt.JwtTokenProvider;
 import com.myhome.server.db.entity.*;
 import com.myhome.server.db.repository.FileServerPrivateRepository;
-import com.myhome.server.db.repository.FileServerPrivateTrashRepository;
 import com.myhome.server.db.repository.FileServerThumbNailRepository;
-import org.apache.catalina.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ContentDisposition;
@@ -43,9 +38,6 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
     FileServerPrivateRepository repository;
 
     @Autowired
-    FileServerPrivateTrashRepository trashRepository;
-
-    @Autowired
     UserService service = new UserServiceImpl();
 
     @Autowired
@@ -70,20 +62,14 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
     }
 
     @Override
-    public List<FileServerPrivateEntity> findByLocation(String location) {
-        List<FileServerPrivateEntity> list = repository.findByLocation(location);
+    public List<FileServerPrivateEntity> findByLocation(String location, int mode) {
+        List<FileServerPrivateEntity> list = repository.findByLocationAndDelete(location, mode);
         return list;
     }
 
     @Override
     public List<FileServerPrivateEntity> findByOwner(String owner) {
         List<FileServerPrivateEntity> list = repository.findByOwner(owner);
-        return list;
-    }
-
-    @Override
-    public List<FileServerPrivateTrashEntity> findTrashAll() {
-        List<FileServerPrivateTrashEntity> list = trashRepository.findAll();
         return list;
     }
 
@@ -120,6 +106,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
                                 (float)file.getSize(), // file size(KB)
                                 userEntity.get().getName(),
                                 fileLocation, // file folder path (need to change)
+                                0,
                                 0
                         );
                         System.out.println(file.getResource());
@@ -166,6 +153,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
                 0, // file size(KB)
                 userEntity.get().getName(),
                 location.toString(), // file folder path (need to change)
+                0,
                 0
         );
         repository.save(new FileServerPrivateEntity(dto));
@@ -208,89 +196,93 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
         return 0;
     }
     private void moveFolder(String path, String destPath){
-        File dir = new File(path);
-        File[] files = dir.listFiles();
-        if(files != null){
-            for(File file : files){
-                if(file.isDirectory()) {
-                    moveFolder(path+File.separator+file.getName(), destPath+File.separator+file.getName());
-                    String dirName = file.getName();
-                    FileServerPrivateEntity entity = repository.findByPath(path+File.separator+dirName);
-                    if(entity != null){
-                        FileServerPrivateTrashDto trashDto = new FileServerPrivateTrashDto(entity);
-                        FileServerPrivateTrashEntity trashEntity = new FileServerPrivateTrashEntity(trashDto);
-                        trashRepository.save(trashEntity);
-                    }
-                    else{
-                        FileServerPrivateTrashDto trashDto = new FileServerPrivateTrashDto();
-                        trashDto.setPath(path+File.separator+file.getName());
-                        trashDto.setLocation(path);
-                        trashDto.setName(file.getName());
-                        trashDto.setSize(0);
-                        trashDto.setState(0);
-                        trashDto.setType("dir");
-                        trashDto.setUuidName(UUID.randomUUID().toString());
-                        trashRepository.save(new FileServerPrivateTrashEntity(trashDto));
-                    }
-                    if(file.delete()){
-                        System.out.println("FileServerPublicService Folder delete Success : "+file.getPath());
-                    }
-                    else{
-                        System.out.println("FileServerPublicService Folder delete Fail : "+file.getPath());
-                    }
-                }
-                else {
-                    try{
-                        FileServerPrivateEntity entity = repository.findByPath(path);
-                        File in = new File(entity.getPath());
-                        File out = new File(destPath);
-                        FileCopyUtils.copy(in, out); // copy file from origin location to new location
-                        if(in.exists()){ // check origin file exist
-                            if(in.delete()){ // if file exist
-                                System.out.println("delete success");
-                                repository.deleteByPath(entity.getPath());
-                            }
-                            else{
-                                System.out.println("delete failed");
-                            }
-                        }
-                    }
-                    catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }
+        // Will change to send Kafka
+
+//        File dir = new File(path);
+//        File[] files = dir.listFiles();
+//        if(files != null){
+//            for(File file : files){
+//                if(file.isDirectory()) {
+//                    moveFolder(path+File.separator+file.getName(), destPath+File.separator+file.getName());
+//                    String dirName = file.getName();
+//                    FileServerPrivateEntity entity = repository.findByPath(path+File.separator+dirName);
+//                    if(entity != null){
+//                        FileServerPrivateTrashDto trashDto = new FileServerPrivateTrashDto(entity);
+//                        FileServerPrivateTrashEntity trashEntity = new FileServerPrivateTrashEntity(trashDto);
+//                        trashRepository.save(trashEntity);
+//                    }
+//                    else{
+//                        FileServerPrivateTrashDto trashDto = new FileServerPrivateTrashDto();
+//                        trashDto.setPath(path+File.separator+file.getName());
+//                        trashDto.setLocation(path);
+//                        trashDto.setName(file.getName());
+//                        trashDto.setSize(0);
+//                        trashDto.setState(0);
+//                        trashDto.setType("dir");
+//                        trashDto.setUuidName(UUID.randomUUID().toString());
+//                        trashRepository.save(new FileServerPrivateTrashEntity(trashDto));
+//                    }
+//                    if(file.delete()){
+//                        System.out.println("FileServerPublicService Folder delete Success : "+file.getPath());
+//                    }
+//                    else{
+//                        System.out.println("FileServerPublicService Folder delete Fail : "+file.getPath());
+//                    }
+//                }
+//                else {
+//                    try{
+//                        FileServerPrivateEntity entity = repository.findByPath(path);
+//                        File in = new File(entity.getPath());
+//                        File out = new File(destPath);
+//                        FileCopyUtils.copy(in, out); // copy file from origin location to new location
+//                        if(in.exists()){ // check origin file exist
+//                            if(in.delete()){ // if file exist
+//                                System.out.println("delete success");
+//                                repository.deleteByPath(entity.getPath());
+//                            }
+//                            else{
+//                                System.out.println("delete failed");
+//                            }
+//                        }
+//                    }
+//                    catch (IOException e) {
+//                        e.printStackTrace();
+//                    }
+//                }
+//            }
+//        }
     }
     private void deleteFolder(String path){
-        File dir = new File(path);
-        File[] files = dir.listFiles();
-        FileServerPrivateTrashEntity entity;
-        if(files != null){
-            for(File file : files){
-                if(file.isDirectory()){
-                    deleteFolder(file.getPath());
-                    if(file.delete()){
-                        entity = trashRepository.findByPath(path);
-                        if(entity != null) trashRepository.delete(trashRepository.findByPath(path));
-                        System.out.println("FileServerPrivateTrashEntity delete folder Success");
-                    }
-                    else{
-                        System.out.println("FileServerPrivateTrashEntity delete folder failed");
-                    }
-                }
-                else{
-                    if(file.delete()){
-                        entity = trashRepository.findByPath(path);
-                        if(entity != null) trashRepository.delete(trashRepository.findByPath(path));
-                        System.out.println("FileServerPrivateTrashEntity delete file Success");
-                    }
-                    else{
-                        System.out.println("FileServerPrivateTrashEntity delete file failed");
-                    }
-                }
-            }
-        }
+        // Will change to send Kafka
+
+//        File dir = new File(path);
+//        File[] files = dir.listFiles();
+//        FileServerPrivateTrashEntity entity;
+//        if(files != null){
+//            for(File file : files){
+//                if(file.isDirectory()){
+//                    deleteFolder(file.getPath());
+//                    if(file.delete()){
+//                        entity = trashRepository.findByPath(path);
+//                        if(entity != null) trashRepository.delete(trashRepository.findByPath(path));
+//                        System.out.println("FileServerPrivateTrashEntity delete folder Success");
+//                    }
+//                    else{
+//                        System.out.println("FileServerPrivateTrashEntity delete folder failed");
+//                    }
+//                }
+//                else{
+//                    if(file.delete()){
+//                        entity = trashRepository.findByPath(path);
+//                        if(entity != null) trashRepository.delete(trashRepository.findByPath(path));
+//                        System.out.println("FileServerPrivateTrashEntity delete file Success");
+//                    }
+//                    else{
+//                        System.out.println("FileServerPrivateTrashEntity delete file failed");
+//                    }
+//                }
+//            }
+//        }
     }
     @Override
     public int moveFile(String uuid, String location) {
@@ -329,75 +321,78 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
 
     @Override
     public int moveTrash(String uuid) {
-        FileServerPrivateEntity entity = repository.findByUuid(uuid);
-        if(entity != null) {
-            FileServerPrivateTrashDto dto = new FileServerPrivateTrashDto(entity);
-            FileServerPrivateTrashEntity trashEntity = new FileServerPrivateTrashEntity(dto);
-            trashRepository.save(trashEntity);
-            String trashPath = diskPath + "trash" + File.separator + dto.getName();
-
-            if (entity.getType().equals("dir")) {
-                moveFolder(entity.getPath(), trashPath);
-            }
-            else {
-                try {
-                    File in = new File(entity.getPath());
-                    File out = new File(trashPath);
-                    FileCopyUtils.copy(in, out); // copy file from origin location to new location
-                    if (in.exists()) { // check origin file exist
-                        if (in.delete()) { // if file exist
-                            System.out.println("delete success");
-                            repository.deleteByPath(entity.getPath());
-                            return 0;
-                        } else {
-                            System.out.println("delete failed");
-                        }
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    return -1;
-                }
-            }
-        }
+        // Will change to send Kafka
+//        FileServerPrivateEntity entity = repository.findByUuid(uuid);
+//        if(entity != null) {
+//            FileServerPrivateTrashDto dto = new FileServerPrivateTrashDto(entity);
+//            FileServerPrivateTrashEntity trashEntity = new FileServerPrivateTrashEntity(dto);
+//            trashRepository.save(trashEntity);
+//            String trashPath = diskPath + "trash" + File.separator + dto.getName();
+//
+//            if (entity.getType().equals("dir")) {
+//                moveFolder(entity.getPath(), trashPath);
+//            }
+//            else {
+//                try {
+//                    File in = new File(entity.getPath());
+//                    File out = new File(trashPath);
+//                    FileCopyUtils.copy(in, out); // copy file from origin location to new location
+//                    if (in.exists()) { // check origin file exist
+//                        if (in.delete()) { // if file exist
+//                            System.out.println("delete success");
+//                            repository.deleteByPath(entity.getPath());
+//                            return 0;
+//                        } else {
+//                            System.out.println("delete failed");
+//                        }
+//                    }
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                    return -1;
+//                }
+//            }
+//        }
         return -1;
     }
 
     @Override
     public int restore(String uuid) {
-        FileServerPrivateTrashEntity trashEntity = trashRepository.findByUuid(uuid);
-        if(trashEntity != null){
-            FileServerPrivateDto dto = new FileServerPrivateDto(
-                    trashEntity.getPath(),
-                    trashEntity.getName(),
-                    trashEntity.getUuid(),
-                    trashEntity.getType(),
-                    trashEntity.getSize(),
-                    trashEntity.getOwner(),
-                    trashEntity.getLocation(),
-                    trashEntity.getState()
-            );
-            repository.save(new FileServerPrivateEntity(dto));
-            String trashPath = diskPath+"trash\\"+dto.getName();
-            try{
-                File in = new File(trashPath);
-                File out = new File(dto.getPath());
-                FileCopyUtils.copy(in, out); // copy file from origin location to new location
-                if(in.exists()){ // check origin file exist
-                    if(in.delete()){ // if file exist
-                        System.out.println("delete success");
-                        trashRepository.deleteByUuid(dto.getUuidName());
-                        return 0;
-                    }
-                    else{
-                        System.out.println("delete failed");
-                    }
-                }
-            }
-            catch (IOException e) {
-                e.printStackTrace();
-                return -1;
-            }
-        }
+        // Will change to send Kafka
+
+//        FileServerPrivateTrashEntity trashEntity = trashRepository.findByUuid(uuid);
+//        if(trashEntity != null){
+//            FileServerPrivateDto dto = new FileServerPrivateDto(
+//                    trashEntity.getPath(),
+//                    trashEntity.getName(),
+//                    trashEntity.getUuid(),
+//                    trashEntity.getType(),
+//                    trashEntity.getSize(),
+//                    trashEntity.getOwner(),
+//                    trashEntity.getLocation(),
+//                    trashEntity.getState()
+//            );
+//            repository.save(new FileServerPrivateEntity(dto));
+//            String trashPath = diskPath+"trash\\"+dto.getName();
+//            try{
+//                File in = new File(trashPath);
+//                File out = new File(dto.getPath());
+//                FileCopyUtils.copy(in, out); // copy file from origin location to new location
+//                if(in.exists()){ // check origin file exist
+//                    if(in.delete()){ // if file exist
+//                        System.out.println("delete success");
+//                        repository.deleteByUuid(dto.getUuidName());
+//                        return 0;
+//                    }
+//                    else{
+//                        System.out.println("delete failed");
+//                    }
+//                }
+//            }
+//            catch (IOException e) {
+//                e.printStackTrace();
+//                return -1;
+//            }
+//        }
         return -1;
     }
 
@@ -464,15 +459,23 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
                     }
                 }
                 String uuid = UUID.randomUUID().toString();
+                String tmpPath = file.getPath(), tmpLocation = file.getPath().split(file.getName())[0];
+//                if(tmpPath.contains("trash")){
+//                    tmpPath = tmpPath.replace("trash", "");
+//                }
+//                if(tmpLocation.contains("trash")){
+//                    tmpLocation = tmpLocation.replace("trash", "");
+//                }
                 FileServerPrivateDto dto = new FileServerPrivateDto(
-                        file.getPath(), // file path (need to change)
+                        tmpPath, // file path (need to change)
                         file.getName(), // file name
                         uuid, // file name to change UUID
                         extension, // file type (need to check ex: txt file -> text/plan)
                         (float)(file.length()/1024), // file size(KB)
                         owner,
-                        file.getPath().split(file.getName())[0], // file folder path (need to change)
-                        1
+                        tmpLocation, // file folder path (need to change)
+                        1,
+                        0
                 );
                 repository.save(new FileServerPrivateEntity(dto));
                 if(Arrays.asList(videoExtensionList).contains(extension)){

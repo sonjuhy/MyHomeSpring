@@ -1,10 +1,10 @@
 package com.myhome.server.api.service;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.myhome.server.api.dto.FileServerPublicDto;
-import com.myhome.server.api.dto.FileServerPublicTrashDto;
 import com.myhome.server.db.entity.*;
 import com.myhome.server.db.repository.FileServerPublicRepository;
-import com.myhome.server.db.repository.FileServerPublicTrashRepository;
 import com.myhome.server.db.repository.FileServerThumbNailRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,8 +28,11 @@ import java.util.*;
 @Service
 public class FileServerPublicServiceImpl implements FileServerPublicService {
 
-    private final String diskPath = "/home/disk1/home/public";
-    private final String trashPath = "/home/disk1/home/public/휴지통";
+//    private final String diskPath = "/home/disk1/home/public";
+//    private final String trashPath = "/home/disk1/home/public/휴지통";
+
+    private final String diskPath = "C:\\Users\\SonJunHyeok\\Desktop\\test\\public";
+    private final String trashPath = "C:\\Users\\SonJunHyeok\\Desktop\\test\\trash";
 
     @Value("${part4.upload.path}")
     private String defaultUploadPath;
@@ -37,10 +40,10 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     private final String[] videoExtensionList = {"mp4", "avi", "mov", "wmv", "avchd", "webm", "mpeg4"};
 
     @Autowired
-    FileServerPublicRepository fileServerRepository;
+    KafkaProducer producer;
 
     @Autowired
-    FileServerPublicTrashRepository trashRepository;
+    FileServerPublicRepository fileServerRepository;
 
     @Autowired
     FileServerThumbNailRepository thumbNailRepository;
@@ -62,16 +65,10 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     }
 
     @Override
-    public List<FileServerPublicEntity> findByLocation(String location) {
+    public List<FileServerPublicEntity> findByLocation(String location, int mode) {
         System.out.println("location : " + location);
         if("default".equals(location)) location = diskPath;
-        List<FileServerPublicEntity> list = fileServerRepository.findByLocation(location);
-        return list;
-    }
-
-    @Override
-    public List<FileServerPublicTrashEntity> findTrashAll() {
-        List<FileServerPublicTrashEntity> list = trashRepository.findAll();
+        List<FileServerPublicEntity> list = fileServerRepository.findByLocationAndDelete(location, mode);
         return list;
     }
 
@@ -114,6 +111,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                             Objects.requireNonNull(file.getOriginalFilename()).substring(file.getOriginalFilename().lastIndexOf(".") + 1), // file type (need to check ex: txt file -> text/plan)
                             (float)file.getSize(), // file size(KB)
                             fileLocation, // file folder path (need to change)
+                            0,
                             0
                     );
                     System.out.println(file.getResource());
@@ -156,6 +154,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                 "dir",
                 0, // file size(KB)
                 location.toString(), // file folder path (need to change)
+                0,
                 0
         );
         fileServerRepository.save(new FileServerPublicEntity(dto));
@@ -173,235 +172,245 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         if(ObjectUtils.isEmpty(entity)){
             return -1;
         }
-        String testInPath = "C:\\Users\\SonJunHyeok\\Desktop\\a.txt"; // test filePath
-        String filePath = testInPath;
-
-//        File file = new File(filePath);
-        File file = new File(path);
-
-        if(file.exists()){ // check file exist
-            if(file.isDirectory()){
-                deleteFolder(file.getPath());
-            }
-            else{
-                if(file.delete()){ // if file exist, delete file
-                    fileServerRepository.deleteByPath(filePath);
-                    System.out.println("delete success");
-                }
-                else{
-                    System.out.println("delete failed");
-                }
-            }
-        }
+        // json type { file : origin file path, path : destination to move file }
+        Gson gson = new Gson();
+        JsonObject jsonObject = new JsonObject();
+        jsonObject.addProperty("purpose", "delete");
+        jsonObject.addProperty("action", "delete");
+        jsonObject.addProperty("uuid", entity.getUuid());
+        jsonObject.addProperty("file", trashPath+"\\"+entity.getName());
+        jsonObject.addProperty("path", entity.getPath());
+        String jsonResult = gson.toJson(jsonObject);
+        System.out.println("deleteByPath : " + jsonResult);
+        // kafka send
+        producer.sendMessage(jsonResult);
         return 0;
     }
+
+//    @Override
+//    public long deleteByPath(String path) {
+//        FileServerPublicEntity entity = fileServerRepository.findByPath(path);
+//        if(ObjectUtils.isEmpty(entity)){
+//            return -1;
+//        }
+//        String testInPath = "C:\\Users\\SonJunHyeok\\Desktop\\a.txt"; // test filePath
+//        String filePath = testInPath;
+//
+////        File file = new File(filePath);
+//        File file = new File(path);
+//
+//        if(file.exists()){ // check file exist
+//            if(file.isDirectory()){
+//                deleteFolder(file.getPath());
+//            }
+//            else{
+//                if(file.delete()){ // if file exist, delete file
+//                    fileServerRepository.deleteByPath(filePath);
+//                    System.out.println("delete success");
+//                }
+//                else{
+//                    System.out.println("delete failed");
+//                }
+//            }
+//        }
+//        return 0;
+//    }
+
     private void deleteFolder(String path){
-        File dir = new File(path);
-        File[] files = dir.listFiles();
-        FileServerPublicTrashEntity entity;
-        if(files != null){
-            for(File file : files){
-                if(file.isDirectory()){
-                    deleteFolder(file.getPath());
-                    if(file.delete()){
-                        entity = trashRepository.findByPath(path);
-                        if(entity != null) trashRepository.delete(trashRepository.findByPath(path));
-                        System.out.println("FileServerPublicServiceImpl delete folder Success");
-                    }
-                    else{
-                        System.out.println("FileServerPublicServiceImpl delete folder failed");
-                    }
-                }
-                else{
-                    if(file.delete()){
-                        entity = trashRepository.findByPath(path);
-                        if(entity != null) trashRepository.delete(trashRepository.findByPath(path));
-                        System.out.println("FileServerPublicServiceImpl delete file Success");
-                    }
-                    else{
-                        System.out.println("FileServerPublicServiceImpl delete file failed");
-                    }
-                }
-            }
-        }
+        // Will change to send Kafka
+
+//        File dir = new File(path);
+//        File[] files = dir.listFiles();
+//        FileServerPublicTrashEntity entity;
+//        if(files != null){
+//            for(File file : files){
+//                if(file.isDirectory()){
+//                    deleteFolder(file.getPath());
+//                    if(file.delete()){
+//                        entity = trashRepository.findByPath(path);
+//                        if(entity != null) trashRepository.delete(trashRepository.findByPath(path));
+//                        System.out.println("FileServerPublicServiceImpl delete folder Success");
+//                    }
+//                    else{
+//                        System.out.println("FileServerPublicServiceImpl delete folder failed");
+//                    }
+//                }
+//                else{
+//                    if(file.delete()){
+//                        entity = trashRepository.findByPath(path);
+//                        if(entity != null) trashRepository.delete(trashRepository.findByPath(path));
+//                        System.out.println("FileServerPublicServiceImpl delete file Success");
+//                    }
+//                    else{
+//                        System.out.println("FileServerPublicServiceImpl delete file failed");
+//                    }
+//                }
+//            }
+//        }
     }
 
-    @Transactional
     @Override
     public int moveFile(String path, String location) {
         FileServerPublicEntity entity = fileServerRepository.findByPath(path);
         if(ObjectUtils.isEmpty(entity)){
-            return -1;
+            return -1; // file info doesn't exist
         }
-        String testInPath = "C:\\Users\\SonJunHyeok\\Desktop\\test\\a.txt"; // test filePath
-        String testOutPath = "C:\\Users\\SonJunHyeok\\Desktop\\test\\test2\\a.txt"; // test move location
-        String filePath = testInPath;
-        String movePath = testOutPath;
-//        String filePath = entity.getPath();
-//        String movePath = location;
-
-        try{
-            File in = new File(filePath);
-            File out = new File(movePath);
-            FileCopyUtils.copy(in, out); // copy file from origin location to new location
-            if(in.exists()){ // check origin file exist
-                if(in.delete()){ // if file exist
-                    System.out.println("delete success");
-                }
-                else{
-                    System.out.println("delete failed");
-                }
-            }
-        }
-        catch (IOException e) {
-            e.printStackTrace();
-            return -1;
-        }
-        entity.changePathAndLocation(movePath, location); // Dirty check
+        // json type { file : origin file path, path : destination to move file }
+        Gson gson = new Gson();
+        JsonObject jsonObject = new JsonObject();
+        jsonObject.addProperty("purpose", "move");
+        jsonObject.addProperty("action", "move");
+        jsonObject.addProperty("uuid", entity.getUuid());
+        jsonObject.addProperty("file", path);
+        jsonObject.addProperty("path", location);
+        String jsonResult = gson.toJson(jsonObject);
+        // kafka send
+        producer.sendMessage(jsonResult);
         return 0;
     }
 
-    @Transactional
     @Override
     public int moveTrash(String uuid) {
         FileServerPublicEntity entity = fileServerRepository.findByUuid(uuid);
         if(entity != null){
-
-            FileServerPublicTrashDto dto = new FileServerPublicTrashDto(entity);
-            FileServerPublicTrashEntity trashEntity = new FileServerPublicTrashEntity(dto);
-            trashRepository.save(trashEntity);
-            String tmpTrashPath = "C:\\Users\\SonJunHyeok\\Desktop\\test\\trash\\" + trashEntity.getName();
-            //            String trashPath = trashPath+"trash";
-
-            if(entity.getType().equals("dir")){
-                moveFolder(entity.getPath(), tmpTrashPath);
-            }
-            else{
-                try{
-                    File in = new File(entity.getPath());
-                    File out = new File(tmpTrashPath);
-                    FileCopyUtils.copy(in, out); // copy file from origin location to new location
-                    if(in.exists()){ // check origin file exist
-                        if(in.delete()){ // if file exist
-                            System.out.println("delete success");
-                            fileServerRepository.deleteByPath(entity.getPath());
-                            return 0;
-                        }
-                        else{
-                            System.out.println("delete failed");
-                        }
-                    }
-                }
-                catch (IOException e) {
-                    e.printStackTrace();
-                    return -1;
-                }
-            }
+            // json type { file : origin file path, path : destination to move file }
+            Gson gson = new Gson();
+            JsonObject jsonObject = new JsonObject();
+            jsonObject.addProperty("purpose", "move");
+            jsonObject.addProperty("action", "delete");
+            jsonObject.addProperty("uuid", entity.getUuid());
+            jsonObject.addProperty("file", entity.getPath());
+            jsonObject.addProperty("path", trashPath);
+            String jsonResult = gson.toJson(jsonObject);
+            // kafka send
+            producer.sendMessage(jsonResult);
         }
         return -1;
     }
+
     private void moveFolder(String path, String destPath){
-        File dir = new File(path);
-        File[] files = dir.listFiles();
-        if(files != null){
-            for(File file : files){
-                if(file.isDirectory()) {
-                    moveFolder(path+File.separator+file.getName(), destPath+File.separator+file.getName());
-                    String dirName = file.getName();
-                    FileServerPublicEntity entity = fileServerRepository.findByPath(path+File.separator+dirName);
-                    if(entity != null){
-                        FileServerPublicTrashDto trashDto = new FileServerPublicTrashDto(entity);
-                        FileServerPublicTrashEntity trashEntity = new FileServerPublicTrashEntity(trashDto);
-                        trashRepository.save(trashEntity);
-                    }
-                    else{
-                        FileServerPublicTrashDto trashDto = new FileServerPublicTrashDto();
-                        trashDto.setPath(path+File.separator+file.getName());
-                        trashDto.setLocation(path);
-                        trashDto.setName(file.getName());
-                        trashDto.setSize(0);
-                        trashDto.setState(0);
-                        trashDto.setType("dir");
-                        trashDto.setUuidName(UUID.randomUUID().toString());
-                        trashRepository.save(new FileServerPublicTrashEntity(trashDto));
-                    }
-                    if(file.delete()){
-                        System.out.println("FileServerPublicService Folder delete Success : "+file.getPath());
-                    }
-                    else{
-                        System.out.println("FileServerPublicService Folder delete Fail : "+file.getPath());
-                    }
-                }
-                else {
-                    try{
-                        FileServerPublicEntity entity = fileServerRepository.findByPath(path);
-                        File in = new File(entity.getPath());
-                        File out = new File(destPath);
-                        FileCopyUtils.copy(in, out); // copy file from origin location to new location
-                        if(in.exists()){ // check origin file exist
-                            if(in.delete()){ // if file exist
-                                System.out.println("delete success");
-                                fileServerRepository.deleteByPath(entity.getPath());
-                            }
-                            else{
-                                System.out.println("delete failed");
-                            }
-                        }
-                    }
-                    catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }
+        // Will change to send Kafka
+
+//        File dir = new File(path);
+//        File[] files = dir.listFiles();
+//        if(files != null){
+//            for(File file : files){
+//                if(file.isDirectory()) {
+//                    moveFolder(path+File.separator+file.getName(), destPath+File.separator+file.getName());
+//                    String dirName = file.getName();
+//                    FileServerPublicEntity entity = fileServerRepository.findByPath(path+File.separator+dirName);
+//                    if(entity != null){
+//                        FileServerPublicTrashDto trashDto = new FileServerPublicTrashDto(entity);
+//                        FileServerPublicTrashEntity trashEntity = new FileServerPublicTrashEntity(trashDto);
+//                        trashRepository.save(trashEntity);
+//                    }
+//                    else{
+//                        FileServerPublicTrashDto trashDto = new FileServerPublicTrashDto();
+//                        trashDto.setPath(path+File.separator+file.getName());
+//                        trashDto.setLocation(path);
+//                        trashDto.setName(file.getName());
+//                        trashDto.setSize(0);
+//                        trashDto.setState(0);
+//                        trashDto.setType("dir");
+//                        trashDto.setUuidName(UUID.randomUUID().toString());
+//                        trashRepository.save(new FileServerPublicTrashEntity(trashDto));
+//                    }
+//                    if(file.delete()){
+//                        System.out.println("FileServerPublicService Folder delete Success : "+file.getPath());
+//                    }
+//                    else{
+//                        System.out.println("FileServerPublicService Folder delete Fail : "+file.getPath());
+//                    }
+//                }
+//                else {
+//                    try{
+//                        FileServerPublicEntity entity = fileServerRepository.findByPath(path);
+//                        File in = new File(entity.getPath());
+//                        File out = new File(destPath);
+//                        FileCopyUtils.copy(in, out); // copy file from origin location to new location
+//                        if(in.exists()){ // check origin file exist
+//                            if(in.delete()){ // if file exist
+//                                System.out.println("delete success");
+//                                fileServerRepository.deleteByPath(entity.getPath());
+//                            }
+//                            else{
+//                                System.out.println("delete failed");
+//                            }
+//                        }
+//                    }
+//                    catch (IOException e) {
+//                        e.printStackTrace();
+//                    }
+//                }
+//            }
+//        }
     }
 
     @Override
     public int restore(String uuid) {
-        FileServerPublicTrashEntity trashEntity = trashRepository.findByUuid(uuid);
+        FileServerPublicEntity entity = fileServerRepository.findByUuid(uuid);
 
-        if(trashEntity != null){
-            String tmpTrashPath = "C:\\Users\\SonJunHyeok\\Desktop\\test\\trash\\"+trashEntity.getName();
-            String trashPath = tmpTrashPath;
-//            String trashPath = diskPath+"trash";
-            if(trashEntity.getType().equals("dir")){
-                moveFolder(trashPath, trashEntity.getPath());
-            }
-            else{
-                FileServerPublicDto dto = new FileServerPublicDto(
-                        trashEntity.getPath(),
-                        trashEntity.getName(),
-                        trashEntity.getUuid(),
-                        trashEntity.getType(),
-                        trashEntity.getSize(),
-                        trashEntity.getLocation(),
-                        trashEntity.getState()
-                );
-                fileServerRepository.save(new FileServerPublicEntity(dto));
-
-                try{
-                    File in = new File(trashPath);
-                    File out = new File(dto.getPath());
-                    FileCopyUtils.copy(in, out); // copy file from origin location to new location
-                    if(in.exists()){ // check origin file exist
-                        if(in.delete()){ // if file exist
-                            System.out.println("delete success");
-                            trashRepository.deleteByUuid(dto.getUuidName());
-                            return 0;
-                        }
-                        else{
-                            System.out.println("delete failed");
-                        }
-                    }
-                }
-                catch (IOException e) {
-                    e.printStackTrace();
-                    return -1;
-                }
-            }
+        if(entity != null){
+            // json type { file : origin file path, path : destination to move file }
+            Gson gson = new Gson();
+            JsonObject jsonObject = new JsonObject();
+            jsonObject.addProperty("purpose", "move");
+            jsonObject.addProperty("action", "restore");
+            jsonObject.addProperty("uuid", entity.getUuid());
+            jsonObject.addProperty("file", trashPath+"\\"+entity.getName());
+            jsonObject.addProperty("path", entity.getPath());
+            String jsonResult = gson.toJson(jsonObject);
+            // kafka send
+            producer.sendMessage(jsonResult);
         }
         return -1;
     }
+//    @Override
+//    public int restore(String uuid) {
+//        FileServerPublicTrashEntity trashEntity = trashRepository.findByUuid(uuid);
+//
+//        if(trashEntity != null){
+//            String tmpTrashPath = "C:\\Users\\SonJunHyeok\\Desktop\\test\\trash\\"+trashEntity.getName();
+//            String trashPath = tmpTrashPath;
+////            String trashPath = diskPath+"trash";
+//            if(trashEntity.getType().equals("dir")){
+//                moveFolder(trashPath, trashEntity.getPath());
+//            }
+//            else{
+//                FileServerPublicDto dto = new FileServerPublicDto(
+//                        trashEntity.getPath(),
+//                        trashEntity.getName(),
+//                        trashEntity.getUuid(),
+//                        trashEntity.getType(),
+//                        trashEntity.getSize(),
+//                        trashEntity.getLocation(),
+//                        trashEntity.getState()
+//                );
+//                fileServerRepository.save(new FileServerPublicEntity(dto));
+//
+//                try{
+//                    File in = new File(trashPath);
+//                    File out = new File(dto.getPath());
+//                    FileCopyUtils.copy(in, out); // copy file from origin location to new location
+//                    if(in.exists()){ // check origin file exist
+//                        if(in.delete()){ // if file exist
+//                            System.out.println("delete success");
+//                            trashRepository.deleteByUuid(dto.getUuidName());
+//                            return 0;
+//                        }
+//                        else{
+//                            System.out.println("delete failed");
+//                        }
+//                    }
+//                }
+//                catch (IOException e) {
+//                    e.printStackTrace();
+//                    return -1;
+//                }
+//            }
+//        }
+//        return -1;
+//    }
 
     @Override
     public int updateByFileServerPublicEntity(FileServerPublicEntity entity) {
@@ -430,13 +439,15 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     @Override
     public void publicFileStateCheck() {
         String tmpPath = "C:\\Users\\SonJunHyeok\\Desktop\\test\\public\\";
+        String tmpTrashPath = "C:\\Users\\SonJunHyeok\\Desktop\\test\\trash\\";
         fileServerRepository.updateAllStateToOne();
-        traversalFolder(tmpPath);
+        traversalFolder(tmpPath, true);
+        traversalFolder(tmpTrashPath, false);
         deleteThumbNail();
         fileServerRepository.deleteByState(0);
     }
 
-    private void traversalFolder(String path){
+    private void traversalFolder(String path, boolean mode){
         System.out.println("This is Path : " + path);
         File dir = new File(path);
         File[] files = dir.listFiles();
@@ -455,16 +466,28 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                 extension = file.getName().substring(file.getName().lastIndexOf(".") + 1); // file type (need to check ex: txt file -> text/plan)
             }
             FileServerPublicEntity entity = fileServerRepository.findByPath(file.getPath());
+            int deleteStatus = 0;
+            String tmpPath = file.getPath(), tmpLocation = file.getPath().split(file.getName())[0];
+            if(!mode) {
+                deleteStatus = 1;
+//                if(tmpPath.contains("trash")){
+//                    tmpPath = tmpPath.replace("trash","public");
+//                }
+//                if(tmpLocation.contains("trash")){
+//                    tmpLocation = tmpLocation.replace("trash", "public");
+//                }
+            }
             if(entity == null){
                 String uuid = UUID.randomUUID().toString();
                 FileServerPublicDto dto = new FileServerPublicDto(
-                        file.getPath(), // file path (need to change)
+                        tmpPath, // file path
                         file.getName(), // file name
                         uuid, // file name to change UUID
                         extension,
                         (float)(file.length()/1024), // file size(KB)
-                        file.getPath().split(file.getName())[0], // file folder path (need to change)
-                        1
+                        tmpLocation, // file folder path (location)
+                        1,
+                        deleteStatus
                 );
                 fileServerRepository.save(new FileServerPublicEntity(dto));
                 if(Arrays.asList(videoExtensionList).contains(extension)){
@@ -473,9 +496,53 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
             }
             System.out.println(file.getPath()+", "+type+file.getName());
         }
+//            if(mode){
+//                FileServerPublicEntity entity = fileServerRepository.findByPath(file.getPath());
+//                if(entity == null){
+//                    String uuid = UUID.randomUUID().toString();
+//                    FileServerPublicDto dto = new FileServerPublicDto(
+//                            file.getPath(), // file path (need to change)
+//                            file.getName(), // file name
+//                            uuid, // file name to change UUID
+//                            extension,
+//                            (float)(file.length()/1024), // file size(KB)
+//                            file.getPath().split(file.getName())[0], // file folder path (need to change)
+//                            1,
+//                            0
+//                    );
+//                    fileServerRepository.save(new FileServerPublicEntity(dto));
+//                    if(Arrays.asList(videoExtensionList).contains(extension)){
+//                        thumbNailService.makeThumbNail(file, uuid);
+//                    }
+//                }
+//                System.out.println(file.getPath()+", "+type+file.getName());
+//            }
+//            else{
+//                FileServerPublicTrashEntity entity = trashRepository.findByPath(file.getPath());
+//                if(entity == null){
+//                    String uuid = UUID.randomUUID().toString();
+//                    FileServerPublicTrashDto dto = new FileServerPublicTrashDto(
+//                            file.getPath(), // file path (need to change)
+//                            file.getName(), // file name
+//                            uuid, // file name to change UUID
+//                            extension,
+//                            (float)(file.length()/1024), // file size(KB)
+//                            file.getPath().split(file.getName())[0], // file folder path (need to change)
+//                            1
+//                    );
+//                    trashRepository.save(new FileServerPublicTrashEntity(dto));
+//                    if(Arrays.asList(videoExtensionList).contains(extension)){
+//                        thumbNailService.makeThumbNail(file, uuid);
+//                    }
+//                }
+//                System.out.println(file.getPath()+", "+type+file.getName());
+//            }
+//        }
+
         for(String folder : dirList){
-            traversalFolder(path+File.separator+folder);
+            traversalFolder(path+File.separator+folder, mode);
         }
+
     }
     private void deleteThumbNail(){
         List<FileServerPublicEntity> list = fileServerRepository.findByState(0);

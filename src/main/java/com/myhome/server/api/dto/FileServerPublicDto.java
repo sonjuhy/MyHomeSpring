@@ -14,9 +14,10 @@ public class FileServerPublicDto {
     private float size;
     private String location;
     private int state;
+    private int deleteStatus;
 
     @Builder
-    public FileServerPublicDto(String path, String name, String uuidName, String type, float size, String location, int state){
+    public FileServerPublicDto(String path, String name, String uuidName, String type, float size, String location, int state, int delete){
         this.path = path;
         this.name = name;
         this.uuidName = uuidName;
@@ -24,5 +25,6 @@ public class FileServerPublicDto {
         this.size = size;
         this.location = location;
         this.state = state;
+        this.deleteStatus =delete;
     }
 }

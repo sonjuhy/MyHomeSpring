@@ -1,8 +1,6 @@
 package com.myhome.server.api.service;
 
 import com.myhome.server.db.entity.FileServerPrivateEntity;
-import com.myhome.server.db.entity.FileServerPrivateTrashEntity;
-import com.myhome.server.db.entity.FileServerThumbNailEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.ui.Model;
 import org.springframework.web.multipart.MultipartFile;
@@ -15,9 +13,8 @@ import java.util.List;
 public interface FileServerPrivateService {
     FileServerPrivateEntity findByPath(String path);
     FileServerPrivateEntity findByUuid(String uuid);
-    List<FileServerPrivateEntity> findByLocation(String location);
+    List<FileServerPrivateEntity> findByLocation(String location, int mode);
     List<FileServerPrivateEntity> findByOwner(String owner);
-    List<FileServerPrivateTrashEntity> findTrashAll();
     HttpHeaders getHttpHeaders(Path path, String fileName) throws IOException;
     List<String> uploadFiles(MultipartFile[] files, String path, String token, Model model);
     void mkdir(String path, String token);

@@ -30,9 +30,11 @@ public class FileServerPublicEntity {
     private String location;
     @Column(name = "STATE_INT")
     private  int state;
+    @Column(name = "DELETE_STATUS_INT")
+    private int delete;
 
     @Builder
-    public FileServerPublicEntity(String path, String name, String uuidName, String type, float size, String location, int state){
+    public FileServerPublicEntity(String path, String name, String uuidName, String type, float size, String location, int state, int delete){
         this.path = path;
         this.name = name;
         this.uuid = uuidName;
@@ -40,6 +42,7 @@ public class FileServerPublicEntity {
         this.size = size;
         this.location = location;
         this.state = state;
+        this.delete = delete;
     }
 
     @Builder
@@ -51,6 +54,7 @@ public class FileServerPublicEntity {
         this.size = dto.getSize();
         this.location = dto.getLocation();
         this.state = dto.getState();
+        this.delete = dto.getDeleteStatus();
     }
 
     public void changePathAndLocation(String movePath, String location) {
