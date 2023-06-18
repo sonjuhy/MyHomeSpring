@@ -16,8 +16,8 @@ import java.util.List;
 @ToString
 public class UserDto {
     private long userId;
-    private String name;
     private String id;
+    private String name;
     private String password;
     private String accessToken;
     private String refreshToken;
