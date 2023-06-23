@@ -19,7 +19,7 @@ public class KafkaConsumer {
         System.out.println("Consume message : " + message);
     }
 
-    @KafkaListener(topics = "cloud-topic", groupId = "cloud-kafka")
+    @KafkaListener(topics = "cloud-check", groupId = "cloud-kafka")
     public void cloudConsume(String message) throws Exception{
         System.out.println("Cloud Consume meesage : " + message);
         JsonObject object = (JsonObject) JsonParser.parseString(message);

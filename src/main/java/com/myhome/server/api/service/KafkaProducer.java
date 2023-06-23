@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class KafkaProducer {
-    private static final String TOPIC = "exam-topic";
+    private static final String TOPIC_CLOUD = "cloud-topic";
     private static final String TOPIC_MQTT = "iot-topic";
 
     @Autowired
@@ -20,7 +20,7 @@ public class KafkaProducer {
 
     public void sendMessage(String message){
         System.out.println("Produce message : "+message);
-        this.kafkaTemplate.send(TOPIC, message);
+        this.kafkaTemplate.send(TOPIC_CLOUD, message);
     }
 
     public void sendIotMessage(LightDto dto, String user){

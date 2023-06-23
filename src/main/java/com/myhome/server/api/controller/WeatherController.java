@@ -22,6 +22,7 @@ public class WeatherController {
     public ResponseEntity<WeatherDto> getUltraNcst(@RequestBody LocationDto locationDto){
         System.out.println("getUltraNcst location : " + locationDto);
         WeatherDto dto = weatherService.getUtlraNcst(locationDto);
+        System.out.println("getUltraNcst dto : " + dto);
 
         return new ResponseEntity<>(dto, HttpStatus.OK);
     }
@@ -38,6 +39,7 @@ public class WeatherController {
     public ResponseEntity<ArrayList<WeatherDto>> getVilageFcst(@RequestBody LocationDto locationDto){
         System.out.println("getVilageFcst location : " + locationDto);
         ArrayList<WeatherDto> list = weatherService.getVilageFcst(locationDto);
+        System.out.println("getVilageFcst get(0) : " + list.get(0));
 
         return new ResponseEntity<>(list, HttpStatus.OK);
     }

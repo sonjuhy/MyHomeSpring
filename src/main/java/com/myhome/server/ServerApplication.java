@@ -15,6 +15,6 @@ public class ServerApplication {
 //		pbe.setPassword("myhomeProjectKey");
 //
 //		String enc = pbe.encrypt("sonjuhy_home");
-//		System.out.println("enc : " + enc);
+
 	}
 }
