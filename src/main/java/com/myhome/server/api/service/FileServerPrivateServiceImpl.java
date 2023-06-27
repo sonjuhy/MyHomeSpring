@@ -1,5 +1,7 @@
 package com.myhome.server.api.service;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.myhome.server.api.dto.FileServerPrivateDto;
 import com.myhome.server.config.jwt.JwtTokenProvider;
 import com.myhome.server.db.entity.*;
@@ -28,11 +30,15 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
 
 //    private final String diskPath = "/home/disk1/home/private";
     private final String diskPath = "C:\\\\Users\\\\SonJunHyeok\\\\Desktop\\\\test\\\\private\\\\";
+    private final String trashPath = "C:\\Users\\SonJunHyeok\\Desktop\\test\\private\\User_";
 
     private final String[] videoExtensionList = {"mp4", "avi", "mov", "wmv", "avchd", "webm", "mpeg4"};
 
     @Value("${part4.upload.path}")
     private String defaultUploadPath;
+
+    @Autowired
+    KafkaProducer producer;
 
     @Autowired
     FileServerPrivateRepository repository;
@@ -134,7 +140,8 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
     @Override
     public void mkdir(String path, String token) {
         File file = new File(path);
-        file.mkdir();
+        boolean result = file.mkdir();
+        System.out.println("FileServerPrivateService mkdir : " + result);
 //        String[] paths = path.split(File.separator);
         String[] paths = path.split("\\\\");
         String name = paths[paths.length-1];
@@ -166,234 +173,111 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
     }
 
     @Override
-    public long deleteByPath(String path) { // add owner
+    public long deleteByPath(String path, String accessToken) { // add owner
         FileServerPrivateEntity entity = repository.findByPath(path);
         if(ObjectUtils.isEmpty(entity)){
             return -1;
         }
-//        String testInPath = "C:\\Users\\SonJunHyeok\\Desktop\\a.txt"; // test filePath
-//        String filePath = testInPath;
-//        String filePath = entity.getPath();
-//        File file = new File(filePath);
-
-        File file = new File(path);
-
-        if(file.exists()){ // check file exist
-            if(file.isDirectory()){
-                deleteFolder(file.getPath());
-            }
-            else{
-                if(file.delete()){ // if file exist, delete file
-                    System.out.println("delete success");
-                    repository.deleteByPath(path);
-                }
-                else{
-                    System.out.println("delete failed");
-                }
-            }
-
+        Optional<UserEntity> entityUser = service.findById(accessToken);
+        if(entityUser.isPresent()){
+            // json type { file : origin file path, path : destination to move file }
+            Gson gson = new Gson();
+            JsonObject jsonObject = new JsonObject();
+            jsonObject.addProperty("purpose", "delete");
+            jsonObject.addProperty("action", "delete");
+            jsonObject.addProperty("uuid", entity.getUuid());
+            jsonObject.addProperty("file", entity.getPath());
+            jsonObject.addProperty("path", trashPath+"\\"+entityUser.get().getUserId()+"\\"+entity.getName());
+            String jsonResult = gson.toJson(jsonObject);
+            System.out.println("deleteByPath : " + jsonResult);
+            // kafka send
+            producer.sendMessage(jsonResult);
+            return 0;
         }
-        return 0;
+        else{
+            return -1;
+        }
     }
-    private void moveFolder(String path, String destPath){
-        // Will change to send Kafka
 
-//        File dir = new File(path);
-//        File[] files = dir.listFiles();
-//        if(files != null){
-//            for(File file : files){
-//                if(file.isDirectory()) {
-//                    moveFolder(path+File.separator+file.getName(), destPath+File.separator+file.getName());
-//                    String dirName = file.getName();
-//                    FileServerPrivateEntity entity = repository.findByPath(path+File.separator+dirName);
-//                    if(entity != null){
-//                        FileServerPrivateTrashDto trashDto = new FileServerPrivateTrashDto(entity);
-//                        FileServerPrivateTrashEntity trashEntity = new FileServerPrivateTrashEntity(trashDto);
-//                        trashRepository.save(trashEntity);
-//                    }
-//                    else{
-//                        FileServerPrivateTrashDto trashDto = new FileServerPrivateTrashDto();
-//                        trashDto.setPath(path+File.separator+file.getName());
-//                        trashDto.setLocation(path);
-//                        trashDto.setName(file.getName());
-//                        trashDto.setSize(0);
-//                        trashDto.setState(0);
-//                        trashDto.setType("dir");
-//                        trashDto.setUuidName(UUID.randomUUID().toString());
-//                        trashRepository.save(new FileServerPrivateTrashEntity(trashDto));
-//                    }
-//                    if(file.delete()){
-//                        System.out.println("FileServerPublicService Folder delete Success : "+file.getPath());
-//                    }
-//                    else{
-//                        System.out.println("FileServerPublicService Folder delete Fail : "+file.getPath());
-//                    }
-//                }
-//                else {
-//                    try{
-//                        FileServerPrivateEntity entity = repository.findByPath(path);
-//                        File in = new File(entity.getPath());
-//                        File out = new File(destPath);
-//                        FileCopyUtils.copy(in, out); // copy file from origin location to new location
-//                        if(in.exists()){ // check origin file exist
-//                            if(in.delete()){ // if file exist
-//                                System.out.println("delete success");
-//                                repository.deleteByPath(entity.getPath());
-//                            }
-//                            else{
-//                                System.out.println("delete failed");
-//                            }
-//                        }
-//                    }
-//                    catch (IOException e) {
-//                        e.printStackTrace();
-//                    }
-//                }
-//            }
-//        }
-    }
-    private void deleteFolder(String path){
-        // Will change to send Kafka
-
-//        File dir = new File(path);
-//        File[] files = dir.listFiles();
-//        FileServerPrivateTrashEntity entity;
-//        if(files != null){
-//            for(File file : files){
-//                if(file.isDirectory()){
-//                    deleteFolder(file.getPath());
-//                    if(file.delete()){
-//                        entity = trashRepository.findByPath(path);
-//                        if(entity != null) trashRepository.delete(trashRepository.findByPath(path));
-//                        System.out.println("FileServerPrivateTrashEntity delete folder Success");
-//                    }
-//                    else{
-//                        System.out.println("FileServerPrivateTrashEntity delete folder failed");
-//                    }
-//                }
-//                else{
-//                    if(file.delete()){
-//                        entity = trashRepository.findByPath(path);
-//                        if(entity != null) trashRepository.delete(trashRepository.findByPath(path));
-//                        System.out.println("FileServerPrivateTrashEntity delete file Success");
-//                    }
-//                    else{
-//                        System.out.println("FileServerPrivateTrashEntity delete file failed");
-//                    }
-//                }
-//            }
-//        }
-    }
     @Override
-    public int moveFile(String uuid, String location) {
+    public int moveFile(String uuid, String location, String accessToken) {
         FileServerPrivateEntity entity = repository.findByUuid(uuid);
         if(ObjectUtils.isEmpty(entity)){
             return -1;
         }
-//        String testInPath = "C:\\Users\\SonJunHyeok\\Desktop\\a.txt"; // test filePath
-//        String testOutPath = "C:\\Users\\SonJunHyeok\\Desktop\\test\\a.txt"; // test move location
-//        String filePath = testInPath;
-//        String movePath = testOutPath;
         String filePath = entity.getPath();
         String movePath = location+entity.getName();
 
-        try{
-            File in = new File(filePath);
-            File out = new File(movePath);
-            FileCopyUtils.copy(in, out); // copy file from origin location to new location
-            if(in.exists()){ // check origin file exist
-                if(in.delete()){ // if file exist
-                    System.out.println("delete success");
-                }
-                else{
-                    System.out.println("delete failed");
-                }
-            }
-        }
-        catch (IOException e) {
-            e.printStackTrace();
-            return -1;
-        }
-//        int result = repository.updateLocation(path, location); // update file location info from DB
-        entity.changePathAndLocation(movePath, location); // Dirty check
+//        Optional<UserEntity> entityUser = service.findById(accessToken);
+
+        // json type { file : origin file path, path : destination to move file }
+        Gson gson = new Gson();
+        JsonObject jsonObject = new JsonObject();
+        jsonObject.addProperty("purpose", "delete");
+        jsonObject.addProperty("action", "delete");
+        jsonObject.addProperty("uuid", uuid);
+        jsonObject.addProperty("file", filePath);
+        jsonObject.addProperty("path", movePath);
+        String jsonResult = gson.toJson(jsonObject);
+        System.out.println("deleteByPath : " + jsonResult);
+        // kafka send
+        producer.sendMessage(jsonResult);
         return 0;
     }
 
     @Override
-    public int moveTrash(String uuid) {
+    public int moveTrash(String uuid, String accessToken) {
         // Will change to send Kafka
-//        FileServerPrivateEntity entity = repository.findByUuid(uuid);
-//        if(entity != null) {
-//            FileServerPrivateTrashDto dto = new FileServerPrivateTrashDto(entity);
-//            FileServerPrivateTrashEntity trashEntity = new FileServerPrivateTrashEntity(dto);
-//            trashRepository.save(trashEntity);
-//            String trashPath = diskPath + "trash" + File.separator + dto.getName();
-//
-//            if (entity.getType().equals("dir")) {
-//                moveFolder(entity.getPath(), trashPath);
-//            }
-//            else {
-//                try {
-//                    File in = new File(entity.getPath());
-//                    File out = new File(trashPath);
-//                    FileCopyUtils.copy(in, out); // copy file from origin location to new location
-//                    if (in.exists()) { // check origin file exist
-//                        if (in.delete()) { // if file exist
-//                            System.out.println("delete success");
-//                            repository.deleteByPath(entity.getPath());
-//                            return 0;
-//                        } else {
-//                            System.out.println("delete failed");
-//                        }
-//                    }
-//                } catch (IOException e) {
-//                    e.printStackTrace();
-//                    return -1;
-//                }
-//            }
-//        }
-        return -1;
+        FileServerPrivateEntity entity = repository.findByUuid(uuid);
+        if(ObjectUtils.isEmpty(entity)){
+            return -1;
+        }
+        System.out.println("FileServerPrivate moveTrash : " + accessToken);
+        Optional<UserEntity> entityUser = service.findById(accessToken);
+        if(entityUser.isPresent()){
+            Gson gson = new Gson();
+            JsonObject jsonObject = new JsonObject();
+            jsonObject.addProperty("purpose", "delete");
+            jsonObject.addProperty("action", "delete");
+            jsonObject.addProperty("uuid", entity.getUuid());
+            jsonObject.addProperty("file", trashPath+"\\"+entityUser.get().getUserId()+"\\"+entity.getName());
+            jsonObject.addProperty("path", entity.getPath());
+            String jsonResult = gson.toJson(jsonObject);
+            System.out.println("deleteByPath : " + jsonResult);
+            // kafka send
+            producer.sendMessage(jsonResult);
+            return 0;
+        }
+        else{
+            return -1;
+        }
     }
 
     @Override
-    public int restore(String uuid) {
+    public int restore(String uuid, String accessToken) {
         // Will change to send Kafka
-
-//        FileServerPrivateTrashEntity trashEntity = trashRepository.findByUuid(uuid);
-//        if(trashEntity != null){
-//            FileServerPrivateDto dto = new FileServerPrivateDto(
-//                    trashEntity.getPath(),
-//                    trashEntity.getName(),
-//                    trashEntity.getUuid(),
-//                    trashEntity.getType(),
-//                    trashEntity.getSize(),
-//                    trashEntity.getOwner(),
-//                    trashEntity.getLocation(),
-//                    trashEntity.getState()
-//            );
-//            repository.save(new FileServerPrivateEntity(dto));
-//            String trashPath = diskPath+"trash\\"+dto.getName();
-//            try{
-//                File in = new File(trashPath);
-//                File out = new File(dto.getPath());
-//                FileCopyUtils.copy(in, out); // copy file from origin location to new location
-//                if(in.exists()){ // check origin file exist
-//                    if(in.delete()){ // if file exist
-//                        System.out.println("delete success");
-//                        repository.deleteByUuid(dto.getUuidName());
-//                        return 0;
-//                    }
-//                    else{
-//                        System.out.println("delete failed");
-//                    }
-//                }
-//            }
-//            catch (IOException e) {
-//                e.printStackTrace();
-//                return -1;
-//            }
-//        }
-        return -1;
+        FileServerPrivateEntity entity = repository.findByUuid(uuid);
+        if(ObjectUtils.isEmpty(entity)){
+            return -1;
+        }
+        Optional<UserEntity> entityUser = service.findById(accessToken);
+        if(entityUser.isPresent()){
+            Gson gson = new Gson();
+            JsonObject jsonObject = new JsonObject();
+            jsonObject.addProperty("purpose", "delete");
+            jsonObject.addProperty("action", "delete");
+            jsonObject.addProperty("uuid", entity.getUuid());
+            jsonObject.addProperty("file", trashPath+"\\"+entityUser.get().getUserId()+"\\"+entity.getName());
+            jsonObject.addProperty("path", entity.getPath());
+            String jsonResult = gson.toJson(jsonObject);
+            System.out.println("deleteByPath : " + jsonResult);
+            // kafka send
+            producer.sendMessage(jsonResult);
+            return 0;
+        }
+        else{
+            return -1;
+        }
     }
 
     @Override
