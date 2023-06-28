@@ -50,8 +50,14 @@ public class AuthController {
     public ResponseEntity<UserEntity> getUserInfo(@PathVariable String accessToken){
         String userId = jwtTokenProvider.getUserPk(accessToken); // get userId from accessToken
         Optional<UserEntity> optionalUserEntity = service.findById(userId); // get userInfo with userId
-        UserEntity entity = optionalUserEntity.orElseThrow(()->new RuntimeException(userId)); // get UserEntity when Optional Entity is present
-        return new ResponseEntity<>(entity, HttpStatus.OK);
+//        UserEntity entity = optionalUserEntity.orElseThrow(()->new RuntimeException(userId)); // get UserEntity when Optional Entity is present
+        if(optionalUserEntity.isPresent()){
+            UserEntity entity = optionalUserEntity.get();
+            return new ResponseEntity<>(entity, HttpStatus.OK);
+        }
+        else{
+            return new ResponseEntity<>(null, HttpStatus.OK);
+        }
     }
 
     @GetMapping("/validateAccessToken/{accessToken}") // check validation of accessToken
@@ -82,6 +88,9 @@ public class AuthController {
         accessTokenValidate = jwtTokenProvider.validateToken(accessToken);
         if(!accessTokenValidate){
             newAccessToken = jwtTokenProvider.createToken(entity.getId(), entity.getAuth(),true);
+        }
+        else{
+            newAccessToken = accessToken;
         }
 
         jsonObject.addProperty("authValidate", auth);

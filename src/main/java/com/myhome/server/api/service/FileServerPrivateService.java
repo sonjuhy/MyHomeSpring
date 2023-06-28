@@ -20,10 +20,10 @@ public interface FileServerPrivateService {
     void mkdir(String path, String token);
     boolean existsByPath(String path);
     @Transactional
-    long deleteByPath(String path);
-    int moveFile(String path, String location);
-    int moveTrash(String uuid);
-    int restore(String uuid);
+    long deleteByPath(String path, String accessToken);
+    int moveFile(String path, String location, String accessToken);
+    int moveTrash(String uuid, String accessToken);
+    int restore(String uuid, String accessToken);
     int updateByFileServerPublicEntity(FileServerPrivateEntity entity);
     boolean save(FileServerPrivateEntity entity);
     void privateFileCheck();
