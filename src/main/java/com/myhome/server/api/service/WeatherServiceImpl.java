@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.lang.reflect.Type;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
@@ -29,6 +30,8 @@ public class WeatherServiceImpl implements WeatherService{
     private String url_UltraFcst = ""; //need key, pageNo, numOfRows, base_date, base_time, x, y | 초단기예보
     private String url_VilageFcst = "";// need key, pageNo, numOfRows, dataType, base_date, base_time, x, y | 동네예보조회
     private String url_main = null;
+
+    private final static String locationURL = "https://www.kma.go.kr/DFSROOT/POINT/DATA";
 
     @Autowired
     WeatherRepository repository;
@@ -570,6 +573,128 @@ public class WeatherServiceImpl implements WeatherService{
             System.out.println("getVilageFsct error : " + e.getMessage());
         }
 
+        return null;
+    }
+
+    @Override
+    public ArrayList<LocationDto> getTopPlace() {
+        ArrayList<LocationDto> list = new ArrayList<>();
+
+        url_main = locationURL+"/top.json.txt";
+
+        URLConnection conn;
+
+        try {
+            URL url = new URL(url_main);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Accept","*/*;q=0.9");
+            System.out.println("url : " + url_main);
+            conn = url.openConnection();
+
+            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
+
+            String ResData = br.readLine();
+
+            if (ResData == null) {
+                System.out.println("응답데이터 == NULL");
+            } else {
+                JsonArray jsonArray = (JsonArray) JsonParser.parseString(ResData);
+                for(int i=0;i<jsonArray.size();i++){
+                    JsonObject jsonObject = (JsonObject) jsonArray.get(i);
+                    LocationDto dto = new LocationDto();
+                    dto.setName(jsonObject.get("value").getAsString());
+                    dto.setCode(jsonObject.get("code").getAsString());
+                    list.add(dto);
+                }
+                return list;
+            }
+            br.close();
+        } catch (Exception e) {
+            System.out.println("getTopPlace error : " + e.getMessage());
+        }
+        return null;
+    }
+
+    @Override
+    public ArrayList<LocationDto> getMiddlePlace(String code) {
+        ArrayList<LocationDto> list = new ArrayList<>();
+
+        url_main = locationURL+"/mdl."+code+".json.txt";
+
+        URLConnection conn;
+
+        try {
+            URL url = new URL(url_main);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Accept","*/*;q=0.9");
+            System.out.println("url : " + url_main);
+            conn = url.openConnection();
+
+            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
+
+            String ResData = br.readLine();
+
+            if (ResData == null) {
+                System.out.println("응답데이터 == NULL");
+            } else {
+                JsonArray jsonArray = (JsonArray) JsonParser.parseString(ResData);
+                for(int i=0;i<jsonArray.size();i++){
+                    JsonObject jsonObject = (JsonObject) jsonArray.get(i);
+                    LocationDto dto = new LocationDto();
+                    dto.setName(jsonObject.get("value").getAsString());
+                    dto.setCode(jsonObject.get("code").getAsString());
+                    list.add(dto);
+                }
+                return list;
+            }
+            br.close();
+        } catch (Exception e) {
+            System.out.println("getMiddlePlace error : " + e.getMessage());
+        }
+        return null;
+    }
+
+    @Override
+    public ArrayList<LocationDto> getLeafPlace(String code) {
+        ArrayList<LocationDto> list = new ArrayList<>();
+
+        url_main = locationURL+"/leaf."+code+".json.txt";
+
+        URLConnection conn;
+
+        try {
+            URL url = new URL(url_main);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Accept","*/*;q=0.9");
+            System.out.println("url : " + url_main);
+            conn = url.openConnection();
+
+            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
+
+            String ResData = br.readLine();
+
+            if (ResData == null) {
+                System.out.println("응답데이터 == NULL");
+            } else {
+                JsonArray jsonArray = (JsonArray) JsonParser.parseString(ResData);
+                for(int i=0;i<jsonArray.size();i++){
+                    JsonObject jsonObject = (JsonObject) jsonArray.get(i);
+                    LocationDto dto = new LocationDto();
+                    dto.setX_code(jsonObject.get("x").getAsInt());
+                    dto.setY_code(jsonObject.get("y").getAsInt());
+                    dto.setName(jsonObject.get("value").getAsString());
+                    dto.setCode(jsonObject.get("code").getAsString());
+                    list.add(dto);
+                }
+                return list;
+            }
+            br.close();
+        } catch (Exception e) {
+            System.out.println("getLeafPlace error : " + e.getMessage());
+        }
         return null;
     }
 

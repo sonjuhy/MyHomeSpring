@@ -17,6 +17,9 @@ public interface WeatherService {
     WeatherDto getUtlraNcst(LocationDto locationDto); // 초단기실황조회
     ArrayList<WeatherDto> getUtlraFcst(LocationDto locationDto); // 초단기예보조회
     ArrayList<WeatherDto> getVilageFcst(LocationDto locationDto); // 단기예보조회
+    ArrayList<LocationDto> getTopPlace();
+    ArrayList<LocationDto> getMiddlePlace(String code);
+    ArrayList<LocationDto> getLeafPlace(String code);
     String ApiTime();
     String ApiTimeChange(String time);
 }
