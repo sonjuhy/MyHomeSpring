@@ -2,10 +2,10 @@ package com.myhome.server;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.integration.annotation.IntegrationComponentScan;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
 
+@EnableTransactionManagement
 @SpringBootApplication
-@IntegrationComponentScan
 public class ServerApplication {
 
 	public static void main(String[] args) {
@@ -15,6 +15,6 @@ public class ServerApplication {
 //		pbe.setPassword("myhomeProjectKey");
 //
 //		String enc = pbe.encrypt("sonjuhy_home");
-//		System.out.println("enc : " + enc);
+
 	}
 }

@@ -27,14 +27,20 @@ public class NoticeServiceImpl implements NoticeService {
     }
 
     @Override
-    public NoticeEntity findByWriter(String writer) {
-        NoticeEntity entity = repository.findByWriter(writer);
-        return entity;
+    public List<NoticeEntity> findByWriter(String writer) {
+        List<NoticeEntity> list = repository.findByWriter(writer);
+        return list;
     }
 
     @Override
     public NoticeEntity findTopNotice() {
         NoticeEntity entity = repository.findTopByOrderByIdDesc();
         return entity;
+    }
+
+    @Override
+    public int delete(int id) {
+        repository.deleteById(id);
+        return 0;
     }
 }

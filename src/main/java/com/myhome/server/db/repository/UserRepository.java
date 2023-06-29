@@ -9,9 +9,9 @@ import org.springframework.data.repository.query.Param;
 import javax.transaction.Transactional;
 import java.util.Optional;
 
-public interface UserRepository extends JpaRepository <UserEntity, Integer>{
-    UserEntity findByUserId(long userId);
-    Optional<UserEntity> findById(String id);
+public interface UserRepository extends JpaRepository <UserEntity, Long>{
+    UserEntity findByUserId(long Id);
+    Optional<UserEntity> findById(String userId);
     @Transactional
     @Modifying(clearAutomatically = true)
     @Query(value = "update USER_TB set ACCESS_CHAR=:accessToken, REFRESH_CHAR=:refreshToken where ID_CHAR=:Id", nativeQuery = true)

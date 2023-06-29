@@ -31,9 +31,12 @@ public class LightServiceImpl implements LightService {
     }
 
     @Override
-    public void control(LightDto dto) {
+    public void control(LightDto dto, String user) {
         String msg = dto.toString();
         System.out.println(msg);
-        producer.sendMessage(msg);
+        if(dto.getState().equals("On")) dto.setState("OFF");
+        else if(dto.getState().equals("Off")) dto.setState("ON");
+//        producer.sendMessage(msg);
+        producer.sendIotMessage(dto, user);
     }
 }

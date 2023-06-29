@@ -7,6 +7,7 @@ import java.util.List;
 
 public interface NoticeRepository extends JpaRepository<NoticeEntity, Long> {
     List<NoticeEntity> findAll();
-    NoticeEntity findByWriter(String writer);
+    List<NoticeEntity> findByWriter(String writer);
     NoticeEntity findTopByOrderByIdDesc();
+    int deleteById(int id);
 }
