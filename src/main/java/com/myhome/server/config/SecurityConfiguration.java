@@ -26,12 +26,7 @@ public class SecurityConfiguration {
     public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception{
         httpSecurity.authorizeHttpRequests((auth) -> auth
                         .antMatchers("/auth/**").permitAll()
-                        .antMatchers("/main/**").authenticated()
-                        .antMatchers("/user/**").authenticated()
-                        .antMatchers("/file/**").authenticated()
-                        .antMatchers("/light/**").authenticated()
-                        .antMatchers("/weather/**").authenticated()
-                        .anyRequest().authenticated()
+                        .anyRequest().hasAnyAuthority("regular", "admin")
                 )
                 .httpBasic(Customizer.withDefaults())
                 .cors().configurationSource(corsConfigurationSource())
