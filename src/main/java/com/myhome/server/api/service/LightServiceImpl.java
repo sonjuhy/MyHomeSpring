@@ -31,6 +31,12 @@ public class LightServiceImpl implements LightService {
     }
 
     @Override
+    public List<LightEntity> findByCategory(String category) {
+        List<LightEntity> list = repository.findByCategory(category);
+        return list;
+    }
+
+    @Override
     public void control(LightDto dto, String user) {
         String msg = dto.toString();
         System.out.println(msg);

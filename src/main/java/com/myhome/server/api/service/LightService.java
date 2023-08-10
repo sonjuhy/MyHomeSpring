@@ -8,5 +8,6 @@ import java.util.List;
 public interface LightService {
     LightEntity findByRoom(String room);
     List<LightEntity> findAll();
+    List<LightEntity> findByCategory(String category);
     void control(LightDto dto, String user);
 }

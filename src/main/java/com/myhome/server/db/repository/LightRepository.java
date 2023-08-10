@@ -8,4 +8,5 @@ import java.util.List;
 public interface LightRepository extends JpaRepository<LightEntity, String> {
     LightEntity findByRoom(String room);
     List<LightEntity> findAll();
+    List<LightEntity> findByCategory(String category);
 }
