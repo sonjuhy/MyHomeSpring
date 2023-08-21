@@ -11,7 +11,7 @@ import lombok.ToString;
 public class LightReserveDto {
     private int pk;
     private String name;
-    private String nameKor;
+    private String roomKor;
     private String time;
     private String room;
     private String action;
@@ -23,7 +23,7 @@ public class LightReserveDto {
         return LightReserveEntity.builder()
                 .pk(this.pk)
                 .name(this.name)
-                .nameKor(this.nameKor)
+                .roomKor(this.roomKor)
                 .time(this.time)
                 .room(this.room)
                 .action(this.action)

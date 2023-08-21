@@ -21,12 +21,12 @@ public class LightReserveEntity {
     private int pk;
     @Column(name = "NAME_CHAR")
     private String name;
-    @Column(name = "NAMEKOR_CHAR")
-    private String nameKor;
-    @Column(name = "TIME_CHAR")
-    private String time;
     @Column(name = "ROOM_CHAR")
     private String room;
+    @Column(name = "ROOMKOR_CHAR")
+    private String roomKor;
+    @Column(name = "TIME_CHAR")
+    private String time;
     @Column(name = "DO_CHAR")
     private String action;
     @Column(name = "DAY_CHAR")
@@ -37,10 +37,10 @@ public class LightReserveEntity {
     private String reiteration;
 
     @Builder
-    protected LightReserveEntity(int pk, String name, String nameKor, String time, String room, String action, String day, String activated, String reiteration) {
+    protected LightReserveEntity(int pk, String name, String roomKor, String time, String room, String action, String day, String activated, String reiteration) {
         this.pk = pk;
         this.name = name;
-        this.nameKor = nameKor;
+        this.roomKor = roomKor;
         this.time = time;
         this.room = room;
         this.action = action;

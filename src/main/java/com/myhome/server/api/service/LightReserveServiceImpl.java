@@ -46,7 +46,7 @@ public class LightReserveServiceImpl implements LightReserveService{
         LightReserveEntity entity = repository.findByPk(dto.getPk());
         entity.builder()
                 .name(dto.getName())
-                .nameKor(dto.getNameKor())
+                .roomKor(dto.getRoomKor())
                 .reiteration(dto.getReiteration())
                 .day(dto.getDay())
                 .action(dto.getAction())
