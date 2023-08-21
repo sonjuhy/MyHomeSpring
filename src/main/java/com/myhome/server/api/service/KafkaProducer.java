@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 public class KafkaProducer {
     private static final String TOPIC_CLOUD = "cloud-topic";
     private static final String TOPIC_MQTT = "iot-topic";
+    private static final String TOPIC_MQTT_RESERVE = "reserve-topic";
 
     @Autowired
     private final KafkaTemplate<String, String> kafkaTemplate;
@@ -37,5 +38,9 @@ public class KafkaProducer {
         System.out.println(message);
 
         this.kafkaTemplate.send(TOPIC_MQTT, message);
+    }
+
+    public void sendReserveMessage(){
+        this.kafkaTemplate.send(TOPIC_MQTT_RESERVE, "refresh");
     }
 }
