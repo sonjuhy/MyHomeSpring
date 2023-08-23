@@ -27,7 +27,7 @@ public class ApkUpdateController {
     @GetMapping("/download")
     public ResponseEntity<Resource> downloadApkFile(){
 //        String filePath = "C:\\Users\\SonJunHyeok\\Desktop\\test\\MyHome.apk";
-        String filePath = "/home/sonjuhy/Myhome/MyHome.apk";
+        String filePath = "/home/MyHome.apk";
         Path path = Paths.get(filePath);
         try{
             HttpHeaders httpHeaders = service.getHttpHeader(path);
