@@ -24,6 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.regex.Matcher;
 
 @Service
 public class FileServerPrivateServiceImpl implements FileServerPrivateService {
@@ -317,9 +318,12 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
         repository.updateAllStateToZero();
     }
     private String changeUnderBarToSeparator(String path){
-        String newPath = path.replaceAll("_",File.pathSeparator);
-        return newPath;
+        return path.replaceAll("_", Matcher.quoteReplacement(File.separator));
     }
+    private String changeSeparatorToUnderBar(String path){
+        return path.replaceAll(Matcher.quoteReplacement(File.separator), "_");
+    }
+
     private void traversalFolder(String path, List<UserEntity> userList){
         System.out.println("This is Path : " + path);
         File dir = new File(path);
@@ -350,8 +354,8 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
                         break;
                     }
                 }
-                String uuid = UUID.randomUUID().toString();
-                String tmpPath = file.getPath(), tmpLocation = file.getPath().split(file.getName())[0];
+                String tmpPath = changeSeparatorToUnderBar(file.getPath()), tmpLocation = changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
+                String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
 //                if(tmpPath.contains("trash")){
 //                    tmpPath = tmpPath.replace("trash", "");
 //                }

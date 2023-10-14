@@ -24,6 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.regex.Matcher;
 
 @Service
 public class FileServerPublicServiceImpl implements FileServerPublicService {
@@ -67,9 +68,10 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
 
     @Override
     public List<FileServerPublicEntity> findByLocation(String location, int mode) {
-        System.out.println("location : " + location);
-        if("default".equals(location)) location = diskPath;
-        List<FileServerPublicEntity> list = fileServerRepository.findByLocationAndDelete(location, mode);
+        String originLocation = changeUnderBarToSeparator(location);
+        System.out.println("location : " + originLocation);
+        if("default".equals(originLocation)) originLocation = diskPath;
+        List<FileServerPublicEntity> list = fileServerRepository.findByLocationAndDelete(originLocation, mode);
         return list;
     }
 
@@ -287,8 +289,10 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         fileServerRepository.deleteByState(0);
     }
     private String changeUnderBarToSeparator(String path){
-        String newPath = path.replaceAll("_",File.pathSeparator);
-        return newPath;
+        return path.replaceAll("_", Matcher.quoteReplacement(File.separator));
+    }
+    private String changeSeparatorToUnderBar(String path){
+        return path.replaceAll(Matcher.quoteReplacement(File.separator), "_");
     }
 
     private void traversalFolder(String path, boolean mode){
@@ -311,12 +315,12 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
             }
             FileServerPublicEntity entity = fileServerRepository.findByPath(file.getPath());
             int deleteStatus = 0;
-            String tmpPath = file.getPath(), tmpLocation = file.getPath().split(file.getName())[0];
+            String tmpPath = changeSeparatorToUnderBar(file.getPath()), tmpLocation = changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
             if(!mode) {
                 deleteStatus = 1;
             }
             if(entity == null){
-                String uuid = UUID.randomUUID().toString();
+                String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
                 FileServerPublicDto dto = new FileServerPublicDto(
                         tmpPath, // file path
                         file.getName(), // file name

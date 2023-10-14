@@ -48,14 +48,14 @@ public class LightController {
     public ResponseEntity<LightEntity> getRoomInfo(@PathVariable String room){
         LightEntity entity = lightService.findByRoom(room);
         if(entity != null) return new ResponseEntity<>(entity, HttpStatus.OK);
-        else return new ResponseEntity<>(entity, HttpStatus.NOT_FOUND);
+        else return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
     }
 
     @GetMapping("/getReserve/{pk}")
     public ResponseEntity<LightReserveEntity> getReserve(@PathVariable int pk){
         LightReserveEntity entity = lightReserveService.findByPk(pk);
         if(entity != null) return new ResponseEntity<>(entity, HttpStatus.OK);
-        else return new ResponseEntity<>(entity, HttpStatus.NOT_FOUND);
+        else return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
     }
 
     @GetMapping("/getReserveRoom/{room}")

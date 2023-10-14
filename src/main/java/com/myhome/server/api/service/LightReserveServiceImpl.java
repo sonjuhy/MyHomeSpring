@@ -53,6 +53,7 @@ public class LightReserveServiceImpl implements LightReserveService{
                 .activated(dto.getActivated())
                 .time(dto.getTime())
                 .build();
+        producer.sendReserveMessage();
     }
 
     @Override
