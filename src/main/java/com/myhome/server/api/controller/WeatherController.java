@@ -16,7 +16,7 @@ import java.util.ArrayList;
 public class WeatherController {
 
     @Autowired
-    private WeatherService weatherService = new WeatherServiceImpl();
+    private WeatherService weatherService;
 
     @PostMapping("/getUltraNcst")
     public ResponseEntity<WeatherDto> getUltraNcst(@RequestBody LocationDto locationDto){
@@ -24,7 +24,8 @@ public class WeatherController {
         WeatherDto dto = weatherService.getUtlraNcst(locationDto);
         System.out.println("getUltraNcst dto : " + dto);
 
-        return new ResponseEntity<>(dto, HttpStatus.OK);
+        if(dto != null) return new ResponseEntity<>(dto, HttpStatus.OK);
+        else return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
     }
 
     @PostMapping("/getUltraFcst")
@@ -32,34 +33,36 @@ public class WeatherController {
         System.out.println("getUltraFcst location : " + locationDto);
         ArrayList<WeatherDto> list = weatherService.getUtlraFcst(locationDto);
 
-        return new ResponseEntity<>(list, HttpStatus.OK);
+        if(list != null && list.size()>0) return new ResponseEntity<>(list, HttpStatus.OK);
+        else return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
     }
 
     @PostMapping("/getVilageFcst")
     public ResponseEntity<ArrayList<WeatherDto>> getVilageFcst(@RequestBody LocationDto locationDto){
         System.out.println("getVilageFcst location : " + locationDto);
         ArrayList<WeatherDto> list = weatherService.getVilageFcst(locationDto);
-        return new ResponseEntity<>(list, HttpStatus.OK);
+        if(list != null && list.size()>0) return new ResponseEntity<>(list, HttpStatus.OK);
+        else return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
     }
 
     @GetMapping("/getTopPlace")
     public ResponseEntity<ArrayList<LocationDto>> getTopPlace(){
         ArrayList<LocationDto> list = weatherService.getTopPlace();
         if(list != null && list.size() > 0) return new ResponseEntity<>(list, HttpStatus.OK);
-        else return new ResponseEntity<>(null, HttpStatus.OK);
+        else return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
     }
 
     @GetMapping("/getMiddlePlace/{code}")
     public ResponseEntity<ArrayList<LocationDto>> getMiddlePlace(@PathVariable String code){
         ArrayList<LocationDto> list = weatherService.getMiddlePlace(code);
         if(list != null && list.size() > 0) return new ResponseEntity<>(list, HttpStatus.OK);
-        else return new ResponseEntity<>(null, HttpStatus.OK);
+        else return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
     }
     @GetMapping("/getLeafPlace/{code}")
     public ResponseEntity<ArrayList<LocationDto>> getLeafPlace(@PathVariable String code){
         ArrayList<LocationDto> list = weatherService.getLeafPlace(code);
         if(list != null && list.size() > 0) return new ResponseEntity<>(list, HttpStatus.OK);
-        else return new ResponseEntity<>(null, HttpStatus.OK);
+        else return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
     }
 
 }

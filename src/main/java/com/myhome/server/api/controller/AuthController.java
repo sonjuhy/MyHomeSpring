@@ -23,7 +23,7 @@ import java.util.Optional;
 public class AuthController {
 
     @Autowired
-    UserService service = new UserServiceImpl();
+    UserService service;
     @Autowired
     JwtTokenProvider jwtTokenProvider;
 
@@ -56,7 +56,7 @@ public class AuthController {
             return new ResponseEntity<>(entity, HttpStatus.OK);
         }
         else{
-            return new ResponseEntity<>(null, HttpStatus.OK);
+            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
         }
     }
 
@@ -103,6 +103,7 @@ public class AuthController {
         catch(Exception e){
             e.printStackTrace();
             jsonObject.addProperty("error", "failed to update token info");
+            return new ResponseEntity<>(gson.toJson(jsonObject), HttpStatus.BAD_GATEWAY);
         }
         return new ResponseEntity<>(gson.toJson(jsonObject), HttpStatus.OK);
     }
@@ -123,6 +124,7 @@ public class AuthController {
         catch(Exception e){
             e.printStackTrace();
             jsonObject.addProperty("error", "failed");
+            return new ResponseEntity<>(gson.toJson(jsonObject), HttpStatus.BAD_GATEWAY);
         }
         return new ResponseEntity<>(gson.toJson(jsonObject), HttpStatus.OK);
     }
@@ -145,6 +147,7 @@ public class AuthController {
         catch(Exception e){
             e.printStackTrace();
             jsonObject.addProperty("error", "failed");
+            return new ResponseEntity<>(gson.toJson(jsonObject), HttpStatus.BAD_GATEWAY);
         }
         return new ResponseEntity<>(gson.toJson(jsonObject), HttpStatus.OK);
     }
@@ -174,10 +177,12 @@ public class AuthController {
                     jsonObject.remove("accessToken");
                     jsonObject.remove("refreshToken");
                     jsonObject.addProperty("error", "failed to update user info");
+                    return new ResponseEntity<>(gson.toJson(jsonObject), HttpStatus.BAD_GATEWAY);
                 }
             }
             else{ // password match result is not correct
                 jsonObject.addProperty("error","incorrect password");
+                return new ResponseEntity<>(gson.toJson(jsonObject), HttpStatus.BAD_GATEWAY);
             }
         }
         return new ResponseEntity<>(gson.toJson(jsonObject), HttpStatus.OK);
@@ -211,6 +216,7 @@ public class AuthController {
                 e.printStackTrace();
                 jsonObject = new JsonObject();
                 jsonObject.addProperty("error","failed to update user info");
+                return new ResponseEntity<>(gson.toJson(jsonObject), HttpStatus.BAD_GATEWAY);
             }
         }
         return new ResponseEntity<>(gson.toJson(jsonObject), HttpStatus.OK);

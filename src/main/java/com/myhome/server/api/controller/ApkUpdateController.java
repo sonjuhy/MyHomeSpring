@@ -22,7 +22,7 @@ import java.nio.file.Paths;
 public class ApkUpdateController {
 
     @Autowired
-    private ApkService service = new ApkServiceImpl();
+    private ApkService service;
 
     @GetMapping("/download")
     public ResponseEntity<Resource> downloadApkFile(){
@@ -43,6 +43,7 @@ public class ApkUpdateController {
     @GetMapping("/versionCheck")
     public ResponseEntity<Double> versionCheck(){
         double version = service.getLastVersion();
-        return new ResponseEntity<>(version, HttpStatus.OK);
+        if(version == 0) return new ResponseEntity<>(version, HttpStatus.BAD_GATEWAY);
+        else return new ResponseEntity<>(version, HttpStatus.OK);
     }
 }

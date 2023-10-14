@@ -20,13 +20,13 @@ import java.util.Optional;
 public class LightController {
 
     @Autowired
-    LightService lightService = new LightServiceImpl();
+    LightService lightService;
 
     @Autowired
-    LightReserveService lightReserveService = new LightReserveServiceImpl();
+    LightReserveService lightReserveService;
 
     @Autowired
-    UserService userService = new UserServiceImpl();
+    UserService userService;
 
     @Autowired
     JwtTokenProvider jwtTokenProvider;
@@ -40,40 +40,45 @@ public class LightController {
     @GetMapping("/getRoomInfoList/{category}")
     public ResponseEntity<List<LightEntity>> getRoomInfoList(@PathVariable String category){
         List<LightEntity> list = lightService.findByCategory(category);
-        return new ResponseEntity<>(list, HttpStatus.OK);
+        if(list != null && list.size() > 0) return new ResponseEntity<>(list, HttpStatus.OK);
+        else return new ResponseEntity<>(list, HttpStatus.NOT_FOUND);
     }
 
     @GetMapping("/getRoomInfo/{room}")
     public ResponseEntity<LightEntity> getRoomInfo(@PathVariable String room){
         LightEntity entity = lightService.findByRoom(room);
-        return new ResponseEntity<>(entity, HttpStatus.OK);
+        if(entity != null) return new ResponseEntity<>(entity, HttpStatus.OK);
+        else return new ResponseEntity<>(entity, HttpStatus.NOT_FOUND);
     }
 
     @GetMapping("/getReserve/{pk}")
     public ResponseEntity<LightReserveEntity> getReserve(@PathVariable int pk){
         LightReserveEntity entity = lightReserveService.findByPk(pk);
-        return new ResponseEntity<>(entity, HttpStatus.OK);
+        if(entity != null) return new ResponseEntity<>(entity, HttpStatus.OK);
+        else return new ResponseEntity<>(entity, HttpStatus.NOT_FOUND);
     }
 
     @GetMapping("/getReserveRoom/{room}")
     public ResponseEntity<List<LightReserveEntity>> getReserveRoom(@PathVariable String room){
         List<LightReserveEntity> list = lightReserveService.findByRoom(room);
-        return new ResponseEntity<>(list, HttpStatus.OK);
+        if(list != null && list.size() > 0) return new ResponseEntity<>(list, HttpStatus.OK);
+        else return new ResponseEntity<>(list, HttpStatus.NOT_FOUND);
     }
 
     @GetMapping("/getReserveAll")
     public ResponseEntity<List<LightReserveEntity>> getReserveAll(){
         List<LightReserveEntity> list = lightReserveService.findAll();
-        return new ResponseEntity<>(list, HttpStatus.OK);
+        if(list != null && list.size() > 0) return new ResponseEntity<>(list, HttpStatus.OK);
+        else return new ResponseEntity<>(list, HttpStatus.NOT_FOUND);
     }
 
     @PostMapping("/control/{accessToken}")
     public ResponseEntity<String> control(@RequestBody LightDto dto, @PathVariable String accessToken){
         String userPK = jwtTokenProvider.getUserPk(accessToken);
-        if(userPK == null) return new ResponseEntity<>("no data about token", HttpStatus.OK);
+        if(userPK == null) return new ResponseEntity<>("no data about token", HttpStatus.UNAUTHORIZED);
 
         Optional<UserEntity> entity = userService.findById(userPK);
-        if(entity.isEmpty()) return new ResponseEntity<>("no data in user pool", HttpStatus.OK);
+        if(entity.isEmpty()) return new ResponseEntity<>("no data in user pool", HttpStatus.FORBIDDEN);
 
         lightService.control(dto, entity.get().getName());
         return new ResponseEntity<>(null, HttpStatus.OK);
