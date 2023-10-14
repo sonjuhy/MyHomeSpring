@@ -37,6 +37,7 @@ public class WOLController {
     @GetMapping("/getComputerNameList")
     public ResponseEntity<List<String>> getComputerNameList(){
         List<String> list = wolService.getComputerNameList();
-        return new ResponseEntity<>(list, HttpStatus.OK);
+        if(list != null && list.size()>0) return new ResponseEntity<>(list, HttpStatus.OK);
+        else return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
     }
 }

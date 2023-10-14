@@ -20,10 +20,10 @@ import java.util.Optional;
 public class NoticeController {
 
     @Autowired
-    private NoticeService noticeService = new NoticeServiceImpl();
+    private NoticeService noticeService;
 
     @Autowired
-    private UserService userService = new UserServiceImpl();
+    private UserService userService;
 
     @Autowired
     JwtTokenProvider jwtTokenProvider;
@@ -31,38 +31,45 @@ public class NoticeController {
     @GetMapping("/getTopNotice")
     public ResponseEntity<NoticeEntity> getTopNotice(){
         NoticeEntity entity = noticeService.findTopNotice();
-        return new ResponseEntity<>(entity, HttpStatus.OK);
+        if(entity != null) return new ResponseEntity<>(entity, HttpStatus.OK);
+        else return new ResponseEntity<>(entity, HttpStatus.NOT_FOUND);
     }
 
     @GetMapping("/getAllNotice")
     public ResponseEntity<List<NoticeEntity>> getAllNotice(){
         List<NoticeEntity> list = noticeService.findAll();
-        return new ResponseEntity<>(list, HttpStatus.OK);
+        if(list != null && list.size() > 0) return new ResponseEntity<>(list, HttpStatus.OK);
+        else return new ResponseEntity<>(list, HttpStatus.NOT_FOUND);
     }
 
     @GetMapping("/getNoticeByWriter")
     public ResponseEntity<List<NoticeEntity>> getNoticeByWriter(@RequestParam String token){
         String userPK = jwtTokenProvider.getUserPk(token);
+        if(userPK == null) return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+
         Optional<UserEntity> userEntity = userService.findById(userPK);
+        if(userEntity.isEmpty()) return new ResponseEntity<>(null, HttpStatus.FORBIDDEN);
+
         List<NoticeEntity> list = noticeService.findByWriter(userEntity.get().getName());
-        return new ResponseEntity<>(list, HttpStatus.OK);
+        if(list != null && list.size() > 0) return new ResponseEntity<>(list, HttpStatus.OK);
+        else return new ResponseEntity<>(list, HttpStatus.NOT_FOUND);
     }
 
     @PostMapping("/setNotice")
-    public ResponseEntity<String> setNotice(@RequestBody NoticeEntity entity){
-        noticeService.save(entity);
-        return new ResponseEntity<>("Success", HttpStatus.OK);
+    public ResponseEntity<Integer> setNotice(@RequestBody NoticeEntity entity){
+        int result = noticeService.save(entity);
+        return new ResponseEntity<>(result, HttpStatus.OK);
     }
 
     @PutMapping("/updateNotice")
     public ResponseEntity<Integer> updateNotice(@RequestBody NoticeEntity entity){
-        noticeService.save(entity);
-        return new ResponseEntity<>(0, HttpStatus.OK);
+        int result = noticeService.save(entity);
+        return new ResponseEntity<>(result, HttpStatus.OK);
     }
 
     @DeleteMapping("/deleteNotice")
     public ResponseEntity<Integer> deleteNotice(@RequestParam int pk){
-        noticeService.delete(pk);
-        return new ResponseEntity<>(0, HttpStatus.OK);
+        int result = noticeService.delete(pk);
+        return new ResponseEntity<>(result, HttpStatus.OK);
     }
 }

@@ -24,6 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.regex.Matcher;
 
 @Service
 public class FileServerPrivateServiceImpl implements FileServerPrivateService {
@@ -44,20 +45,21 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
     FileServerPrivateRepository repository;
 
     @Autowired
-    UserService service = new UserServiceImpl();
+    UserService service;
 
     @Autowired
     FileServerThumbNailRepository thumbNailRepository;
 
     @Autowired
-    FileServerThumbNailService thumbNailService = new FileServerThumbNailServiceImpl();
+    FileServerThumbNailService thumbNailService;
 
     @Autowired
     JwtTokenProvider jwtTokenProvider;
 
     @Override
     public FileServerPrivateEntity findByPath(String path) {
-        FileServerPrivateEntity entity = repository.findByPath(path);
+        String originPath = changeUnderBarToSeparator(path);
+        FileServerPrivateEntity entity = repository.findByPath(originPath);
         return entity;
     }
 
@@ -99,7 +101,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
             String id = jwtTokenProvider.getUserPk(token);
             Optional<UserEntity> userEntity = service.findById(id);
 //            String fileLocation = defaultUploadPath+File.separator+path+File.separator;
-            String fileLocation = path;
+            String fileLocation = changeUnderBarToSeparator(path);;
             List<FileServerPrivateEntity> list = new ArrayList<>();
             for(MultipartFile file : files){
                 if(!file.isEmpty()){
@@ -139,11 +141,12 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
 
     @Override
     public void mkdir(String path, String token) {
-        File file = new File(path);
+        String originPath = changeUnderBarToSeparator(path);
+        File file = new File(originPath);
         boolean result = file.mkdir();
         System.out.println("FileServerPrivateService mkdir : " + result);
 //        String[] paths = path.split(File.separator);
-        String[] paths = path.split("\\\\");
+        String[] paths = originPath.split("\\\\");
         String name = paths[paths.length-1];
         StringBuilder location = new StringBuilder();
         for(int i=0;i<paths.length-1;i++){
@@ -153,7 +156,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
         Optional<UserEntity> userEntity = service.findById(pk);
 
         FileServerPrivateDto dto = new FileServerPrivateDto(
-                path, // file path (need to change)
+                originPath, // file path (need to change)
                 name, // file name
                 UUID.randomUUID().toString(), // file name to change UUID
                 "dir",
@@ -168,13 +171,15 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
 
     @Override
     public boolean existsByPath(String path) {
-        boolean result = repository.existsByPath(path);
+        String originPath = changeUnderBarToSeparator(path);
+        boolean result = repository.existsByPath(originPath);
         return result;
     }
 
     @Override
     public long deleteByPath(String path, String accessToken) { // add owner
-        FileServerPrivateEntity entity = repository.findByPath(path);
+        String originPath = changeUnderBarToSeparator(path);
+        FileServerPrivateEntity entity = repository.findByPath(originPath);
         if(ObjectUtils.isEmpty(entity)){
             return -1;
         }
@@ -312,6 +317,13 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
         repository.deleteByState(0);
         repository.updateAllStateToZero();
     }
+    private String changeUnderBarToSeparator(String path){
+        return path.replaceAll("_", Matcher.quoteReplacement(File.separator));
+    }
+    private String changeSeparatorToUnderBar(String path){
+        return path.replaceAll(Matcher.quoteReplacement(File.separator), "_");
+    }
+
     private void traversalFolder(String path, List<UserEntity> userList){
         System.out.println("This is Path : " + path);
         File dir = new File(path);
@@ -342,8 +354,8 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
                         break;
                     }
                 }
-                String uuid = UUID.randomUUID().toString();
-                String tmpPath = file.getPath(), tmpLocation = file.getPath().split(file.getName())[0];
+                String tmpPath = changeSeparatorToUnderBar(file.getPath()), tmpLocation = changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
+                String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
 //                if(tmpPath.contains("trash")){
 //                    tmpPath = tmpPath.replace("trash", "");
 //                }

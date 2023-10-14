@@ -36,13 +36,13 @@ public class FileServerController {
     private String defaultUploadPath;
 
     @Autowired
-    FileServerPublicService service = new FileServerPublicServiceImpl();
+    FileServerPublicService service;
 
     @Autowired
-    FileServerThumbNailService thumbNailService = new FileServerThumbNailServiceImpl();
+    FileServerThumbNailService thumbNailService;
 
     @Autowired
-    FileServerPrivateService privateService = new FileServerPrivateServiceImpl();
+    FileServerPrivateService privateService;
 
     @GetMapping("/checkFileState")
     public ResponseEntity<Void> checkFileState(){
@@ -64,7 +64,7 @@ public class FileServerController {
                 e.printStackTrace();
             }
         }
-        return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
     }
 
     /**
@@ -79,17 +79,20 @@ public class FileServerController {
     @GetMapping("/getPublicFileInfo") // get PublicFile info
     public ResponseEntity<FileServerPublicEntity> getPublicFileInfo(@RequestParam String path){
         FileServerPublicEntity fileServerPublicService = service.findByPath(path);
-        return new ResponseEntity<>(fileServerPublicService, HttpStatus.OK);
+        if(fileServerPublicService != null) return new ResponseEntity<>(fileServerPublicService, HttpStatus.OK);
+        else return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
     }
     @GetMapping("/getPublicFilesInfo") // get PublicFiles info list
     public ResponseEntity<List<FileServerPublicEntity>> getPublicFilesInfo(@RequestParam String location){
 
         List<FileServerPublicEntity> list = service.findByLocation(location, 0);
-        return new ResponseEntity<>(list, HttpStatus.OK);
+        if(list != null && list.size() > 0) return new ResponseEntity<>(list, HttpStatus.OK);
+        else return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
     }
     @GetMapping("/movePublicFileInfo")
     public ResponseEntity<Integer> movePublicFileInfo(@RequestParam(value="path") String path, @RequestParam(value="location") String location){
         int result = service.moveFile(path, location);
+        if(result == 0) return new ResponseEntity<>(result, HttpStatus.BAD_GATEWAY);
         return new ResponseEntity<>(result, HttpStatus.OK);
 //        System.out.println("MovePublicFileInfo : " + path + ", " + location);
 //        return new ResponseEntity<>(0, HttpStatus.OK);
@@ -108,7 +111,7 @@ public class FileServerController {
                 e.printStackTrace();
             }
         }
-        return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
     }
 
     @CrossOrigin(origins = "*")
@@ -125,13 +128,14 @@ public class FileServerController {
                 e.printStackTrace();
             }
         }
-        return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
     }
 
     @GetMapping("/getPublicTrashFiles")
     public ResponseEntity<List<FileServerPublicEntity>> getPublicTrashFiles(@RequestParam String location){
         List<FileServerPublicEntity> list = service.findByLocation(location, 1);
-        return new ResponseEntity<>(list, HttpStatus.OK);
+        if(list != null && list.size() > 0) return new ResponseEntity<>(list, HttpStatus.OK);
+        else return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
     }
 
     @PostMapping("/uploadPublicFile") // upload files
@@ -139,7 +143,8 @@ public class FileServerController {
     {
         System.out.println("uploadPublicFile : " + path);
         List<String> resultArr = service.uploadFiles(uploadFile, path, model);
-        return new ResponseEntity<>(resultArr, HttpStatus.OK); // return filename that success to insert file name in DB
+        if(resultArr != null && resultArr.size() > 0) return new ResponseEntity<>(resultArr, HttpStatus.OK); // return filename that success to insert file name in DB
+        else return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
     }
 
     @PostMapping("/mkdirPublic")
@@ -151,24 +156,28 @@ public class FileServerController {
     @PutMapping("/updatePublicFileInfo")
     public ResponseEntity<Integer> updatePublicFileInfo(@RequestBody FileServerPublicDto dto){
         int result = service.updateByFileServerPublicEntity(new FileServerPublicEntity(dto));
+        if(result == 0) return new ResponseEntity<>(result, HttpStatus.BAD_GATEWAY);
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
 
     @PutMapping("/restorePublicFile")
     public ResponseEntity<Integer> restorePublic(@RequestParam String uuid){
         int result = service.restore(uuid);
+        if(result == 0) return new ResponseEntity<>(result, HttpStatus.BAD_GATEWAY);
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
 
     @DeleteMapping("/deletePublicFileToTrash")
     public ResponseEntity<Long> deletePublicFileTrash(@RequestParam String uuid){
         long result = service.moveTrash(uuid);
-        return new ResponseEntity<Long>(result, HttpStatus.OK);
+        if(result == 0) return new ResponseEntity<>(result, HttpStatus.BAD_GATEWAY);
+        return new ResponseEntity<>(result, HttpStatus.OK);
     }
 
     @DeleteMapping("/deletePublicFileInfo/{path}")
     public ResponseEntity<Long> deletePublicFileInfo(@PathVariable String path){
         long result = service.deleteByPath(path); // delete file
+        if(result == 0) return new ResponseEntity<>(result, HttpStatus.BAD_GATEWAY);
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
     /**
@@ -188,7 +197,8 @@ public class FileServerController {
     @GetMapping("/getPrivateFilesInfo") // get PrivateFile info list
     public ResponseEntity<List<FileServerPrivateEntity>> getPrivateFilesInfo(@RequestParam String location){
         List<FileServerPrivateEntity> list = privateService.findByLocation(location, 0);
-        return new ResponseEntity<>(list, HttpStatus.OK);
+        if(list != null && list.size() > 0) return new ResponseEntity<>(list, HttpStatus.OK);
+        else return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
     }
     @GetMapping("/movePrivateFileInfo")
     public ResponseEntity<Integer> movePrivateFileInfo(@RequestParam String path, @RequestParam String location, @RequestParam String accessToken){
@@ -209,7 +219,7 @@ public class FileServerController {
                 e.printStackTrace();
             }
         }
-        return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
     }
 
     @CrossOrigin(origins = "*")
@@ -226,18 +236,20 @@ public class FileServerController {
                 e.printStackTrace();
             }
         }
-        return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
     }
     @GetMapping("/getPrivateTrashFiles")
     public ResponseEntity<List<FileServerPrivateEntity>> getPrivateTrashFiles(@RequestParam String location){
         List<FileServerPrivateEntity> list = privateService.findByLocation(location, 1);
-        return new ResponseEntity<>(list, HttpStatus.OK);
+        if(list != null && list.size() > 0) return new ResponseEntity<>(list, HttpStatus.OK);
+        else return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
     }
     @PostMapping("/uploadPrivateFile/{token}") // upload PrivateFiles
     public ResponseEntity<List<String>> uploadPrivateFileInfo(@RequestParam MultipartFile[] uploadFile, @RequestParam String path, Model model, @PathVariable String token)
     {
         List<String> resultArr = privateService.uploadFiles(uploadFile, path, token, model);
-        return new ResponseEntity<>(resultArr, HttpStatus.OK); // return filename that success to insert file name in DB
+        if(resultArr != null && resultArr.size() > 0) return new ResponseEntity<>(resultArr, HttpStatus.OK); // return filename that success to insert file name in DB
+        else return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
     }
 
     @PostMapping("/mkdirPrivate")
@@ -250,21 +262,25 @@ public class FileServerController {
     @PutMapping("/updatePrivateFileInfo")
     public ResponseEntity<Integer> updatePrivateFileInfo(@RequestBody FileServerPrivateDto dto){
         int result = privateService.updateByFileServerPublicEntity(new FileServerPrivateEntity(dto));
+        if(result == 0) return new ResponseEntity<>(result, HttpStatus.BAD_GATEWAY);
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
     @PutMapping("/restorePrivateFile")
     public ResponseEntity<Integer> restorePrivateFile(@RequestParam(value="uuid") String uuid, @RequestParam(value="accessToken") String accessToken){
         int result = privateService.restore(uuid, accessToken);
+        if(result == 0) return new ResponseEntity<>(result, HttpStatus.BAD_GATEWAY);
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
     @DeleteMapping("/deletePrivateFileToTrash")
     public ResponseEntity<Long> deletePrivateFileTrash(@RequestParam(value="uuid") String uuid, @RequestParam(value="accessToken") String accessToken){
         long result = privateService.moveTrash(uuid, accessToken);
-        return new ResponseEntity<Long>(0L, HttpStatus.OK);
+        if(result == 0) return new ResponseEntity<>(result, HttpStatus.BAD_GATEWAY);
+        return new ResponseEntity<>(result, HttpStatus.OK);
     }
     @DeleteMapping("/deletePrivateFileInfo")
     public ResponseEntity<Long> deletePrivateFileInfo(@RequestParam(value="path") String path, @RequestParam(value="accessToken") String accessToken){
         long result = privateService.deleteByPath(path, accessToken); // delete file
+        if(result == 0) return new ResponseEntity<>(result, HttpStatus.BAD_GATEWAY);
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
 }
