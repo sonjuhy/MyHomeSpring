@@ -2,6 +2,8 @@ package com.myhome.server;
 
 import com.myhome.server.api.controller.AuthController;
 import com.myhome.server.api.dto.UserDto;
+import com.myhome.server.api.service.ScheduleService;
+import com.myhome.server.api.service.ScheduleServiceImpl;
 import com.myhome.server.db.entity.UserEntity;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,9 +15,17 @@ class ServerApplicationTests {
 	@Autowired
 	private AuthController authController;
 
+	@Autowired
+	ScheduleService service;
+
 	@Test
 	void contextLoads() {
 		assert authController != null;
 	}
 
+	@Test
+	void testSchedule(){
+		service = new ScheduleServiceImpl();
+//		service.test();
+	}
 }
