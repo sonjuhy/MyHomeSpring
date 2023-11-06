@@ -2,8 +2,14 @@ package com.myhome.server;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
+import javax.annotation.PostConstruct;
+import java.sql.Time;
+import java.util.TimeZone;
+
+@EnableScheduling
 @EnableTransactionManagement
 @SpringBootApplication
 public class ServerApplication {
@@ -16,5 +22,10 @@ public class ServerApplication {
 //
 //		String enc = pbe.encrypt("sonjuhy_home");
 
+	}
+
+	@PostConstruct
+	public void init(){
+		TimeZone.setDefault(TimeZone.getTimeZone("Asia/Seoul"));
 	}
 }
