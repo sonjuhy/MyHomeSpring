@@ -45,9 +45,19 @@ public class FileServerController {
     FileServerPrivateService privateService;
 
     @GetMapping("/checkFileState")
-    public ResponseEntity<Void> checkFileState(){
-        service.publicFileStateCheck();
-        privateService.privateFileCheck();
+    public ResponseEntity<String> checkFileState(){
+        try {
+            service.publicFileStateCheck();
+        }
+        catch (Exception e){
+            return new ResponseEntity<>("publicFileCheck error", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        try {
+            privateService.privateFileCheck();
+        }
+        catch (Exception e){
+            return new ResponseEntity<>("privateFileCheck error", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
         return new ResponseEntity<>(null, HttpStatus.OK);
     }
 
@@ -149,8 +159,12 @@ public class FileServerController {
 
     @PostMapping("/mkdirPublic")
     public ResponseEntity<Void> mkdirPublic(@RequestParam String path){
-        service.mkdir(path);
-        return new ResponseEntity<>(null, HttpStatus.OK);
+        if(service.mkdir(path)){
+            return new ResponseEntity<>(null, HttpStatus.OK);
+        }
+        else{
+            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @PutMapping("/updatePublicFileInfo")
@@ -254,9 +268,12 @@ public class FileServerController {
 
     @PostMapping("/mkdirPrivate")
     public ResponseEntity<Void> mkdirPrivate(@RequestParam String path, @RequestParam String token){
-        System.out.println("path : " + path + ", token : " + token);
-        privateService.mkdir(path, token);
-        return new ResponseEntity<>(null, HttpStatus.OK);
+        if(privateService.mkdir(path, token)) {
+            return new ResponseEntity<>(null, HttpStatus.OK);
+        }
+        else{
+            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @PutMapping("/updatePrivateFileInfo")

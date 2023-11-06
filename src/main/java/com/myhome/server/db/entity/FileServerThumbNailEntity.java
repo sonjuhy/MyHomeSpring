@@ -24,16 +24,14 @@ public class FileServerThumbNailEntity {
     private String path;
     @Column(name = "ORIGIN_FILENAME_CHAR")
     private String originName;
-
-//    @Builder
-//    public FileServerThumbNailEntity(){
-//
-//    }
+    @Column(name = "TYPE_CHAR")
+    private String type;
 
     @Builder
     public FileServerThumbNailEntity(FileServerThumbNailDto dto){
         this.uuid = dto.getUuid();
         this.path = dto.getPath();
         this.originName = dto.getOriginName();
+        this.type = dto.getType();
     }
 }

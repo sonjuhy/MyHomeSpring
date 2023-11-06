@@ -2,12 +2,19 @@ package com.myhome.server;
 
 import com.myhome.server.api.controller.AuthController;
 import com.myhome.server.api.dto.UserDto;
+import com.myhome.server.api.service.FileServerThumbNailService;
 import com.myhome.server.api.service.ScheduleService;
 import com.myhome.server.api.service.ScheduleServiceImpl;
+import com.myhome.server.db.entity.FileDefaultPathEntity;
+import com.myhome.server.db.entity.FileServerThumbNailEntity;
 import com.myhome.server.db.entity.UserEntity;
+import com.myhome.server.db.repository.FileDefaultPathRepository;
+import com.myhome.server.db.repository.FileServerThumbNailRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+
+import java.util.List;
 
 @SpringBootTest
 class ServerApplicationTests {
@@ -18,6 +25,12 @@ class ServerApplicationTests {
 	@Autowired
 	ScheduleService service;
 
+	@Autowired
+	private FileDefaultPathRepository fileDefaultPathRepository;
+
+	@Autowired
+	private FileServerThumbNailRepository fileServerThumbNailRepository;
+
 	@Test
 	void contextLoads() {
 		assert authController != null;
@@ -27,5 +40,17 @@ class ServerApplicationTests {
 	void testSchedule(){
 		service = new ScheduleServiceImpl();
 //		service.test();
+	}
+
+	@Test
+	public void getDefaultPath(){
+		FileDefaultPathEntity entity = fileDefaultPathRepository.findByPathName("store");
+		System.out.println("test getDefaultPath : "+entity.getPublicDefaultPath());
+	}
+
+	@Test
+	public void getThumbnailWithoutFile(){
+		List<FileServerThumbNailEntity> list = fileServerThumbNailRepository.findAllNotInPublic();
+		System.out.println("test getThumbnailWithoutFile : "+list);
 	}
 }

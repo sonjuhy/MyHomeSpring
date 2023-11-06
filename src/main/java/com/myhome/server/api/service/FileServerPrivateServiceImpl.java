@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import com.myhome.server.api.dto.FileServerPrivateDto;
 import com.myhome.server.config.jwt.JwtTokenProvider;
 import com.myhome.server.db.entity.*;
+import com.myhome.server.db.repository.FileDefaultPathRepository;
 import com.myhome.server.db.repository.FileServerPrivateRepository;
 import com.myhome.server.db.repository.FileServerThumbNailRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,8 +31,9 @@ import java.util.regex.Matcher;
 public class FileServerPrivateServiceImpl implements FileServerPrivateService {
 
 //    private final String diskPath = "/home/disk1/home/private";
-    private final String diskPath = "C:\\\\Users\\\\SonJunHyeok\\\\Desktop\\\\test\\\\private\\\\";
-    private final String trashPath = "C:\\Users\\SonJunHyeok\\Desktop\\test\\private\\User_";
+    private final String diskPath;
+    private final String trashPath;
+    private final String thumbnailPath;
 
     private final String[] videoExtensionList = {"mp4", "avi", "mov", "wmv", "avchd", "webm", "mpeg4"};
 
@@ -55,6 +57,16 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
 
     @Autowired
     JwtTokenProvider jwtTokenProvider;
+
+    @Autowired
+    public FileServerPrivateServiceImpl(FileDefaultPathRepository fileDefaultPathRepository){
+        FileDefaultPathEntity storeEntity = fileDefaultPathRepository.findByPathName("store");
+        FileDefaultPathEntity trashEntity = fileDefaultPathRepository.findByPathName("trash");
+        FileDefaultPathEntity thumbnailEntity = fileDefaultPathRepository.findByPathName("trash");
+        diskPath = changeUnderBarToSeparator(storeEntity.getPrivateDefaultPath());
+        trashPath = changeUnderBarToSeparator(trashEntity.getPrivateDefaultPath());
+        thumbnailPath = changeUnderBarToSeparator(thumbnailEntity.getPrivateDefaultPath());
+    }
 
     @Override
     public FileServerPrivateEntity findByPath(String path) {
@@ -101,7 +113,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
             String id = jwtTokenProvider.getUserPk(token);
             Optional<UserEntity> userEntity = service.findById(id);
 //            String fileLocation = defaultUploadPath+File.separator+path+File.separator;
-            String fileLocation = changeUnderBarToSeparator(path);;
+            String fileLocation = changeUnderBarToSeparator(path);
             List<FileServerPrivateEntity> list = new ArrayList<>();
             for(MultipartFile file : files){
                 if(!file.isEmpty()){
@@ -140,33 +152,36 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
     }
 
     @Override
-    public void mkdir(String path, String token) {
+    public boolean mkdir(String path, String token) {
         String originPath = changeUnderBarToSeparator(path);
         File file = new File(originPath);
-        boolean result = file.mkdir();
-        System.out.println("FileServerPrivateService mkdir : " + result);
-//        String[] paths = path.split(File.separator);
-        String[] paths = originPath.split("\\\\");
-        String name = paths[paths.length-1];
-        StringBuilder location = new StringBuilder();
-        for(int i=0;i<paths.length-1;i++){
-            location.append(paths[i]).append(File.separator);
-        }
-        String pk = jwtTokenProvider.getUserPk(token);
-        Optional<UserEntity> userEntity = service.findById(pk);
+        if(file.mkdir()){
+            String[] paths = originPath.split(File.separator);
+            String name = paths[paths.length-1];
+            StringBuilder location = new StringBuilder();
+            for(int i=0;i<paths.length-1;i++){
+                location.append(paths[i]).append(File.separator);
+            }
+            String pk = jwtTokenProvider.getUserPk(token);
+            Optional<UserEntity> userEntity = service.findById(pk);
 
-        FileServerPrivateDto dto = new FileServerPrivateDto(
-                originPath, // file path (need to change)
-                name, // file name
-                UUID.randomUUID().toString(), // file name to change UUID
-                "dir",
-                0, // file size(KB)
-                userEntity.get().getName(),
-                location.toString(), // file folder path (need to change)
-                0,
-                0
-        );
-        repository.save(new FileServerPrivateEntity(dto));
+            FileServerPrivateDto dto = new FileServerPrivateDto(
+                    originPath, // file path (need to change)
+                    name, // file name
+                    UUID.randomUUID().toString(), // file name to change UUID
+                    "dir",
+                    0, // file size(KB)
+                    userEntity.get().getName(),
+                    location.toString(), // file folder path (need to change)
+                    0,
+                    0
+            );
+            repository.save(new FileServerPrivateEntity(dto));
+            return true;
+        }
+        else{
+            return false;
+        }
     }
 
     @Override
@@ -192,7 +207,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
             jsonObject.addProperty("action", "delete");
             jsonObject.addProperty("uuid", entity.getUuid());
             jsonObject.addProperty("file", entity.getPath());
-            jsonObject.addProperty("path", trashPath+"\\"+entityUser.get().getUserId()+"\\"+entity.getName());
+            jsonObject.addProperty("path", trashPath+File.separator+entityUser.get().getUserId()+File.separator+entity.getName());
             String jsonResult = gson.toJson(jsonObject);
             System.out.println("deleteByPath : " + jsonResult);
             // kafka send
@@ -245,7 +260,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
             jsonObject.addProperty("purpose", "delete");
             jsonObject.addProperty("action", "delete");
             jsonObject.addProperty("uuid", entity.getUuid());
-            jsonObject.addProperty("file", trashPath+"\\"+entityUser.get().getUserId()+"\\"+entity.getName());
+            jsonObject.addProperty("file", trashPath+File.separator+entityUser.get().getUserId()+File.separator+entity.getName());
             jsonObject.addProperty("path", entity.getPath());
             String jsonResult = gson.toJson(jsonObject);
             System.out.println("deleteByPath : " + jsonResult);
@@ -272,7 +287,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
             jsonObject.addProperty("purpose", "delete");
             jsonObject.addProperty("action", "delete");
             jsonObject.addProperty("uuid", entity.getUuid());
-            jsonObject.addProperty("file", trashPath+"\\"+entityUser.get().getUserId()+"\\"+entity.getName());
+            jsonObject.addProperty("file", trashPath+File.separator+entityUser.get().getUserId()+File.separator+entity.getName());
             jsonObject.addProperty("path", entity.getPath());
             String jsonResult = gson.toJson(jsonObject);
             System.out.println("deleteByPath : " + jsonResult);
@@ -344,9 +359,8 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
             }
             FileServerPrivateEntity entity = repository.findByPath(file.getPath());
             if(entity == null){
-                String folderName = file.getPath().split(diskPath)[1].split("\\\\")[0];
+                String folderName = file.getPath().split(diskPath)[1].split(File.separator)[0];
                 int userNum = Integer.parseInt(folderName.split("_")[1]);
-                System.out.println("FileServerPrivateServiceImpl : " + "\\\\"+", "+File.separator);
                 String owner = "owner";
                 for(UserEntity user : userList){
                     if(user.getUserId() == userNum){
@@ -381,7 +395,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
-                    thumbNailService.makeThumbNail(file, uuid);
+                    thumbNailService.makeThumbNail(file, uuid, "private");
                 }
             }
             System.out.println(file.getPath()+", "+type+file.getName());
@@ -391,9 +405,9 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
         }
     }
     private void deleteThumbNail(){
-        List<FileServerPrivateEntity> list = repository.findByState(0);
-        for(FileServerPrivateEntity entity : list){
-            File out = new File(entity.getPath());
+        List<FileServerThumbNailEntity> thumbNailEntityList = thumbNailRepository.findAllNotInPublic();
+        for(FileServerThumbNailEntity entity : thumbNailEntityList){
+            File out = new File(changeUnderBarToSeparator(entity.getPath()));
             if(out.exists()){
                 if(out.delete()){
                     thumbNailRepository.deleteByUuid(entity.getUuid());

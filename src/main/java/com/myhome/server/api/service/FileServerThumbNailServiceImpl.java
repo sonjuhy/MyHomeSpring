@@ -1,7 +1,9 @@
 package com.myhome.server.api.service;
 
 import com.myhome.server.api.dto.FileServerThumbNailDto;
+import com.myhome.server.db.entity.FileDefaultPathEntity;
 import com.myhome.server.db.entity.FileServerThumbNailEntity;
+import com.myhome.server.db.repository.FileDefaultPathRepository;
 import com.myhome.server.db.repository.FileServerThumbNailRepository;
 import org.jcodec.api.FrameGrab;
 import org.jcodec.api.JCodecException;
@@ -15,14 +17,21 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.regex.Matcher;
 
 @Service
 public class FileServerThumbNailServiceImpl implements FileServerThumbNailService {
 
-    private static final String uploadPath = "C:\\Users\\SonJunHyeok\\Desktop\\test\\thumbnail";
+    private final String uploadPath;
 
     @Autowired
     FileServerThumbNailRepository repository;
+
+    @Autowired
+    public FileServerThumbNailServiceImpl(FileDefaultPathRepository defaultPathRepository){
+        FileDefaultPathEntity entity = defaultPathRepository.findByPathName("thumbnail");
+        uploadPath = changeUnderBarToSeparator(entity.getPublicDefaultPath());
+    }
 
     @Override
     public void deleteByUUID(String uuid) {
@@ -35,7 +44,7 @@ public class FileServerThumbNailServiceImpl implements FileServerThumbNailServic
     }
 
     @Override
-    public void makeThumbNail(File file, String uuid) {
+    public void makeThumbNail(File file, String uuid, String type) {
         System.out.println("makeThumbNail : " + file.getName());
         File thumbnail = new File(uploadPath, uuid+".png");
         try{
@@ -51,11 +60,17 @@ public class FileServerThumbNailServiceImpl implements FileServerThumbNailServic
             ImageIO.write(bi, "png", thumbnail);
 
             String fileLocation = uploadPath+File.separator+uuid+".png";
-            FileServerThumbNailDto thumbNailDto = new FileServerThumbNailDto(uuid, fileLocation, file.getName());
+            FileServerThumbNailDto thumbNailDto = new FileServerThumbNailDto(uuid, fileLocation, file.getName(), type);
             repository.save(new FileServerThumbNailEntity(thumbNailDto));
 
         } catch (JCodecException | IOException e) {
             e.printStackTrace();
         }
+    }
+    private String changeUnderBarToSeparator(String path){
+        return path.replaceAll("_", Matcher.quoteReplacement(File.separator));
+    }
+    private String changeSeparatorToUnderBar(String path){
+        return path.replaceAll(Matcher.quoteReplacement(File.separator), "_");
     }
 }

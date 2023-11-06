@@ -18,13 +18,13 @@ public class ScheduleServiceImpl implements ScheduleService {
     @Autowired
     FileServerPublicService fileServerPublicService;
 
-    @Scheduled(cron = "0 0 * * * *") // top of every hour of every day
+    @Scheduled(cron = "0 0 0 * * *") // top of  every day (second, min, hour, day, month, week)
     @Override
     public void sendRefreshReserveList() {
         kafkaProducer.sendReserveMessage();
     }
 
-    @Scheduled(cron = "0 0 * * * *") // top of every hour of every day
+    @Scheduled(cron = "0 0 0 * * *") // top of e every day
     @Override
     public void checkCloudFile() {
         fileServerPublicService.publicFileStateCheck();
