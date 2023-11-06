@@ -18,7 +18,7 @@ public interface FileServerPublicService {
     List<FileServerPublicEntity> findByLocation(String location, int mode);
     HttpHeaders getHttpHeader(Path path, String fileName) throws IOException;
     List<String> uploadFiles(MultipartFile[] files, String path, Model model);
-    void mkdir(String path);
+    boolean mkdir(String path);
     boolean existsByPath(String path);
     @Transactional
     long deleteByPath(String path);

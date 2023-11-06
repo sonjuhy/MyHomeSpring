@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.myhome.server.api.dto.FileServerPublicDto;
 import com.myhome.server.db.entity.*;
+import com.myhome.server.db.repository.FileDefaultPathRepository;
 import com.myhome.server.db.repository.FileServerPublicRepository;
 import com.myhome.server.db.repository.FileServerThumbNailRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,11 +30,9 @@ import java.util.regex.Matcher;
 @Service
 public class FileServerPublicServiceImpl implements FileServerPublicService {
 
-//    private final String diskPath = "/home/disk1/home/public";
-//    private final String trashPath = "/home/disk1/home/public/휴지통";
-
-    private final String diskPath = "C:\\Users\\SonJunHyeok\\Desktop\\test\\public";
-    private final String trashPath = "C:\\Users\\SonJunHyeok\\Desktop\\test\\trash";
+    private final String diskPath;
+    private final String trashPath;
+    private final String thumbnailPath;
 
     @Value("${part4.upload.path}")
     private String defaultUploadPath;
@@ -50,7 +49,17 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     FileServerThumbNailRepository thumbNailRepository;
 
     @Autowired
-    FileServerThumbNailService thumbNailService = new FileServerThumbNailServiceImpl();
+    FileServerThumbNailService thumbNailService;
+
+    @Autowired
+    public FileServerPublicServiceImpl(FileDefaultPathRepository fileDefaultPathRepository){
+        FileDefaultPathEntity storeEntity = fileDefaultPathRepository.findByPathName("store");
+        FileDefaultPathEntity trashEntity = fileDefaultPathRepository.findByPathName("trash");
+        FileDefaultPathEntity thumbnailEntity = fileDefaultPathRepository.findByPathName("trash");
+        diskPath = changeUnderBarToSeparator(storeEntity.getPublicDefaultPath());
+        trashPath = changeUnderBarToSeparator(trashEntity.getPublicDefaultPath());
+        thumbnailPath = changeUnderBarToSeparator(thumbnailEntity.getPublicDefaultPath());
+    }
 
     @Override
     public FileServerPublicEntity findByPath(String path) {
@@ -93,7 +102,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     @Override
     public List<String> uploadFiles(MultipartFile[] files, String path, Model model) {
 
-//        String fileLocation = defaultUploadPath+File.separator+path+File.separator;
+        String fileLocation = defaultUploadPath+File.separator+path+File.separator;
         String originPath = changeUnderBarToSeparator(path);
         if(originPath != null && originPath.isBlank() && !originPath.isEmpty()) {
             System.out.println("uploadFile impl here : " + originPath);
@@ -102,7 +111,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         else{
             System.out.println("uploadFile impl path is empty");
         }
-        String fileLocation = "C:\\Users\\SonJunHyeok\\Desktop\\test\\public"+File.separator+originPath;
+//        String fileLocation = "C:\\Users\\SonJunHyeok\\Desktop\\test\\public"+File.separator+originPath;
         List<FileServerPublicEntity> list = new ArrayList<>();
         for(MultipartFile file : files){
             if(!file.isEmpty()){
@@ -139,30 +148,37 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     }
 
     @Override
-    public void mkdir(String path) {
+    public boolean mkdir(String path) {
         String originPath = changeUnderBarToSeparator(path);
         File file = new File(originPath);
-        file.mkdir();
-        System.out.println("Public mkdir : " + originPath);
-//        String[] paths = path.split(File.separator);
-        String[] paths = originPath.split("\\\\");
-        String name = paths[paths.length-1];
-        StringBuilder location = new StringBuilder();
-        for(int i=0;i<paths.length-1;i++){
-            location.append(paths[i]).append(File.separator);
+        if(file.mkdir()){
+            System.out.println("Public mkdir : " + originPath);
+
+            String[] paths = originPath.split(File.separator);
+            String name = paths[paths.length-1];
+            StringBuilder location = new StringBuilder();
+            for(int i=0;i<paths.length-1;i++){
+                location.append(paths[i]).append(File.separator);
+            }
+            System.out.println("Public mkdir location : " + location.toString());
+
+            FileServerPublicDto dto = new FileServerPublicDto(
+                    originPath, // file path (need to change)
+                    name, // file name
+                    UUID.randomUUID().toString(), // file name to change UUID
+                    "dir",
+                    0, // file size(KB)
+                    location.toString(), // file folder path (need to change)
+                    0,
+                    0
+            );
+            fileServerRepository.save(new FileServerPublicEntity(dto));
+
+            return true;
         }
-        System.out.println("Public mkdir location : " + location.toString());
-        FileServerPublicDto dto = new FileServerPublicDto(
-                originPath, // file path (need to change)
-                name, // file name
-                UUID.randomUUID().toString(), // file name to change UUID
-                "dir",
-                0, // file size(KB)
-                location.toString(), // file folder path (need to change)
-                0,
-                0
-        );
-        fileServerRepository.save(new FileServerPublicEntity(dto));
+        else{
+            return false;
+        }
     }
 
     @Override
@@ -185,7 +201,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         jsonObject.addProperty("purpose", "delete");
         jsonObject.addProperty("action", "delete");
         jsonObject.addProperty("uuid", entity.getUuid());
-        jsonObject.addProperty("file", trashPath+"\\"+entity.getName());
+        jsonObject.addProperty("file", trashPath+File.separator+entity.getName());
         jsonObject.addProperty("path", entity.getPath());
         String jsonResult = gson.toJson(jsonObject);
         System.out.println("deleteByPath : " + jsonResult);
@@ -245,7 +261,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
             jsonObject.addProperty("purpose", "move");
             jsonObject.addProperty("action", "restore");
             jsonObject.addProperty("uuid", entity.getUuid());
-            jsonObject.addProperty("file", trashPath+"\\"+entity.getName());
+            jsonObject.addProperty("file", trashPath+File.separator+entity.getName());
             jsonObject.addProperty("path", entity.getPath());
             String jsonResult = gson.toJson(jsonObject);
             // kafka send
@@ -280,11 +296,9 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
 
     @Override
     public void publicFileStateCheck() {
-        String tmpPath = "C:\\Users\\SonJunHyeok\\Desktop\\test\\public\\";
-        String tmpTrashPath = "C:\\Users\\SonJunHyeok\\Desktop\\test\\trash\\";
         fileServerRepository.updateAllStateToOne();
-        traversalFolder(tmpPath, true);
-        traversalFolder(tmpTrashPath, false);
+        traversalFolder(diskPath, true);
+        traversalFolder(trashPath, false);
         deleteThumbNail();
         fileServerRepository.deleteByState(0);
     }
@@ -333,7 +347,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                 );
                 fileServerRepository.save(new FileServerPublicEntity(dto));
                 if(Arrays.asList(videoExtensionList).contains(extension)){
-                    thumbNailService.makeThumbNail(file, uuid);
+                    thumbNailService.makeThumbNail(file, uuid, "public");
                 }
             }
             System.out.println(file.getPath()+", "+type+file.getName());
@@ -345,11 +359,12 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
 
     }
     private void deleteThumbNail(){
-        List<FileServerPublicEntity> list = fileServerRepository.findByState(0);
-        for(FileServerPublicEntity entity : list){
-            File out = new File(entity.getPath());
-            if(out.exists()){
-                if(out.delete()){
+        List<FileServerThumbNailEntity> thumbNailEntityList = thumbNailRepository.findAllNotInPublic();
+        for(FileServerThumbNailEntity entity : thumbNailEntityList){
+            String path = changeUnderBarToSeparator(entity.getPath());
+            File thumbnailFile = new File(path);
+            if(thumbnailFile.exists()){
+                if(thumbnailFile.delete()){
                     thumbNailRepository.deleteByUuid(entity.getUuid());
                 }
             }

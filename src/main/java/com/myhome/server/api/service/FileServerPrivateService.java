@@ -17,7 +17,7 @@ public interface FileServerPrivateService {
     List<FileServerPrivateEntity> findByOwner(String owner);
     HttpHeaders getHttpHeaders(Path path, String fileName) throws IOException;
     List<String> uploadFiles(MultipartFile[] files, String path, String token, Model model);
-    void mkdir(String path, String token);
+    boolean mkdir(String path, String token);
     boolean existsByPath(String path);
     @Transactional
     long deleteByPath(String path, String accessToken);
