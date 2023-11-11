@@ -55,7 +55,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     public FileServerPublicServiceImpl(FileDefaultPathRepository fileDefaultPathRepository){
         FileDefaultPathEntity storeEntity = fileDefaultPathRepository.findByPathName("store");
         FileDefaultPathEntity trashEntity = fileDefaultPathRepository.findByPathName("trash");
-        FileDefaultPathEntity thumbnailEntity = fileDefaultPathRepository.findByPathName("trash");
+        FileDefaultPathEntity thumbnailEntity = fileDefaultPathRepository.findByPathName("thumbnail");
         diskPath = changeUnderBarToSeparator(storeEntity.getPublicDefaultPath());
         trashPath = changeUnderBarToSeparator(trashEntity.getPublicDefaultPath());
         thumbnailPath = changeUnderBarToSeparator(thumbnailEntity.getPublicDefaultPath());

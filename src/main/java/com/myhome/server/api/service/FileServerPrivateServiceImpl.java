@@ -62,7 +62,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
     public FileServerPrivateServiceImpl(FileDefaultPathRepository fileDefaultPathRepository){
         FileDefaultPathEntity storeEntity = fileDefaultPathRepository.findByPathName("store");
         FileDefaultPathEntity trashEntity = fileDefaultPathRepository.findByPathName("trash");
-        FileDefaultPathEntity thumbnailEntity = fileDefaultPathRepository.findByPathName("trash");
+        FileDefaultPathEntity thumbnailEntity = fileDefaultPathRepository.findByPathName("thumbnail");
         diskPath = changeUnderBarToSeparator(storeEntity.getPrivateDefaultPath());
         trashPath = changeUnderBarToSeparator(trashEntity.getPrivateDefaultPath());
         thumbnailPath = changeUnderBarToSeparator(thumbnailEntity.getPrivateDefaultPath());

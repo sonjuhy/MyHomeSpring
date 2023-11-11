@@ -14,12 +14,12 @@ public class KafkaConsumer {
     @Autowired
     FileServerPrivateService privateService;
 
-    @KafkaListener(topics = "exam-topic", groupId = "spring-kafka")
+    @KafkaListener(topics = "exam-topic", groupId = "spring-group")
     public void consume(String message) throws Exception {
         System.out.println("Consume message : " + message);
     }
 
-    @KafkaListener(topics = "cloud-check", groupId = "cloud-kafka")
+    @KafkaListener(topics = "cloud-check", groupId = "spring-group")
     public void cloudConsume(String message) throws Exception{
         System.out.println("Cloud Consume meesage : " + message);
         JsonObject object = (JsonObject) JsonParser.parseString(message);
