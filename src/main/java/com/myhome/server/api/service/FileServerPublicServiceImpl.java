@@ -34,6 +34,9 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     private final String trashPath;
     private final String thumbnailPath;
 
+    private final static String TOPIC_CLOUD_LOG = "cloud-log-topic";
+    private final static String TOPIC_CLOUD_CHECK_LOG = "cloud-check-log";
+
     @Value("${part4.upload.path}")
     private String defaultUploadPath;
 
@@ -59,6 +62,11 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         diskPath = changeUnderBarToSeparator(storeEntity.getPublicDefaultPath());
         trashPath = changeUnderBarToSeparator(trashEntity.getPublicDefaultPath());
         thumbnailPath = changeUnderBarToSeparator(thumbnailEntity.getPublicDefaultPath());
+
+        producer.sendLogDto("Cloud",
+                "[FileServerPublicServiceImpl] diskPath : "+diskPath+", trashPath : "+trashPath+", thumbnailPath : " + thumbnailPath,
+                true,
+                TOPIC_CLOUD_LOG);
     }
 
     @Override
@@ -105,46 +113,46 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         String fileLocation = defaultUploadPath+File.separator+path+File.separator;
         String originPath = changeUnderBarToSeparator(path);
         if(originPath != null && originPath.isBlank() && !originPath.isEmpty()) {
-            System.out.println("uploadFile impl here : " + originPath);
             originPath += File.separator;
-        }
-        else{
-            System.out.println("uploadFile impl path is empty");
-        }
-//        String fileLocation = "C:\\Users\\SonJunHyeok\\Desktop\\test\\public"+File.separator+originPath;
-        List<FileServerPublicEntity> list = new ArrayList<>();
-        for(MultipartFile file : files){
-            if(!file.isEmpty()){
-                System.out.println("uploadFile impl filepath : " + fileLocation+file.getOriginalFilename());
-                try{
-                    FileServerPublicDto dto = new FileServerPublicDto(
-                            fileLocation+file.getOriginalFilename(), // file path (need to change)
-                            file.getOriginalFilename(), // file name
-                            UUID.randomUUID().toString(), // file name to change UUID
-                            Objects.requireNonNull(file.getOriginalFilename()).substring(file.getOriginalFilename().lastIndexOf(".") + 1), // file type (need to check ex: txt file -> text/plan)
-                            (float)file.getSize(), // file size(KB)
-                            fileLocation, // file folder path (need to change)
-                            0,
-                            0
-                    );
-                    System.out.println(file.getResource());
-                    list.add(new FileServerPublicEntity(dto));
-                    String saveName = fileLocation+dto.getName();
-                    Path savePath = Paths.get(saveName);
-                    file.transferTo(savePath);
-                } catch (IOException e) {
-                    e.printStackTrace();
+            //        String fileLocation = "C:\\Users\\SonJunHyeok\\Desktop\\test\\public"+File.separator+originPath;
+            List<FileServerPublicEntity> list = new ArrayList<>();
+            for(MultipartFile file : files){
+                if(!file.isEmpty()){
+                    try{
+                        FileServerPublicDto dto = new FileServerPublicDto(
+                                fileLocation+file.getOriginalFilename(), // file path (need to change)
+                                file.getOriginalFilename(), // file name
+                                UUID.randomUUID().toString(), // file name to change UUID
+                                Objects.requireNonNull(file.getOriginalFilename()).substring(file.getOriginalFilename().lastIndexOf(".") + 1), // file type (need to check ex: txt file -> text/plan)
+                                (float)file.getSize(), // file size(KB)
+                                fileLocation, // file folder path (need to change)
+                                0,
+                                0
+                        );
+                        System.out.println(file.getResource());
+                        list.add(new FileServerPublicEntity(dto));
+                        String saveName = fileLocation+dto.getName();
+                        Path savePath = Paths.get(saveName);
+                        file.transferTo(savePath);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
-        }
-        model.addAttribute("files", list);
-        List<String> resultArr = new ArrayList<>();
-        for (FileServerPublicEntity entity : list) {
-            if (save(entity)) {
-                resultArr.add(entity.getName());
+            model.addAttribute("files", list);
+            List<String> resultArr = new ArrayList<>();
+            for (FileServerPublicEntity entity : list) {
+                if (save(entity)) {
+                    resultArr.add(entity.getName());
+                }
             }
+            producer.sendLogDto("Cloud", "[uploadFiles(public)] file size : "+resultArr.size(), true, TOPIC_CLOUD_LOG);
+            return resultArr;
         }
-        return resultArr;
+        else{
+            producer.sendLogDto("Cloud", "[uploadFiles(public)] uploadFile impl path is empty", false, TOPIC_CLOUD_LOG);
+            return null;
+        }
     }
 
     @Override
@@ -173,10 +181,11 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                     0
             );
             fileServerRepository.save(new FileServerPublicEntity(dto));
-
+            producer.sendLogDto("Cloud", "[mkdir(public)] mkdir dto : "+dto, true, TOPIC_CLOUD_LOG);
             return true;
         }
         else{
+            producer.sendLogDto("Cloud", "[mkdir(public)] failed to mkdir (path) : "+path, false, TOPIC_CLOUD_LOG);
             return false;
         }
     }
@@ -193,6 +202,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         String originPath = changeUnderBarToSeparator(path);
         FileServerPublicEntity entity = fileServerRepository.findByPath(originPath);
         if(ObjectUtils.isEmpty(entity)){
+            producer.sendLogDto("Cloud", "[deleteByPath(public)] file entity is null (path) : "+path, false, TOPIC_CLOUD_LOG);
             return -1;
         }
         // json type { file : origin file path, path : destination to move file }
@@ -207,6 +217,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         System.out.println("deleteByPath : " + jsonResult);
         // kafka send
         producer.sendMessage(jsonResult);
+        producer.sendLogDto("Cloud", "[deleteByPath(public)] json : "+jsonResult, true, TOPIC_CLOUD_LOG);
         return 0;
     }
 
@@ -215,6 +226,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         String originPath = changeUnderBarToSeparator(path);
         FileServerPublicEntity entity = fileServerRepository.findByPath(originPath);
         if(ObjectUtils.isEmpty(entity)){
+            producer.sendLogDto("Cloud", "[moveFile(public)] file entity is null (path) : "+path+", location : " + location, false, TOPIC_CLOUD_LOG);
             return -1; // file info doesn't exist
         }
         // json type { file : origin file path, path : destination to move file }
@@ -228,6 +240,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         String jsonResult = gson.toJson(jsonObject);
         // kafka send
         producer.sendMessage(jsonResult);
+        producer.sendLogDto("Cloud", "[moveFile(public)] json : "+jsonResult, true, TOPIC_CLOUD_LOG);
         return 0;
     }
 
@@ -246,7 +259,10 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
             String jsonResult = gson.toJson(jsonObject);
             // kafka send
             producer.sendMessage(jsonResult);
+            producer.sendLogDto("Cloud", "[moveTrash(public)] file info send to django (json) : "+jsonResult, true, TOPIC_CLOUD_LOG);
+            return 0;
         }
+        producer.sendLogDto("Cloud", "[moveTrash(public)] entity is null (uuid) : "+uuid, false, TOPIC_CLOUD_LOG);
         return -1;
     }
 
@@ -266,23 +282,27 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
             String jsonResult = gson.toJson(jsonObject);
             // kafka send
             producer.sendMessage(jsonResult);
+            producer.sendLogDto("Cloud", "[restore(public)] file info send to django (json) : "+jsonResult, true, TOPIC_CLOUD_LOG);
+            return 0;
         }
+        producer.sendLogDto("Cloud", "[restore(public)] file entity is null (uuid) : "+uuid, false, TOPIC_CLOUD_LOG);
         return -1;
     }
 
     @Override
     public int updateByFileServerPublicEntity(FileServerPublicEntity entity) {
         if(existsByPath(entity.getPath())){
-            System.out.println("already exist file in location");
+            producer.sendLogDto("Cloud", "[updateByFileServerPublicEntity(public)] already exist file in location (path): "+entity.getPath(), false, TOPIC_CLOUD_LOG);
             return -1;
         }
         else{
             FileServerPublicEntity resultEntity = fileServerRepository.save(entity);
             if(ObjectUtils.isEmpty(resultEntity)){ // error during change info on DB
-                System.out.println("Error during change info on DB");
+                producer.sendLogDto("Cloud", "[updateByFileServerPublicEntity(public)] Error during change info on DB (uuid): "+entity.getUuid(), false, TOPIC_CLOUD_LOG);
                 return -2;
             }
             else{ // success update file info
+                producer.sendLogDto("Cloud", "[updateByFileServerPublicEntity(public)] change info on DB (uuid) : "+entity.getUuid(), true, TOPIC_CLOUD_LOG);
                 return 0;
             }
         }
@@ -313,48 +333,54 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         System.out.println("This is Path : " + path);
         File dir = new File(path);
         File[] files = dir.listFiles();
-        assert files != null;
-        ArrayList<String> dirList = new ArrayList<>();
-        System.out.println("Files size : " + files.length);
-        for(File file : files){
-            String type, extension;
-            if(file.isDirectory()) {
-                type = "dir : ";
-                extension = "dir";
-                dirList.add(file.getName());
-            }
-            else {
-                type = "file : ";
-                extension = file.getName().substring(file.getName().lastIndexOf(".") + 1); // file type (need to check ex: txt file -> text/plan)
-            }
-            FileServerPublicEntity entity = fileServerRepository.findByPath(file.getPath());
-            int deleteStatus = 0;
-            String tmpPath = changeSeparatorToUnderBar(file.getPath()), tmpLocation = changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
-            if(!mode) {
-                deleteStatus = 1;
-            }
-            if(entity == null){
-                String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
-                FileServerPublicDto dto = new FileServerPublicDto(
-                        tmpPath, // file path
-                        file.getName(), // file name
-                        uuid, // file name to change UUID
-                        extension,
-                        (float)(file.length()/1024), // file size(KB)
-                        tmpLocation, // file folder path (location)
-                        1,
-                        deleteStatus
-                );
-                fileServerRepository.save(new FileServerPublicEntity(dto));
-                if(Arrays.asList(videoExtensionList).contains(extension)){
-                    thumbNailService.makeThumbNail(file, uuid, "public");
+        if(files == null){
+            ArrayList<String> dirList = new ArrayList<>();
+            System.out.println("Files size : " + files.length);
+            for(File file : files){
+                String type, extension;
+                if(file.isDirectory()) {
+                    type = "dir : ";
+                    extension = "dir";
+                    dirList.add(file.getName());
+                }
+                else {
+                    type = "file : ";
+                    extension = file.getName().substring(file.getName().lastIndexOf(".") + 1); // file type (need to check ex: txt file -> text/plan)
+                }
+                FileServerPublicEntity entity = fileServerRepository.findByPath(file.getPath());
+                int deleteStatus = 0;
+                String tmpPath = changeSeparatorToUnderBar(file.getPath()), tmpLocation = changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
+                if(!mode) {
+                    deleteStatus = 1;
+                }
+                if(entity == null){
+                    String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
+                    FileServerPublicDto dto = new FileServerPublicDto(
+                            tmpPath, // file path
+                            file.getName(), // file name
+                            uuid, // file name to change UUID
+                            extension,
+                            (float)(file.length()/1024), // file size(KB)
+                            tmpLocation, // file folder path (location)
+                            1,
+                            deleteStatus
+                    );
+                    fileServerRepository.save(new FileServerPublicEntity(dto));
+                    if(Arrays.asList(videoExtensionList).contains(extension)){
+                        thumbNailService.makeThumbNail(file, uuid, "public");
+                    }
+                    producer.sendLogDto("Cloud-Check", "[traversalFolder(private)] file (dto) : "+dto+", no exist file", true, TOPIC_CLOUD_CHECK_LOG);
+                }
+                else{
+                    producer.sendLogDto("Cloud-Check", "[traversalFolder(private)] file (path) : "+file.getPath()+", (name) : "+type+file.getName()+", exist file", true, TOPIC_CLOUD_CHECK_LOG);
                 }
             }
-            System.out.println(file.getPath()+", "+type+file.getName());
+            for(String folder : dirList){
+                traversalFolder(path+File.separator+folder, mode);
+            }
         }
-
-        for(String folder : dirList){
-            traversalFolder(path+File.separator+folder, mode);
+        else{
+            producer.sendLogDto("Cloud-Check", "[traversalFolder(public)] files is null (path) : "+path, false, TOPIC_CLOUD_CHECK_LOG);
         }
 
     }
@@ -366,6 +392,10 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
             if(thumbnailFile.exists()){
                 if(thumbnailFile.delete()){
                     thumbNailRepository.deleteByUuid(entity.getUuid());
+                    producer.sendLogDto("Cloud-Check", "[deleteThumbNail(public)] files is deleted (uuid) : "+entity.getUuid(), true, TOPIC_CLOUD_CHECK_LOG);
+                }
+                else{
+                    producer.sendLogDto("Cloud-Check", "[deleteThumbNail(public)] files is doesn't delete (uuid) : "+entity.getUuid(), false, TOPIC_CLOUD_CHECK_LOG);
                 }
             }
         }

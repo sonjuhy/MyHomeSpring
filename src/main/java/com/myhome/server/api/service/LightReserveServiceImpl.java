@@ -11,6 +11,8 @@ import java.util.List;
 @Service
 public class LightReserveServiceImpl implements LightReserveService{
 
+    private final String TOPIC_RESERVE_LOG = "reserve-log-topic";
+
     @Autowired
     LightReserveRepository repository;
 
@@ -20,25 +22,48 @@ public class LightReserveServiceImpl implements LightReserveService{
     @Override
     public LightReserveEntity findByPk(int pk) {
         LightReserveEntity entity = repository.findByPk(pk);
+        if(entity != null){
+            producer.sendLogDto("Reserve", "[findByPk] find reserve entity (entity) : "+entity+", (pk) : " + pk, true, TOPIC_RESERVE_LOG);
+        }
+        else{
+            producer.sendLogDto("Reserve", "[findByPk] entity is null (pk) : " + pk, false, TOPIC_RESERVE_LOG);
+        }
         return entity;
     }
 
     @Override
     public List<LightReserveEntity> findByRoom(String room) {
         List<LightReserveEntity> list = repository.findByRoom(room);
+        if(list != null){
+            producer.sendLogDto("Reserve", "[findByRoom] find by room (list size) : "+list.size()+", (room) : " +room, true, TOPIC_RESERVE_LOG);
+        }
+        else{
+            producer.sendLogDto("Reserve", "[findByRoom] list is null (room) : " + room, false, TOPIC_RESERVE_LOG);
+        }
         return list;
     }
 
     @Override
     public List<LightReserveEntity> findAll() {
         List<LightReserveEntity> list = repository.findAll();
+        if(list != null){
+            producer.sendLogDto("Reserve", "[findAll] find all reserve (list size) : "+list.size(), true, TOPIC_RESERVE_LOG);
+        }
+        else{
+            producer.sendLogDto("Reserve", "[findAll] list is null", false, TOPIC_RESERVE_LOG);
+        }
         return list;
     }
 
     @Override
     public void save(LightReserveDto dto) {
-        repository.save(dto.toEntity());
-        producer.sendReserveMessage();
+        if(repository.save(dto.toEntity()) != null){
+            producer.sendReserveMessage();
+            producer.sendLogDto("Reserve", "[save] db save success (dto) : "+dto, true, TOPIC_RESERVE_LOG);
+        }
+        else{
+            producer.sendLogDto("Reserve", "[save] db save failed : "+dto, false, TOPIC_RESERVE_LOG);
+        }
     }
 
     @Override
@@ -54,11 +79,13 @@ public class LightReserveServiceImpl implements LightReserveService{
                 .time(dto.getTime())
                 .build();
         producer.sendReserveMessage();
+        producer.sendLogDto("Reserve", "[updateReserve] reserve is updated (dto) : "+dto, true, TOPIC_RESERVE_LOG);
     }
 
     @Override
     public void deleteReserve(int pk) {
         repository.deleteById(pk);
         producer.sendReserveMessage();
+        producer.sendLogDto("Reserve", "[deleteReserve] reserve is deleted (pk) : "+pk, true, TOPIC_RESERVE_LOG);
     }
 }
