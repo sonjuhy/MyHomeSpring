@@ -278,7 +278,7 @@ public class FileServerController {
 
     @PutMapping("/updatePrivateFileInfo")
     public ResponseEntity<Integer> updatePrivateFileInfo(@RequestBody FileServerPrivateDto dto){
-        int result = privateService.updateByFileServerPublicEntity(new FileServerPrivateEntity(dto));
+        int result = privateService.updateByFileServerPrivateEntity(new FileServerPrivateEntity(dto));
         if(result == 0) return new ResponseEntity<>(result, HttpStatus.BAD_GATEWAY);
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
