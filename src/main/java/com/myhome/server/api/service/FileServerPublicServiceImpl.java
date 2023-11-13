@@ -333,7 +333,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         System.out.println("This is Path : " + path);
         File dir = new File(path);
         File[] files = dir.listFiles();
-        if(files == null){
+        if(files != null){
             ArrayList<String> dirList = new ArrayList<>();
             System.out.println("Files size : " + files.length);
             for(File file : files){

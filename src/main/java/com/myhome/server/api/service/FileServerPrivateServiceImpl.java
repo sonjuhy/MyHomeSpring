@@ -367,7 +367,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
     private void traversalFolder(String path, List<UserEntity> userList){
         File dir = new File(path);
         File[] files = dir.listFiles();
-        if(files == null){
+        if(files != null){
             ArrayList<String> dirList = new ArrayList<>();
             for(File file : files){
                 String type, extension;
