@@ -42,7 +42,6 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
 
     private final String[] videoExtensionList = {"mp4", "avi", "mov", "wmv", "avchd", "webm", "mpeg4"};
 
-    @Autowired
     KafkaProducer producer;
 
     @Autowired
@@ -55,7 +54,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     FileServerThumbNailService thumbNailService;
 
     @Autowired
-    public FileServerPublicServiceImpl(FileDefaultPathRepository fileDefaultPathRepository){
+    public FileServerPublicServiceImpl(FileDefaultPathRepository fileDefaultPathRepository, KafkaProducer kafkaProducer){
         FileDefaultPathEntity storeEntity = fileDefaultPathRepository.findByPathName("store");
         FileDefaultPathEntity trashEntity = fileDefaultPathRepository.findByPathName("trash");
         FileDefaultPathEntity thumbnailEntity = fileDefaultPathRepository.findByPathName("thumbnail");
@@ -63,6 +62,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         trashPath = changeUnderBarToSeparator(trashEntity.getPublicDefaultPath());
         thumbnailPath = changeUnderBarToSeparator(thumbnailEntity.getPublicDefaultPath());
 
+        producer = kafkaProducer;
         producer.sendLogDto("Cloud",
                 "[FileServerPublicServiceImpl] diskPath : "+diskPath+", trashPath : "+trashPath+", thumbnailPath : " + thumbnailPath,
                 true,

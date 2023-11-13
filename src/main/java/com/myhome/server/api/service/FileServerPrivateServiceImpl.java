@@ -43,7 +43,6 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
     @Value("${part4.upload.path}")
     private String defaultUploadPath;
 
-    @Autowired
     KafkaProducer producer;
 
     @Autowired
@@ -62,7 +61,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
     JwtTokenProvider jwtTokenProvider;
 
     @Autowired
-    public FileServerPrivateServiceImpl(FileDefaultPathRepository fileDefaultPathRepository){
+    public FileServerPrivateServiceImpl(FileDefaultPathRepository fileDefaultPathRepository, KafkaProducer kafkaProducer){
         FileDefaultPathEntity storeEntity = fileDefaultPathRepository.findByPathName("store");
         FileDefaultPathEntity trashEntity = fileDefaultPathRepository.findByPathName("trash");
         FileDefaultPathEntity thumbnailEntity = fileDefaultPathRepository.findByPathName("thumbnail");
@@ -70,6 +69,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
         trashPath = changeUnderBarToSeparator(trashEntity.getPrivateDefaultPath());
         thumbnailPath = changeUnderBarToSeparator(thumbnailEntity.getPrivateDefaultPath());
 
+        producer = kafkaProducer;
         producer.sendLogDto("Cloud",
                 "[FileServerPrivateServiceImpl] diskPath : "+diskPath+", trashPath : "+trashPath+", thumbnailPath : " + thumbnailPath,
                 true,
