@@ -1,12 +1,11 @@
 package com.myhome.server.db.entity;
 
+import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import org.hibernate.annotations.DynamicUpdate;
-
-import javax.persistence.*;
 
 @Getter
 @Entity
