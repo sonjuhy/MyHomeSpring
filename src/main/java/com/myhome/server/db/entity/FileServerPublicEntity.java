@@ -1,14 +1,10 @@
 package com.myhome.server.db.entity;
 
 import com.myhome.server.api.dto.FileServerPublicDto;
+import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
 
 @Getter
 @Entity

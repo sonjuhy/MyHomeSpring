@@ -2,8 +2,6 @@ package com.myhome.server.api.dto;
 
 import lombok.*;
 
-import javax.persistence.Column;
-
 @Getter
 @Setter
 @ToString

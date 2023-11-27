@@ -3,11 +3,11 @@ package com.myhome.server.api.service;
 import com.myhome.server.db.entity.FileServerPrivateEntity;
 import com.myhome.server.db.entity.FileServerPublicEntity;
 import com.myhome.server.db.entity.FileServerThumbNailEntity;
+import jakarta.transaction.Transactional;
 import org.springframework.http.HttpHeaders;
 import org.springframework.ui.Model;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.transaction.Transactional;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
