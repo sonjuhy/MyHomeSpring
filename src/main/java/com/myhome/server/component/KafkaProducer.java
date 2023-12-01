@@ -1,4 +1,4 @@
-package com.myhome.server.api.service;
+package com.myhome.server.component;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -7,10 +7,10 @@ import com.myhome.server.api.dto.LogReceiveDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 
-@Service
+@Component
 @RequiredArgsConstructor
 public class KafkaProducer {
     private static final String TOPIC_TEST = "exam-topic";
@@ -45,13 +45,7 @@ public class KafkaProducer {
         this.kafkaTemplate.send(TOPIC_MQTT, message);
     }
 
-    public void sendLogDto(String service, String content, Boolean type, String topic){
-        LogReceiveDto dto = new LogReceiveDto();
-        dto.setId(0);
-        dto.setSender("Spring");
-        dto.setService(service);
-        dto.setContent(content);
-        dto.setType(type);
+    public void sendLogDto(LogReceiveDto dto, String topic){
         this.kafkaTemplateDto.send(topic, dto);
     }
 

@@ -1,12 +1,14 @@
-package com.myhome.server.api.service;
+package com.myhome.server.component;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.myhome.server.api.service.FileServerPrivateService;
+import com.myhome.server.api.service.FileServerPublicService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
-@Service
+@Component
 public class KafkaConsumer {
 
     @Autowired
