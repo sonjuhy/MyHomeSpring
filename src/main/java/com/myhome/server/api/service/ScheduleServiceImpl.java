@@ -1,5 +1,7 @@
 package com.myhome.server.api.service;
 
+import com.myhome.server.component.KafkaProducer;
+import com.myhome.server.component.LogComponent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -13,6 +15,9 @@ public class ScheduleServiceImpl implements ScheduleService {
 
     @Autowired
     KafkaProducer kafkaProducer;
+
+    @Autowired
+    LogComponent logComponent;
 
     @Autowired
     FileServerPrivateService fileServerPrivateService;
@@ -31,17 +36,18 @@ public class ScheduleServiceImpl implements ScheduleService {
     public void checkCloudFile() {
         try {
             fileServerPublicService.publicFileStateCheck();
-            kafkaProducer.sendLogDto("Cloud-Check", "[checkCloudFile(public)] check success", true, TOPIC_CLOUD_CHECK_LOG);
+            logComponent.sendLog("cloud-Check", "[checkCloudFile(public)] check success", true, TOPIC_CLOUD_CHECK_LOG);
         }
         catch (Exception e){
-            kafkaProducer.sendLogDto("Cloud-Check", "[checkCloudFile(public)] error : "+e.getMessage(), false, TOPIC_CLOUD_CHECK_LOG);
+            logComponent.sendErrorLog("Cloud-Check", "[checkCloudFile(private)] error : ", e, TOPIC_CLOUD_CHECK_LOG);
         }
         try {
             fileServerPrivateService.privateFileCheck();
-            kafkaProducer.sendLogDto("Cloud-Check", "[checkCloudFile(private)] check success", true, TOPIC_CLOUD_CHECK_LOG);
+            logComponent.sendLog("Cloud-Check", "[checkCloudFile(private)] check success", true, TOPIC_CLOUD_CHECK_LOG);
+
         }
         catch (Exception e){
-            kafkaProducer.sendLogDto("Cloud-Check", "[checkCloudFile(private)] error : "+e.getMessage(), false, TOPIC_CLOUD_CHECK_LOG);
+            logComponent.sendErrorLog("Cloud-Check", "[checkCloudFile(private)] error : ", e, TOPIC_CLOUD_CHECK_LOG);
         }
     }
 }

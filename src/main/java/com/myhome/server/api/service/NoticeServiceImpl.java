@@ -1,6 +1,7 @@
 package com.myhome.server.api.service;
 
-import com.myhome.server.api.dto.NoticeDto;
+import com.myhome.server.component.KafkaProducer;
+import com.myhome.server.component.LogComponent;
 import com.myhome.server.db.entity.NoticeEntity;
 import com.myhome.server.db.repository.NoticeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +15,9 @@ public class NoticeServiceImpl implements NoticeService {
     private final String TOPIC_NOTICE_LOG = "notice-log-topic";
 
     @Autowired
+    LogComponent logComponent;
+
+    @Autowired
     NoticeRepository repository;
 
     @Autowired
@@ -22,10 +26,10 @@ public class NoticeServiceImpl implements NoticeService {
     @Override
     public int save(NoticeEntity entity) {
         if(repository.save(entity) != null){
-            producer.sendLogDto("Notice", "[save] db save success (dto) : "+entity, true, TOPIC_NOTICE_LOG);
+            logComponent.sendLog("Notice", "[save] db save success (dto) : "+entity, true, TOPIC_NOTICE_LOG);
         }
         else{
-            producer.sendLogDto("Notice", "[save] db save failed : "+entity, false, TOPIC_NOTICE_LOG);
+            logComponent.sendLog("Notice", "[save] db save failed : "+entity, false, TOPIC_NOTICE_LOG);
         }
         return 0;
     }
@@ -34,10 +38,10 @@ public class NoticeServiceImpl implements NoticeService {
     public List<NoticeEntity> findAll() {
         List<NoticeEntity> list = repository.findAll();
         if(list != null){
-            producer.sendLogDto("Notice", "[findAll] find all notice list (list size) : "+list.size(), true, TOPIC_NOTICE_LOG);
+            logComponent.sendLog("Notice", "[findAll] find all notice list (list size) : "+list.size(), true, TOPIC_NOTICE_LOG);
         }
         else{
-            producer.sendLogDto("Notice", "[findAll] list is null", false, TOPIC_NOTICE_LOG);
+            logComponent.sendLog("Notice", "[findAll] list is null", false, TOPIC_NOTICE_LOG);
         }
         return list;
     }
@@ -46,10 +50,10 @@ public class NoticeServiceImpl implements NoticeService {
     public List<NoticeEntity> findByWriter(String writer) {
         List<NoticeEntity> list = repository.findByWriter(writer);
         if(list != null){
-            producer.sendLogDto("Notice", "[findByWriter] find notice list by writer (list size) : "+list.size()+", writer : "+writer, true, TOPIC_NOTICE_LOG);
+            logComponent.sendLog("Notice", "[findByWriter] find notice list by writer (list size) : "+list.size()+", writer : "+writer, true, TOPIC_NOTICE_LOG);
         }
         else{
-            producer.sendLogDto("Notice", "[findByWriter] list is null", false, TOPIC_NOTICE_LOG);
+            logComponent.sendLog("Notice", "[findByWriter] list is null", false, TOPIC_NOTICE_LOG);
         }
         return list;
     }
@@ -58,10 +62,10 @@ public class NoticeServiceImpl implements NoticeService {
     public NoticeEntity findTopNotice() {
         NoticeEntity entity = repository.findTopByOrderByIdDesc();
         if(entity != null){
-            producer.sendLogDto("Notice", "[findTopNotice] find top notice entity (entity) : "+entity, true, TOPIC_NOTICE_LOG);
+            logComponent.sendLog("Notice", "[findTopNotice] find top notice entity (entity) : "+entity, true, TOPIC_NOTICE_LOG);
         }
         else{
-            producer.sendLogDto("Notice", "[findTopNotice] entity is null", false, TOPIC_NOTICE_LOG);
+            logComponent.sendLog("Notice", "[findTopNotice] entity is null", false, TOPIC_NOTICE_LOG);
         }
         return entity;
     }

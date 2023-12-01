@@ -3,6 +3,8 @@ package com.myhome.server.api.service;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.myhome.server.api.dto.FileServerPublicDto;
+import com.myhome.server.component.KafkaProducer;
+import com.myhome.server.component.LogComponent;
 import com.myhome.server.db.entity.*;
 import com.myhome.server.db.repository.FileDefaultPathRepository;
 import com.myhome.server.db.repository.FileServerPublicRepository;
@@ -12,9 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
-import org.springframework.util.FileCopyUtils;
 import org.springframework.util.ObjectUtils;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -44,6 +44,8 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
 
     KafkaProducer producer;
 
+    LogComponent logComponent;
+
     @Autowired
     FileServerPublicRepository fileServerRepository;
 
@@ -54,7 +56,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     FileServerThumbNailService thumbNailService;
 
     @Autowired
-    public FileServerPublicServiceImpl(FileDefaultPathRepository fileDefaultPathRepository, KafkaProducer kafkaProducer){
+    public FileServerPublicServiceImpl(FileDefaultPathRepository fileDefaultPathRepository, KafkaProducer kafkaProducer, LogComponent component){
         FileDefaultPathEntity storeEntity = fileDefaultPathRepository.findByPathName("store");
         FileDefaultPathEntity trashEntity = fileDefaultPathRepository.findByPathName("trash");
         FileDefaultPathEntity thumbnailEntity = fileDefaultPathRepository.findByPathName("thumbnail");
@@ -63,7 +65,9 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         thumbnailPath = changeUnderBarToSeparator(thumbnailEntity.getPublicDefaultPath());
 
         producer = kafkaProducer;
-        producer.sendLogDto("Cloud",
+        logComponent = component;
+
+        logComponent.sendLog("Cloud",
                 "[FileServerPublicServiceImpl] diskPath : "+diskPath+", trashPath : "+trashPath+", thumbnailPath : " + thumbnailPath,
                 true,
                 TOPIC_CLOUD_LOG);
@@ -146,11 +150,11 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                     resultArr.add(entity.getName());
                 }
             }
-            producer.sendLogDto("Cloud", "[uploadFiles(public)] file size : "+resultArr.size(), true, TOPIC_CLOUD_LOG);
+            logComponent.sendLog("Cloud", "[uploadFiles(public)] file size : "+resultArr.size(), true, TOPIC_CLOUD_LOG);
             return resultArr;
         }
         else{
-            producer.sendLogDto("Cloud", "[uploadFiles(public)] uploadFile impl path is empty", false, TOPIC_CLOUD_LOG);
+            logComponent.sendLog("Cloud", "[uploadFiles(public)] uploadFile impl path is empty", false, TOPIC_CLOUD_LOG);
             return null;
         }
     }
@@ -181,11 +185,11 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                     0
             );
             fileServerRepository.save(new FileServerPublicEntity(dto));
-            producer.sendLogDto("Cloud", "[mkdir(public)] mkdir dto : "+dto, true, TOPIC_CLOUD_LOG);
+            logComponent.sendLog("Cloud", "[mkdir(public)] mkdir dto : "+dto, true, TOPIC_CLOUD_LOG);
             return true;
         }
         else{
-            producer.sendLogDto("Cloud", "[mkdir(public)] failed to mkdir (path) : "+path, false, TOPIC_CLOUD_LOG);
+            logComponent.sendLog("Cloud", "[mkdir(public)] failed to mkdir (path) : "+path, false, TOPIC_CLOUD_LOG);
             return false;
         }
     }
@@ -202,7 +206,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         String originPath = changeUnderBarToSeparator(path);
         FileServerPublicEntity entity = fileServerRepository.findByPath(originPath);
         if(ObjectUtils.isEmpty(entity)){
-            producer.sendLogDto("Cloud", "[deleteByPath(public)] file entity is null (path) : "+path, false, TOPIC_CLOUD_LOG);
+            logComponent.sendLog("Cloud", "[deleteByPath(public)] file entity is null (path) : "+path, false, TOPIC_CLOUD_LOG);
             return -1;
         }
         // json type { file : origin file path, path : destination to move file }
@@ -217,7 +221,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         System.out.println("deleteByPath : " + jsonResult);
         // kafka send
         producer.sendMessage(jsonResult);
-        producer.sendLogDto("Cloud", "[deleteByPath(public)] json : "+jsonResult, true, TOPIC_CLOUD_LOG);
+        logComponent.sendLog("Cloud", "[deleteByPath(public)] json : "+jsonResult, true, TOPIC_CLOUD_LOG);
         return 0;
     }
 
@@ -226,7 +230,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         String originPath = changeUnderBarToSeparator(path);
         FileServerPublicEntity entity = fileServerRepository.findByPath(originPath);
         if(ObjectUtils.isEmpty(entity)){
-            producer.sendLogDto("Cloud", "[moveFile(public)] file entity is null (path) : "+path+", location : " + location, false, TOPIC_CLOUD_LOG);
+            logComponent.sendLog("Cloud", "[moveFile(public)] file entity is null (path) : "+path+", location : " + location, false, TOPIC_CLOUD_LOG);
             return -1; // file info doesn't exist
         }
         // json type { file : origin file path, path : destination to move file }
@@ -240,7 +244,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         String jsonResult = gson.toJson(jsonObject);
         // kafka send
         producer.sendMessage(jsonResult);
-        producer.sendLogDto("Cloud", "[moveFile(public)] json : "+jsonResult, true, TOPIC_CLOUD_LOG);
+        logComponent.sendLog("Cloud", "[moveFile(public)] json : "+jsonResult, true, TOPIC_CLOUD_LOG);
         return 0;
     }
 
@@ -259,10 +263,10 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
             String jsonResult = gson.toJson(jsonObject);
             // kafka send
             producer.sendMessage(jsonResult);
-            producer.sendLogDto("Cloud", "[moveTrash(public)] file info send to django (json) : "+jsonResult, true, TOPIC_CLOUD_LOG);
+            logComponent.sendLog("Cloud", "[moveTrash(public)] file info send to django (json) : "+jsonResult, true, TOPIC_CLOUD_LOG);
             return 0;
         }
-        producer.sendLogDto("Cloud", "[moveTrash(public)] entity is null (uuid) : "+uuid, false, TOPIC_CLOUD_LOG);
+        logComponent.sendLog("Cloud", "[moveTrash(public)] entity is null (uuid) : "+uuid, false, TOPIC_CLOUD_LOG);
         return -1;
     }
 
@@ -282,27 +286,27 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
             String jsonResult = gson.toJson(jsonObject);
             // kafka send
             producer.sendMessage(jsonResult);
-            producer.sendLogDto("Cloud", "[restore(public)] file info send to django (json) : "+jsonResult, true, TOPIC_CLOUD_LOG);
+            logComponent.sendLog("Cloud", "[restore(public)] file info send to django (json) : "+jsonResult, true, TOPIC_CLOUD_LOG);
             return 0;
         }
-        producer.sendLogDto("Cloud", "[restore(public)] file entity is null (uuid) : "+uuid, false, TOPIC_CLOUD_LOG);
+        logComponent.sendLog("Cloud", "[restore(public)] file entity is null (uuid) : "+uuid, false, TOPIC_CLOUD_LOG);
         return -1;
     }
 
     @Override
     public int updateByFileServerPublicEntity(FileServerPublicEntity entity) {
         if(existsByPath(entity.getPath())){
-            producer.sendLogDto("Cloud", "[updateByFileServerPublicEntity(public)] already exist file in location (path): "+entity.getPath(), false, TOPIC_CLOUD_LOG);
+            logComponent.sendLog("Cloud", "[updateByFileServerPublicEntity(public)] already exist file in location (path): "+entity.getPath(), false, TOPIC_CLOUD_LOG);
             return -1;
         }
         else{
             FileServerPublicEntity resultEntity = fileServerRepository.save(entity);
             if(ObjectUtils.isEmpty(resultEntity)){ // error during change info on DB
-                producer.sendLogDto("Cloud", "[updateByFileServerPublicEntity(public)] Error during change info on DB (uuid): "+entity.getUuid(), false, TOPIC_CLOUD_LOG);
+                logComponent.sendLog("Cloud", "[updateByFileServerPublicEntity(public)] Error during change info on DB (uuid): "+entity.getUuid(), false, TOPIC_CLOUD_LOG);
                 return -2;
             }
             else{ // success update file info
-                producer.sendLogDto("Cloud", "[updateByFileServerPublicEntity(public)] change info on DB (uuid) : "+entity.getUuid(), true, TOPIC_CLOUD_LOG);
+                logComponent.sendLog("Cloud", "[updateByFileServerPublicEntity(public)] change info on DB (uuid) : "+entity.getUuid(), true, TOPIC_CLOUD_LOG);
                 return 0;
             }
         }
@@ -369,10 +373,10 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                     if(Arrays.asList(videoExtensionList).contains(extension)){
                         thumbNailService.makeThumbNail(file, uuid, "public");
                     }
-                    producer.sendLogDto("Cloud-Check", "[traversalFolder(private)] file (dto) : "+dto+", no exist file", true, TOPIC_CLOUD_CHECK_LOG);
+                    logComponent.sendLog("Cloud-Check", "[traversalFolder(private)] file (dto) : "+dto+", no exist file", true, TOPIC_CLOUD_CHECK_LOG);
                 }
                 else{
-                    producer.sendLogDto("Cloud-Check", "[traversalFolder(private)] file (path) : "+file.getPath()+", (name) : "+type+file.getName()+", exist file", true, TOPIC_CLOUD_CHECK_LOG);
+                    logComponent.sendLog("Cloud-Check", "[traversalFolder(private)] file (path) : "+file.getPath()+", (name) : "+type+file.getName()+", exist file", true, TOPIC_CLOUD_CHECK_LOG);
                 }
             }
             for(String folder : dirList){
@@ -380,7 +384,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
             }
         }
         else{
-            producer.sendLogDto("Cloud-Check", "[traversalFolder(public)] files is null (path) : "+path, false, TOPIC_CLOUD_CHECK_LOG);
+            logComponent.sendLog("Cloud-Check", "[traversalFolder(public)] files is null (path) : "+path, false, TOPIC_CLOUD_CHECK_LOG);
         }
 
     }
@@ -392,10 +396,10 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
             if(thumbnailFile.exists()){
                 if(thumbnailFile.delete()){
                     thumbNailRepository.deleteByUuid(entity.getUuid());
-                    producer.sendLogDto("Cloud-Check", "[deleteThumbNail(public)] files is deleted (uuid) : "+entity.getUuid(), true, TOPIC_CLOUD_CHECK_LOG);
+                    logComponent.sendLog("Cloud-Check", "[deleteThumbNail(public)] files is deleted (uuid) : "+entity.getUuid(), true, TOPIC_CLOUD_CHECK_LOG);
                 }
                 else{
-                    producer.sendLogDto("Cloud-Check", "[deleteThumbNail(public)] files is doesn't delete (uuid) : "+entity.getUuid(), false, TOPIC_CLOUD_CHECK_LOG);
+                    logComponent.sendLog("Cloud-Check", "[deleteThumbNail(public)] files is doesn't delete (uuid) : "+entity.getUuid(), false, TOPIC_CLOUD_CHECK_LOG);
                 }
             }
         }

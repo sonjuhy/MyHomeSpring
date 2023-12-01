@@ -3,6 +3,8 @@ package com.myhome.server.api.service;
 import com.google.gson.*;
 import com.myhome.server.api.dto.LocationDto;
 import com.myhome.server.api.dto.WeatherDto;
+import com.myhome.server.component.KafkaProducer;
+import com.myhome.server.component.LogComponent;
 import com.myhome.server.db.entity.WeatherKeyEntity;
 import com.myhome.server.db.repository.WeatherRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,7 +14,6 @@ import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.lang.reflect.Type;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
@@ -34,6 +35,9 @@ public class WeatherServiceImpl implements WeatherService{
     private final String TOPIC_WEATHER_LOG = "weather-log-topic";
 
     private final static String locationURL = "https://www.kma.go.kr/DFSROOT/POINT/DATA";
+
+    @Autowired
+    LogComponent logComponent;
 
     @Autowired
     WeatherRepository repository;
@@ -330,10 +334,10 @@ public class WeatherServiceImpl implements WeatherService{
                         break;
                     }
                 }
-                producer.sendLogDto("Weather", "[JsonParsing] tmp weather : "+tmp_weather+", mode : " + mode, true, TOPIC_WEATHER_LOG);
+                logComponent.sendLog("Weather", "[JsonParsing] tmp weather : "+tmp_weather+", mode : " + mode, true, TOPIC_WEATHER_LOG);
             }
         } catch (Exception e) {
-            producer.sendLogDto("Weather", "[JsonParsing] error : "+e.getMessage(), false, TOPIC_WEATHER_LOG);
+            logComponent.sendErrorLog("Weather", "[JsonParsing] error : ", e, TOPIC_WEATHER_LOG);
             return null;
         }
 
@@ -355,15 +359,15 @@ public class WeatherServiceImpl implements WeatherService{
             String result = objectHeader.get("resultCode").getAsString();
 
             if(!"00".equals(result)){
-                producer.sendLogDto("Weather", "[fnJson] JSON data is error : "+result, false, TOPIC_WEATHER_LOG);
+                logComponent.sendLog("Weather", "[fnJson] JSON data is error : "+result, false, TOPIC_WEATHER_LOG);
                 return null;
             }
             else{
-                producer.sendLogDto("Weather", "[fnJson] array size : "+array.size(), true, TOPIC_WEATHER_LOG);
+                logComponent.sendLog("Weather", "[fnJson] array size : "+array.size(), true, TOPIC_WEATHER_LOG);
                 return array;
             }
         } catch (Exception e) {
-            producer.sendLogDto("Weather", "[fnJson] error : "+e.getMessage(), false, TOPIC_WEATHER_LOG);
+            logComponent.sendErrorLog("Weather", "[fnJson] error : ", e, TOPIC_WEATHER_LOG);
             return null;
         }
     }
@@ -406,7 +410,7 @@ public class WeatherServiceImpl implements WeatherService{
 
 
             if (ResData == null) {
-                producer.sendLogDto("Weather", "[getUtlraNcst] 응답데이터 == NULL", false, TOPIC_WEATHER_LOG);
+                logComponent.sendLog("Weather", "[getUtlraNcst] 응답데이터 == NULL", false, TOPIC_WEATHER_LOG);
             } else {
                 JsonArray array = fnJson(ResData);
 
@@ -475,11 +479,11 @@ public class WeatherServiceImpl implements WeatherService{
                         dto.setVEC(DataValue);
                     }
                 }
-                producer.sendLogDto("Weather", "[getUtlraNcst] array size : "+array.size()+", url : "+url_main, true, TOPIC_WEATHER_LOG);
+                logComponent.sendLog("Weather", "[getUtlraNcst] array size : "+array.size()+", url : "+url_main, true, TOPIC_WEATHER_LOG);
             }
             br.close();
         } catch (Exception e) {
-            producer.sendLogDto("Weather", "[getUtlraNcst] getUltraNcst error : "+e.getMessage(), false, TOPIC_WEATHER_LOG);
+            logComponent.sendErrorLog("Weather", "[getUtlraNcst] getUltraNcst error : ", e, TOPIC_WEATHER_LOG);
             return null;
         }
         return dto;
@@ -519,16 +523,16 @@ public class WeatherServiceImpl implements WeatherService{
             String ResData = br.readLine();
 
             if (ResData == null) {
-                producer.sendLogDto("Weather", "[getUtlraFsct] 응답데이터 == NULL", false, TOPIC_WEATHER_LOG);
+                logComponent.sendLog("Weather", "[getUtlraFsct] 응답데이터 == NULL", false, TOPIC_WEATHER_LOG);
             } else {
                 JsonArray array = fnJson(ResData);
                 ArrayList<WeatherDto> list = JsonParsing(array, 1);
-                producer.sendLogDto("Weather", "[getUtlraFsct] list size : "+list.size()+", url : "+url_main, true, TOPIC_WEATHER_LOG);
+                logComponent.sendLog("Weather", "[getUtlraFsct] list size : "+list.size()+", url : "+url_main, true, TOPIC_WEATHER_LOG);
                 return list;
             }
             br.close();
         } catch (Exception e) {
-            producer.sendLogDto("Weather", "[getUtlraFsct] getUtlraFsct error : "+e.getMessage(), false, TOPIC_WEATHER_LOG);
+            logComponent.sendErrorLog("Weather", "[getUtlraFsct] getUtlraFsct error : ", e, TOPIC_WEATHER_LOG);
         }
 
         return null;
@@ -566,17 +570,17 @@ public class WeatherServiceImpl implements WeatherService{
             String ResData = br.readLine();
 
             if (ResData == null) {
-                producer.sendLogDto("Weather", "[getVilageFcst] 응답데이터 == NULL", false, TOPIC_WEATHER_LOG);
+                logComponent.sendLog("Weather", "[getVilageFcst] 응답데이터 == NULL", false, TOPIC_WEATHER_LOG);
             } else {
                 JsonArray array = fnJson(ResData);
                 if(array == null) return null;
                 ArrayList<WeatherDto> list = JsonParsing(array, 2);
-                producer.sendLogDto("Weather", "[getVilageFcst] list size : "+list.size()+", url : "+url_main, true, TOPIC_WEATHER_LOG);
+                logComponent.sendLog("Weather", "[getVilageFcst] list size : "+list.size()+", url : "+url_main, true, TOPIC_WEATHER_LOG);
                 return list;
             }
             br.close();
         } catch (Exception e) {
-            producer.sendLogDto("Weather", "[getVilageFcst] getVilageFcst error : "+e.getMessage(), false, TOPIC_WEATHER_LOG);
+            logComponent.sendErrorLog("Weather", "[getVilageFcst] getVilageFcst error : ", e, TOPIC_WEATHER_LOG);
         }
 
         return null;
@@ -603,7 +607,7 @@ public class WeatherServiceImpl implements WeatherService{
             String ResData = br.readLine();
 
             if (ResData == null) {
-                producer.sendLogDto("Weather", "[getTopPlace] 응답데이터 == NULL", false, TOPIC_WEATHER_LOG);
+                logComponent.sendLog("Weather", "[getTopPlace] 응답데이터 == NULL", false, TOPIC_WEATHER_LOG);
             } else {
                 JsonArray jsonArray = (JsonArray) JsonParser.parseString(ResData);
                 for(int i=0;i<jsonArray.size();i++){
@@ -613,12 +617,12 @@ public class WeatherServiceImpl implements WeatherService{
                     dto.setCode(jsonObject.get("code").getAsString());
                     list.add(dto);
                 }
-                producer.sendLogDto("Weather", "[getTopPlace] list size : "+list.size()+", url : "+url_main, true, TOPIC_WEATHER_LOG);
+                logComponent.sendLog("Weather", "[getTopPlace] list size : "+list.size()+", url : "+url_main, true, TOPIC_WEATHER_LOG);
                 return list;
             }
             br.close();
         } catch (Exception e) {
-            producer.sendLogDto("Weather", "[getTopPlace] getTopPlace error : "+e.getMessage(), false, TOPIC_WEATHER_LOG);
+            logComponent.sendErrorLog("Weather", "[getTopPlace] getTopPlace error : ", e, TOPIC_WEATHER_LOG);
         }
         return null;
     }
@@ -644,7 +648,7 @@ public class WeatherServiceImpl implements WeatherService{
             String ResData = br.readLine();
 
             if (ResData == null) {
-                producer.sendLogDto("Weather", "[getMiddlePlace] 응답데이터 == NULL", false, TOPIC_WEATHER_LOG);
+                logComponent.sendLog("Weather", "[getMiddlePlace] 응답데이터 == NULL", false, TOPIC_WEATHER_LOG);
             } else {
                 JsonArray jsonArray = (JsonArray) JsonParser.parseString(ResData);
                 for(int i=0;i<jsonArray.size();i++){
@@ -654,12 +658,12 @@ public class WeatherServiceImpl implements WeatherService{
                     dto.setCode(jsonObject.get("code").getAsString());
                     list.add(dto);
                 }
-                producer.sendLogDto("Weather", "[getMiddlePlace] list size : "+list.size()+", url : "+url_main, true, TOPIC_WEATHER_LOG);
+                logComponent.sendLog("Weather", "[getMiddlePlace] list size : "+list.size()+", url : "+url_main, true, TOPIC_WEATHER_LOG);
                 return list;
             }
             br.close();
         } catch (Exception e) {
-            producer.sendLogDto("Weather", "[getMiddlePlace] getMiddlePlace error : "+e.getMessage(), false, TOPIC_WEATHER_LOG);
+            logComponent.sendErrorLog("Weather", "[getMiddlePlace] getMiddlePlace error : ", e, TOPIC_WEATHER_LOG);
         }
         return null;
     }
@@ -685,7 +689,7 @@ public class WeatherServiceImpl implements WeatherService{
             String ResData = br.readLine();
 
             if (ResData == null) {
-                producer.sendLogDto("Weather", "[getLeafPlace] 응답데이터 == NULL", false, TOPIC_WEATHER_LOG);
+                logComponent.sendLog("Weather", "[getLeafPlace] 응답데이터 == NULL", false, TOPIC_WEATHER_LOG);
             } else {
                 JsonArray jsonArray = (JsonArray) JsonParser.parseString(ResData);
                 for(int i=0;i<jsonArray.size();i++){
@@ -697,12 +701,12 @@ public class WeatherServiceImpl implements WeatherService{
                     dto.setCode(jsonObject.get("code").getAsString());
                     list.add(dto);
                 }
-                producer.sendLogDto("Weather", "[getLeafPlace] list size : "+list.size()+", url : "+url_main, true, TOPIC_WEATHER_LOG);
+                logComponent.sendLog("Weather", "[getLeafPlace] list size : "+list.size()+", url : "+url_main, true, TOPIC_WEATHER_LOG);
                 return list;
             }
             br.close();
         } catch (Exception e) {
-            producer.sendLogDto("Weather", "[getLeafPlace] getLeafPlace error : "+e.getMessage(), false, TOPIC_WEATHER_LOG);
+            logComponent.sendErrorLog("Weather", "[getLeafPlace] getLeafPlace error : ", e, TOPIC_WEATHER_LOG);
         }
         return null;
     }
