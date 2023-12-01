@@ -3,6 +3,8 @@ package com.myhome.server.api.service;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.myhome.server.api.dto.FileServerPrivateDto;
+import com.myhome.server.component.KafkaProducer;
+import com.myhome.server.component.LogComponent;
 import com.myhome.server.config.jwt.JwtTokenProvider;
 import com.myhome.server.db.entity.*;
 import com.myhome.server.db.repository.FileDefaultPathRepository;
@@ -14,7 +16,6 @@ import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.ui.Model;
-import org.springframework.util.FileCopyUtils;
 import org.springframework.util.ObjectUtils;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -44,6 +45,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
     private String defaultUploadPath;
 
     KafkaProducer producer;
+    LogComponent logComponent;
 
     @Autowired
     FileServerPrivateRepository repository;
@@ -61,7 +63,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
     JwtTokenProvider jwtTokenProvider;
 
     @Autowired
-    public FileServerPrivateServiceImpl(FileDefaultPathRepository fileDefaultPathRepository, KafkaProducer kafkaProducer){
+    public FileServerPrivateServiceImpl(FileDefaultPathRepository fileDefaultPathRepository, KafkaProducer kafkaProducer, LogComponent component){
         FileDefaultPathEntity storeEntity = fileDefaultPathRepository.findByPathName("store");
         FileDefaultPathEntity trashEntity = fileDefaultPathRepository.findByPathName("trash");
         FileDefaultPathEntity thumbnailEntity = fileDefaultPathRepository.findByPathName("thumbnail");
@@ -70,7 +72,8 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
         thumbnailPath = changeUnderBarToSeparator(thumbnailEntity.getPrivateDefaultPath());
 
         producer = kafkaProducer;
-        producer.sendLogDto("Cloud",
+        logComponent = component;
+        logComponent.sendLog("Cloud",
                 "[FileServerPrivateServiceImpl] diskPath : "+diskPath+", trashPath : "+trashPath+", thumbnailPath : " + thumbnailPath,
                 true,
                 TOPIC_CLOUD_LOG);
@@ -144,7 +147,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
                         Path savePath = Paths.get(saveName);
                         file.transferTo(savePath);
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        logComponent.sendErrorLog("Cloud-Check", "[uploadFiles(private)] error : ", e, TOPIC_CLOUD_CHECK_LOG);
                     }
                 }
             }
@@ -155,11 +158,11 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
                     resultArr.add(entity.getName());
                 }
             }
-            producer.sendLogDto("Cloud", "[uploadFiles(private)] file size : "+resultArr.size(), true, TOPIC_CLOUD_LOG);
+            logComponent.sendLog("Cloud", "[uploadFiles(private)] file size : "+resultArr.size(), true, TOPIC_CLOUD_LOG);
             return resultArr;
         }
         else{
-            producer.sendLogDto("Cloud", "[uploadFiles(private)] jwtToken validate failed", false, TOPIC_CLOUD_LOG);
+            logComponent.sendLog("Cloud", "[uploadFiles(private)] jwtToken validate failed", false, TOPIC_CLOUD_LOG);
         }
         return null;
     }
@@ -190,11 +193,11 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
                     0
             );
             repository.save(new FileServerPrivateEntity(dto));
-            producer.sendLogDto("Cloud", "[mkdir(private)] mkdir dto : "+dto, true, TOPIC_CLOUD_LOG);
+            logComponent.sendLog("Cloud", "[mkdir(private)] mkdir dto : "+dto, true, TOPIC_CLOUD_LOG);
             return true;
         }
         else{
-            producer.sendLogDto("Cloud", "[mkdir(private)] failed to mkdir (path) : "+path, false, TOPIC_CLOUD_LOG);
+            logComponent.sendLog("Cloud", "[mkdir(private)] failed to mkdir (path) : "+path, false, TOPIC_CLOUD_LOG);
             return false;
         }
     }
@@ -211,7 +214,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
         String originPath = changeUnderBarToSeparator(path);
         FileServerPrivateEntity entity = repository.findByPath(originPath);
         if(ObjectUtils.isEmpty(entity)){
-            producer.sendLogDto("Cloud", "[deleteByPath(private)] file entity is null (path) : "+path, false, TOPIC_CLOUD_LOG);
+            logComponent.sendLog("Cloud", "[deleteByPath(private)] file entity is null (path) : "+path, false, TOPIC_CLOUD_LOG);
             return -1;
         }
         Optional<UserEntity> entityUser = service.findById(accessToken);
@@ -227,11 +230,11 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
             String jsonResult = gson.toJson(jsonObject);
             // kafka send
             producer.sendMessage(jsonResult);
-            producer.sendLogDto("Cloud", "[deleteByPath(private)] json : "+jsonResult, true, TOPIC_CLOUD_LOG);
+            logComponent.sendLog("Cloud", "[deleteByPath(private)] json : "+jsonResult, true, TOPIC_CLOUD_LOG);
             return 0;
         }
         else{
-            producer.sendLogDto("Cloud", "[deleteByPath(private)] file doesn't exist (path) : "+path, false, TOPIC_CLOUD_LOG);
+            logComponent.sendLog("Cloud", "[deleteByPath(private)] file doesn't exist (path) : "+path, false, TOPIC_CLOUD_LOG);
             return -1;
         }
     }
@@ -240,7 +243,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
     public int moveFile(String uuid, String location, String accessToken) {
         FileServerPrivateEntity entity = repository.findByUuid(uuid);
         if(ObjectUtils.isEmpty(entity)){
-            producer.sendLogDto("Cloud", "[moveFile(private)] file entity is null (uuid) : "+uuid+", location : " + location, false, TOPIC_CLOUD_LOG);
+            logComponent.sendLog("Cloud", "[moveFile(private)] file entity is null (uuid) : "+uuid+", location : " + location, false, TOPIC_CLOUD_LOG);
             return -1;
         }
         String filePath = entity.getPath();
@@ -260,7 +263,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
         System.out.println("deleteByPath : " + jsonResult);
         // kafka send
         producer.sendMessage(jsonResult);
-        producer.sendLogDto("Cloud", "[moveFile(private)] json : "+jsonResult, true, TOPIC_CLOUD_LOG);
+        logComponent.sendLog("Cloud", "[moveFile(private)] json : "+jsonResult, true, TOPIC_CLOUD_LOG);
         return 0;
     }
 
@@ -269,7 +272,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
         // Will change to send Kafka
         FileServerPrivateEntity entity = repository.findByUuid(uuid);
         if(ObjectUtils.isEmpty(entity)){
-            producer.sendLogDto("Cloud", "[moveTrash(private)] file entity is null (uuid) : "+uuid, false, TOPIC_CLOUD_LOG);
+            logComponent.sendLog("Cloud", "[moveTrash(private)] file entity is null (uuid) : "+uuid, false, TOPIC_CLOUD_LOG);
             return -1;
         }
         Optional<UserEntity> entityUser = service.findById(accessToken);
@@ -285,11 +288,11 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
             System.out.println("deleteByPath : " + jsonResult);
             // kafka send
             producer.sendMessage(jsonResult);
-            producer.sendLogDto("Cloud", "[moveTrash(private)] file info send to django (json) : "+jsonResult, true, TOPIC_CLOUD_LOG);
+            logComponent.sendLog("Cloud", "[moveTrash(private)] file info send to django (json) : "+jsonResult, true, TOPIC_CLOUD_LOG);
             return 0;
         }
         else{
-            producer.sendLogDto("Cloud", "[moveTrash(private)] file doesn't exist (uuid) : "+uuid, false, TOPIC_CLOUD_LOG);
+            logComponent.sendLog("Cloud", "[moveTrash(private)] file doesn't exist (uuid) : "+uuid, false, TOPIC_CLOUD_LOG);
             return -1;
         }
     }
@@ -299,7 +302,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
         // Will change to send Kafka
         FileServerPrivateEntity entity = repository.findByUuid(uuid);
         if(ObjectUtils.isEmpty(entity)){
-            producer.sendLogDto("Cloud", "[restore(private)] file entity is null (uuid) : "+uuid, false, TOPIC_CLOUD_LOG);
+            logComponent.sendLog("Cloud", "[restore(private)] file entity is null (uuid) : "+uuid, false, TOPIC_CLOUD_LOG);
             return -1;
         }
         Optional<UserEntity> entityUser = service.findById(accessToken);
@@ -315,11 +318,11 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
             System.out.println("deleteByPath : " + jsonResult);
             // kafka send
             producer.sendMessage(jsonResult);
-            producer.sendLogDto("Cloud", "[restore(private)] file info send to django (json) : "+jsonResult, true, TOPIC_CLOUD_LOG);
+            logComponent.sendLog("Cloud", "[restore(private)] file info send to django (json) : "+jsonResult, true, TOPIC_CLOUD_LOG);
             return 0;
         }
         else{
-            producer.sendLogDto("Cloud", "[restore(private)] file doesn't exist (accessToken) : "+accessToken, false, TOPIC_CLOUD_LOG);
+            logComponent.sendLog("Cloud", "[restore(private)] file doesn't exist (accessToken) : "+accessToken, false, TOPIC_CLOUD_LOG);
             return -1;
         }
     }
@@ -327,17 +330,17 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
     @Override
     public int updateByFileServerPrivateEntity(FileServerPrivateEntity entity) {
         if(existsByPath(entity.getPath())){
-            producer.sendLogDto("Cloud", "[updateByFileServerPrivateEntity(private)] already exist file in location (path): "+entity.getPath(), false, TOPIC_CLOUD_LOG);
+            logComponent.sendLog("Cloud", "[updateByFileServerPrivateEntity(private)] already exist file in location (path): "+entity.getPath(), false, TOPIC_CLOUD_LOG);
             return -1;
         }
         else{
             FileServerPrivateEntity resultEntity = repository.save(entity);
             if(ObjectUtils.isEmpty(resultEntity)){ // error during change info on DB
-                producer.sendLogDto("Cloud", "[updateByFileServerPrivateEntity(private)] Error during change info on DB (uuid): "+entity.getUuid(), false, TOPIC_CLOUD_LOG);
+                logComponent.sendLog("Cloud", "[updateByFileServerPrivateEntity(private)] Error during change info on DB (uuid): "+entity.getUuid(), false, TOPIC_CLOUD_LOG);
                 return -2;
             }
             else{ // success update file info
-                producer.sendLogDto("Cloud", "[updateByFileServerPrivateEntity(private)] change info on DB (uuid) : "+entity.getUuid(), true, TOPIC_CLOUD_LOG);
+                logComponent.sendLog("Cloud", "[updateByFileServerPrivateEntity(private)] change info on DB (uuid) : "+entity.getUuid(), true, TOPIC_CLOUD_LOG);
                 return 0;
             }
         }
@@ -417,14 +420,14 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
                             Path source = Paths.get(file.getPath());
                             System.out.println(Files.probeContentType(source));
                         } catch (IOException e) {
-                            e.printStackTrace();
+                            logComponent.sendErrorLog("Cloud-Check", "[traversalFolder(private)] error : ", e, TOPIC_CLOUD_CHECK_LOG);
                         }
                         thumbNailService.makeThumbNail(file, uuid, "private");
                     }
-                    producer.sendLogDto("Cloud-Check", "[traversalFolder(private)] file (dto) : "+dto+", no exist file", true, TOPIC_CLOUD_CHECK_LOG);
+                    logComponent.sendLog("Cloud-Check", "[traversalFolder(private)] file (dto) : "+dto+", no exist file", true, TOPIC_CLOUD_CHECK_LOG);
                 }
                 else{
-                    producer.sendLogDto("Cloud-Check", "[traversalFolder(private)] file (path) : "+file.getPath()+", (name) : "+type+file.getName()+", exist file", true, TOPIC_CLOUD_CHECK_LOG);
+                    logComponent.sendLog("Cloud-Check", "[traversalFolder(private)] file (path) : "+file.getPath()+", (name) : "+type+file.getName()+", exist file", true, TOPIC_CLOUD_CHECK_LOG);
                 }
 
             }
@@ -433,7 +436,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
             }
         }
         else{
-            producer.sendLogDto("Cloud-Check", "[traversalFolder(private)] files is null (path) : "+path, false, TOPIC_CLOUD_CHECK_LOG);
+            logComponent.sendLog("Cloud-Check", "[traversalFolder(private)] files is null (path) : "+path, false, TOPIC_CLOUD_CHECK_LOG);
         }
     }
     private void deleteThumbNail(){
@@ -443,10 +446,10 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
             if(out.exists()){
                 if(out.delete()){
                     thumbNailRepository.deleteByUuid(entity.getUuid());
-                    producer.sendLogDto("Cloud-Check", "[deleteThumbNail(private)] files is deleted (uuid) : "+entity.getUuid(), true, TOPIC_CLOUD_CHECK_LOG);
+                    logComponent.sendLog("Cloud-Check", "[deleteThumbNail(private)] files is deleted (uuid) : "+entity.getUuid(), true, TOPIC_CLOUD_CHECK_LOG);
                 }
                 else{
-                    producer.sendLogDto("Cloud-Check", "[deleteThumbNail(private)] files is doesn't delete (uuid) : "+entity.getUuid(), false, TOPIC_CLOUD_CHECK_LOG);
+                    logComponent.sendLog("Cloud-Check", "[deleteThumbNail(private)] files is doesn't delete (uuid) : "+entity.getUuid(), false, TOPIC_CLOUD_CHECK_LOG);
                 }
             }
         }

@@ -1,6 +1,6 @@
 package com.myhome.server.api.controller;
 
-import com.myhome.server.api.service.KafkaProducer;
+import com.myhome.server.component.KafkaProducer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
