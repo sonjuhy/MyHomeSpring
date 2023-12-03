@@ -14,4 +14,15 @@ public interface UserService {
     void updateTokens(String accessToken, String refreshToken, String Id);
 
     boolean checkPassword(String inputPassword, String email);
+
+    String getAccessToken(String refreshToken);
+    UserEntity getUserInfo(String accessToken);
+    boolean validateAccessToken(String accessToken);
+    boolean validateRefreshToken(String refreshToken);
+    String validateAuth(String accessToken);
+    String reissueAccessToken(String accessToken);
+    String reissueRefreshToken(String refreshToken);
+    String signIn(UserDto dto);
+    String signUp(UserDto dto);
+
 }
