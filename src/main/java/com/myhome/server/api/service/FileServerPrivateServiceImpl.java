@@ -10,6 +10,7 @@ import com.myhome.server.db.entity.*;
 import com.myhome.server.db.repository.FileDefaultPathRepository;
 import com.myhome.server.db.repository.FileServerPrivateRepository;
 import com.myhome.server.db.repository.FileServerThumbNailRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ContentDisposition;
@@ -351,6 +352,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
         return !ObjectUtils.isEmpty(repository.save(entity));
     }
 
+    @Transactional
     @Override
     public void privateFileCheck() {
         List<UserEntity> userList = service.findAll();
@@ -436,9 +438,9 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
                     }
                     logComponent.sendLog("Cloud-Check", "[traversalFolder(private)] file (dto) : "+dto+", no exist file", true, TOPIC_CLOUD_CHECK_LOG);
                 }
-                else{
-                    logComponent.sendLog("Cloud-Check", "[traversalFolder(private)] file (path) : "+file.getPath()+", (name) : "+type+file.getName()+", exist file", true, TOPIC_CLOUD_CHECK_LOG);
-                }
+//                else{
+//                    logComponent.sendLog("Cloud-Check", "[traversalFolder(private)] file (path) : "+file.getPath()+", (name) : "+type+file.getName()+", exist file", true, TOPIC_CLOUD_CHECK_LOG);
+//                }
 
             }
             for(String folder : dirList){
