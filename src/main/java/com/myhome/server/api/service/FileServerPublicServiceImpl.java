@@ -383,9 +383,9 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                 traversalFolder(path+File.separator+folder, mode);
             }
         }
-        else{
-            logComponent.sendLog("Cloud-Check", "[traversalFolder(public)] files is null (path) : "+path, false, TOPIC_CLOUD_CHECK_LOG);
-        }
+//        else{
+//            logComponent.sendLog("Cloud-Check", "[traversalFolder(public)] files is null (path) : "+path, false, TOPIC_CLOUD_CHECK_LOG);
+//        }
 
     }
     private void deleteThumbNail(){
