@@ -327,10 +327,10 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         fileServerRepository.deleteByState(0);
     }
     private String changeUnderBarToSeparator(String path){
-        return path.replaceAll("_", Matcher.quoteReplacement(File.separator));
+        return path.replaceAll("__", Matcher.quoteReplacement(File.separator));
     }
     private String changeSeparatorToUnderBar(String path){
-        return path.replaceAll(Matcher.quoteReplacement(File.separator), "_");
+        return path.replaceAll(Matcher.quoteReplacement(File.separator), "__");
     }
 
     private void traversalFolder(String path, boolean mode){

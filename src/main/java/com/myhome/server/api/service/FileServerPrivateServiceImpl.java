@@ -355,19 +355,32 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
     public void privateFileCheck() {
         List<UserEntity> userList = service.findAll();
         repository.updateAllStateToOne();
-        traversalFolder(diskPath, userList);
+        File defaultPath = new File(diskPath);
+        File[] files = defaultPath.listFiles();
+        if(files != null) {
+            for (File file : files) {
+                String fileName = file.getName();
+                for(UserEntity entity : userList){
+                    if(entity.getName().equals(fileName)){
+                        String owner = entity.getId();
+                        traversalFolder(diskPath+File.separator+owner, owner);
+                        break;
+                    }
+                }
+            }
+        }
         deleteThumbNail();
         repository.deleteByState(0);
         repository.updateAllStateToZero();
     }
     private String changeUnderBarToSeparator(String path){
-        return path.replaceAll("_", Matcher.quoteReplacement(File.separator));
+        return path.replaceAll("__", Matcher.quoteReplacement(File.separator));
     }
     private String changeSeparatorToUnderBar(String path){
-        return path.replaceAll(Matcher.quoteReplacement(File.separator), "_");
+        return path.replaceAll(Matcher.quoteReplacement(File.separator), "__");
     }
 
-    private void traversalFolder(String path, List<UserEntity> userList){
+    private void traversalFolder(String path, String owner){
         File dir = new File(path);
         File[] files = dir.listFiles();
         if(files != null){
@@ -386,23 +399,9 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
                 FileServerPrivateEntity entity = repository.findByPath(file.getPath());
 
                 if(entity == null){
-                    String folderName = file.getPath().split(diskPath)[1].split(File.separator)[0];
-                    int userNum = Integer.parseInt(folderName.split("_")[1]);
-                    String owner = "owner";
-                    for(UserEntity user : userList){
-                        if(user.getUserId() == userNum){
-                            owner = user.getName();
-                            break;
-                        }
-                    }
                     String tmpPath = changeSeparatorToUnderBar(file.getPath()), tmpLocation = changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
                     String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
-//                if(tmpPath.contains("trash")){
-//                    tmpPath = tmpPath.replace("trash", "");
-//                }
-//                if(tmpLocation.contains("trash")){
-//                    tmpLocation = tmpLocation.replace("trash", "");
-//                }
+
                     FileServerPrivateDto dto = new FileServerPrivateDto(
                             tmpPath, // file path (need to change)
                             file.getName(), // file name
@@ -420,9 +419,20 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
                             Path source = Paths.get(file.getPath());
                             System.out.println(Files.probeContentType(source));
                         } catch (IOException e) {
-                            logComponent.sendErrorLog("Cloud-Check", "[traversalFolder(private)] error : ", e, TOPIC_CLOUD_CHECK_LOG);
+                            logComponent.sendErrorLog("Cloud-Check", "[traversalFolder(private)] Path Source get error : ", e, TOPIC_CLOUD_CHECK_LOG);
                         }
-                        thumbNailService.makeThumbNail(file, uuid, "private");
+                        File thumbNailPath = new File(thumbnailPath);
+                        File[] thumbNailFiles = thumbNailPath.listFiles();
+                        boolean isExist = false;
+                        if(thumbNailFiles != null || thumbNailFiles.length > 0) {
+                            for (File thumbNailFile : thumbNailFiles) {
+                                if (thumbNailFile.getName().equals(uuid + ".jpg")) {
+                                    isExist = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if(!isExist) thumbNailService.makeThumbNail(file, uuid, "private");
                     }
                     logComponent.sendLog("Cloud-Check", "[traversalFolder(private)] file (dto) : "+dto+", no exist file", true, TOPIC_CLOUD_CHECK_LOG);
                 }
@@ -432,7 +442,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
 
             }
             for(String folder : dirList){
-                traversalFolder(path+File.separator+folder, userList);
+                traversalFolder(path+File.separator+folder, owner);
             }
         }
         else{
@@ -440,7 +450,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
         }
     }
     private void deleteThumbNail(){
-        List<FileServerThumbNailEntity> thumbNailEntityList = thumbNailRepository.findAllNotInPublic();
+        List<FileServerThumbNailEntity> thumbNailEntityList = thumbNailRepository.findAllNotInPrivate();
         for(FileServerThumbNailEntity entity : thumbNailEntityList){
             File out = new File(changeUnderBarToSeparator(entity.getPath()));
             if(out.exists()){
