@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.util.ObjectUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -318,6 +319,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         return !ObjectUtils.isEmpty(fileServerRepository.save(entity));
     }
 
+    @Transactional
     @Override
     public void publicFileStateCheck() {
         fileServerRepository.updateAllStateToOne();
