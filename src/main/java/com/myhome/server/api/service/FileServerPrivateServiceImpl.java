@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.util.ObjectUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -351,6 +352,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
         return !ObjectUtils.isEmpty(repository.save(entity));
     }
 
+    @Transactional
     @Override
     public void privateFileCheck() {
         List<UserEntity> userList = service.findAll();
@@ -436,9 +438,9 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
                     }
                     logComponent.sendLog("Cloud-Check", "[traversalFolder(private)] file (dto) : "+dto+", no exist file", true, TOPIC_CLOUD_CHECK_LOG);
                 }
-                else{
-                    logComponent.sendLog("Cloud-Check", "[traversalFolder(private)] file (path) : "+file.getPath()+", (name) : "+type+file.getName()+", exist file", true, TOPIC_CLOUD_CHECK_LOG);
-                }
+//                else{
+//                    logComponent.sendLog("Cloud-Check", "[traversalFolder(private)] file (path) : "+file.getPath()+", (name) : "+type+file.getName()+", exist file", true, TOPIC_CLOUD_CHECK_LOG);
+//                }
 
             }
             for(String folder : dirList){
