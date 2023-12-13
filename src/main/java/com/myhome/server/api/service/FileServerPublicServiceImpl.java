@@ -11,6 +11,8 @@ import com.myhome.server.db.repository.FileServerPublicRepository;
 import com.myhome.server.db.repository.FileServerThumbNailRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
@@ -98,6 +100,15 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     }
 
     @Override
+    public List<FileServerPublicEntity> findByLocationPage(String location, int mode, int size, int page) {
+        Pageable pageable = PageRequest.of(page, size);
+        String originLocation = changeUnderBarToSeparator(location);
+        if("default".equals(originLocation)) originLocation = diskPath;
+        List<FileServerPublicEntity> list = fileServerRepository.findByLocationAndDelete(originLocation, mode, pageable);
+        return list;
+    }
+
+    @Override
     public HttpHeaders getHttpHeader(Path path, String fileName) throws IOException {
         String contentType = Files.probeContentType(path); // content type setting
 
@@ -140,7 +151,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                         Path savePath = Paths.get(saveName);
                         file.transferTo(savePath);
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        logComponent.sendErrorLog("Cloud", "[uploadFiles(public)] error : ", e, TOPIC_CLOUD_LOG);
                     }
                 }
             }
@@ -390,6 +401,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
 //        }
 
     }
+    @Transactional
     private void deleteThumbNail(){
         List<FileServerThumbNailEntity> thumbNailEntityList = thumbNailRepository.findAllNotInPublic();
         for(FileServerThumbNailEntity entity : thumbNailEntityList){

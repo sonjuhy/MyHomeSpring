@@ -2,6 +2,7 @@ package com.myhome.server.api.service;
 
 import com.myhome.server.db.entity.FileServerPrivateEntity;
 import jakarta.transaction.Transactional;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.ui.Model;
 import org.springframework.web.multipart.MultipartFile;
@@ -14,6 +15,7 @@ public interface FileServerPrivateService {
     FileServerPrivateEntity findByPath(String path);
     FileServerPrivateEntity findByUuid(String uuid);
     List<FileServerPrivateEntity> findByLocation(String location, int mode);
+    List<FileServerPrivateEntity> findByLocationPage(String location, int mode, int size, int page);
     List<FileServerPrivateEntity> findByOwner(String owner);
     HttpHeaders getHttpHeaders(Path path, String fileName) throws IOException;
     List<String> uploadFiles(MultipartFile[] files, String path, String token, Model model);

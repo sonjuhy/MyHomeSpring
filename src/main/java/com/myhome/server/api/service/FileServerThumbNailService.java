@@ -8,4 +8,5 @@ public interface FileServerThumbNailService {
     void deleteByUUID(String uuid);
     FileServerThumbNailEntity findByUUID(String uuid);
     void makeThumbNail(File file, String uuid, String type);
+    boolean checkThumbNailExist(String uuid);
 }

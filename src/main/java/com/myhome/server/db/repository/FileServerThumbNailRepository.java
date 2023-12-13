@@ -12,6 +12,7 @@ public interface FileServerThumbNailRepository extends JpaRepository<FileServerT
     FileServerThumbNailEntity findByUuid(String uuid);
     List<FileServerThumbNailEntity> findByType(String type);
     void deleteByUuid(String uuid);
+    boolean existsByUuid(String uuid);
 
     // SELECT * FROM FILE_THUMBNAIL_TB WHERE NOT EXISTS(SELECT * FROM FILE_PUBLIC_TB WHERE FILE_PUBLIC_TB.UUID_PK = FILE_THUMBNAIL_TB.UUID_PK);
     @Transactional

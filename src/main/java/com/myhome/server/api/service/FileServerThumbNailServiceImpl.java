@@ -1,6 +1,7 @@
 package com.myhome.server.api.service;
 
 import com.myhome.server.api.dto.FileServerThumbNailDto;
+import com.myhome.server.component.LogComponent;
 import com.myhome.server.db.entity.FileDefaultPathEntity;
 import com.myhome.server.db.entity.FileServerThumbNailEntity;
 import com.myhome.server.db.repository.FileDefaultPathRepository;
@@ -23,6 +24,11 @@ import java.util.regex.Matcher;
 public class FileServerThumbNailServiceImpl implements FileServerThumbNailService {
 
     private final String uploadPath;
+
+    private final static String TOPIC_CLOUD_LOG = "cloud-log-topic";
+
+    @Autowired
+    LogComponent logComponent;
 
     @Autowired
     FileServerThumbNailRepository repository;
@@ -64,13 +70,19 @@ public class FileServerThumbNailServiceImpl implements FileServerThumbNailServic
             repository.save(new FileServerThumbNailEntity(thumbNailDto));
 
         } catch (JCodecException | IOException e) {
-            e.printStackTrace();
+            logComponent.sendErrorLog("Cloud", "makeThumbNail Error : ", e, TOPIC_CLOUD_LOG);
         }
     }
+
+    @Override
+    public boolean checkThumbNailExist(String uuid) {
+        return repository.existsByUuid(uuid);
+    }
+
     private String changeUnderBarToSeparator(String path){
-        return path.replaceAll("_", Matcher.quoteReplacement(File.separator));
+        return path.replaceAll("__", Matcher.quoteReplacement(File.separator));
     }
     private String changeSeparatorToUnderBar(String path){
-        return path.replaceAll(Matcher.quoteReplacement(File.separator), "_");
+        return path.replaceAll(Matcher.quoteReplacement(File.separator), "__");
     }
 }
