@@ -1,20 +1,15 @@
-package com.myhome.server.api.service;
+package com.myhome.server.component;
 
-import com.myhome.server.component.KafkaProducer;
-import com.myhome.server.component.LogComponent;
-import lombok.extern.slf4j.Slf4j;
+import com.myhome.server.api.service.FileServerPrivateService;
+import com.myhome.server.api.service.FileServerPublicService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
-@Slf4j
-@Service
-public class ScheduleServiceImpl implements ScheduleService {
+@Component
+public class SchedulerComponent {
 
     private final static String TOPIC_CLOUD_CHECK_LOG = "cloud-check-log";
-
-    @Autowired
-    KafkaProducer kafkaProducer;
 
     @Autowired
     LogComponent logComponent;
@@ -25,14 +20,7 @@ public class ScheduleServiceImpl implements ScheduleService {
     @Autowired
     FileServerPublicService fileServerPublicService;
 
-    @Scheduled(cron = "0 0 0 * * *") // top of  every day (second, min, hour, day, month, week)
-    @Override
-    public void sendRefreshReserveList() {
-        kafkaProducer.sendReserveMessage();
-    }
-
     @Scheduled(cron = "0 0 0 * * *") // top of e every day
-    @Override
     public void checkCloudFile() {
         try {
             fileServerPublicService.publicFileStateCheck();
