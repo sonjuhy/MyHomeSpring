@@ -1,6 +1,8 @@
 package com.myhome.server.db.repository;
 
 import com.myhome.server.db.entity.FileServerPublicEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -16,6 +18,7 @@ public interface FileServerPublicRepository extends JpaRepository<FileServerPubl
     FileServerPublicEntity findByUuid(String uuid);
 
     List<FileServerPublicEntity> findByLocationAndDelete(String location, int delete);
+    List<FileServerPublicEntity> findByLocationAndDelete(String location, int delete, Pageable pageable);
 
     List<FileServerPublicEntity> findByState(int state);
 

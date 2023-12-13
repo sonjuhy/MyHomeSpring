@@ -12,6 +12,8 @@ import com.myhome.server.db.repository.FileServerPrivateRepository;
 import com.myhome.server.db.repository.FileServerThumbNailRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
@@ -96,7 +98,18 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
 
     @Override
     public List<FileServerPrivateEntity> findByLocation(String location, int mode) {
-        List<FileServerPrivateEntity> list = repository.findByLocationAndDelete(location, mode);
+        String originLocation = changeUnderBarToSeparator(location);
+        if("default".equals(originLocation)) originLocation = diskPath;
+        List<FileServerPrivateEntity> list = repository.findByLocationAndDelete(originLocation, mode);
+        return list;
+    }
+
+    @Override
+    public List<FileServerPrivateEntity> findByLocationPage(String location, int mode, int size, int page) {
+        Pageable pageable = PageRequest.of(page, size);
+        String originLocation = changeUnderBarToSeparator(location);
+        if("default".equals(originLocation)) originLocation = diskPath;
+        List<FileServerPrivateEntity> list = repository.findByLocationAndDelete(originLocation, mode, pageable);
         return list;
     }
 
@@ -148,7 +161,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
                         Path savePath = Paths.get(saveName);
                         file.transferTo(savePath);
                     } catch (IOException e) {
-                        logComponent.sendErrorLog("Cloud-Check", "[uploadFiles(private)] error : ", e, TOPIC_CLOUD_CHECK_LOG);
+                        logComponent.sendErrorLog("Cloud", "[uploadFiles(private)] error : ", e, TOPIC_CLOUD_CHECK_LOG);
                     }
                 }
             }
@@ -451,6 +464,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
             logComponent.sendLog("Cloud-Check", "[traversalFolder(private)] files is null (path) : "+path, false, TOPIC_CLOUD_CHECK_LOG);
         }
     }
+    @Transactional
     private void deleteThumbNail(){
         List<FileServerThumbNailEntity> thumbNailEntityList = thumbNailRepository.findAllNotInPrivate();
         for(FileServerThumbNailEntity entity : thumbNailEntityList){
