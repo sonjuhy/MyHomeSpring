@@ -122,7 +122,7 @@ public class FileServerController {
         List<FileServerPublicEntity> list = service.findByLocation(location, 0);
         return new ResponseEntity<>(list, HttpStatus.OK);
     }
-    @GetMapping("/getPublicFilesInfo") // get PublicFiles info list
+    @GetMapping("/getPublicFilesPageInfo") // get PublicFiles info list
     public ResponseEntity<List<FileServerPublicEntity>> getPublicFilesPageInfo(@RequestParam String location, @RequestParam int size, @RequestParam int page){
         List<FileServerPublicEntity> list = service.findByLocationPage(location, 0, size, page);
         return new ResponseEntity<>(list, HttpStatus.OK);
@@ -175,7 +175,7 @@ public class FileServerController {
         return new ResponseEntity<>(list, HttpStatus.OK);
     }
 
-    @GetMapping("/getPublicTrashFiles")
+    @GetMapping("/getPublicTrashPageFiles")
     public ResponseEntity<List<FileServerPublicEntity>> getPublicTrashPageFiles(@RequestParam String location, @RequestParam int size, @RequestParam int page){
         List<FileServerPublicEntity> list = service.findByLocationPage(location, 1, size, page);
         return new ResponseEntity<>(list, HttpStatus.OK);
