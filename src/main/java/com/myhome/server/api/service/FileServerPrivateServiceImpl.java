@@ -378,7 +378,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
                 String fileName = file.getName();
                 sb.append(fileName).append("\n");
                 for(UserEntity entity : userList){
-                    if(entity.getName().equals(fileName)){
+                    if(entity.getId().equals(fileName)){
                         String owner = entity.getId();
                         traversalFolder(diskPath+File.separator+owner, owner);
                         break;
@@ -404,60 +404,61 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
         if(files != null){
             ArrayList<String> dirList = new ArrayList<>();
             for(File file : files){
-                String type, extension;
-                if(file.isDirectory()) {
-                    type = "dir : ";
-                    extension = "dir";
-                    dirList.add(file.getName());
-                }
-                else {
-                    type = "file : ";
-                    extension = file.getName().substring(file.getName().lastIndexOf(".")+1);
-                }
-                FileServerPrivateEntity entity = repository.findByPath(file.getPath());
+                try{
+                    String type, extension;
+                    if(file.isDirectory()) {
+                        type = "dir : ";
+                        extension = "dir";
+                        dirList.add(file.getName());
+                    }
+                    else {
+                        type = "file : ";
+                        extension = file.getName().substring(file.getName().lastIndexOf(".")+1);
+                    }
+                    FileServerPrivateEntity entity = repository.findByPath(file.getPath());
 
-                if(entity == null){
-                    String tmpPath = changeSeparatorToUnderBar(file.getPath()), tmpLocation = changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
-                    String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
+                    if(entity == null){
+                        String tmpPath = changeSeparatorToUnderBar(file.getPath()), tmpLocation = changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
+                        String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
 
-                    FileServerPrivateDto dto = new FileServerPrivateDto(
-                            tmpPath, // file path (need to change)
-                            file.getName(), // file name
-                            uuid, // file name to change UUID
-                            extension, // file type (need to check ex: txt file -> text/plan)
-                            (float)(file.length()/1024), // file size(KB)
-                            owner,
-                            tmpLocation, // file folder path (need to change)
-                            1,
-                            0
-                    );
-                    repository.save(new FileServerPrivateEntity(dto));
-                    if(Arrays.asList(videoExtensionList).contains(extension)){
-                        try {
-                            Path source = Paths.get(file.getPath());
-                            System.out.println(Files.probeContentType(source));
-                        } catch (IOException e) {
-                            logComponent.sendErrorLog("Cloud-Check", "[traversalFolder(private)] Path Source get error : ", e, TOPIC_CLOUD_CHECK_LOG);
-                        }
-                        File thumbNailPath = new File(thumbnailPath);
-                        File[] thumbNailFiles = thumbNailPath.listFiles();
-                        boolean isExist = false;
-                        if(thumbNailFiles != null || thumbNailFiles.length > 0) {
-                            for (File thumbNailFile : thumbNailFiles) {
-                                if (thumbNailFile.getName().equals(uuid + ".jpg")) {
-                                    isExist = true;
-                                    break;
+                        FileServerPrivateDto dto = new FileServerPrivateDto(
+                                tmpPath, // file path (need to change)
+                                file.getName(), // file name
+                                uuid, // file name to change UUID
+                                extension, // file type (need to check ex: txt file -> text/plan)
+                                (float)(file.length()/1024), // file size(KB)
+                                owner,
+                                tmpLocation, // file folder path (need to change)
+                                1,
+                                0
+                        );
+                        repository.save(new FileServerPrivateEntity(dto));
+                        if(Arrays.asList(videoExtensionList).contains(extension)){
+                            try {
+                                Path source = Paths.get(file.getPath());
+                                System.out.println(Files.probeContentType(source));
+                            } catch (IOException e) {
+                                logComponent.sendErrorLog("Cloud-Check", "[traversalFolder(private)] Path Source get error : ", e, TOPIC_CLOUD_CHECK_LOG);
+                            }
+                            File thumbNailPath = new File(thumbnailPath);
+                            File[] thumbNailFiles = thumbNailPath.listFiles();
+                            boolean isExist = false;
+                            if(thumbNailFiles != null || thumbNailFiles.length > 0) {
+                                for (File thumbNailFile : thumbNailFiles) {
+                                    if (thumbNailFile.getName().equals(uuid + ".jpg")) {
+                                        isExist = true;
+                                        break;
+                                    }
                                 }
                             }
+                            if(!isExist) thumbNailService.makeThumbNail(file, uuid, "private");
                         }
-                        if(!isExist) thumbNailService.makeThumbNail(file, uuid, "private");
+                        logComponent.sendLog("Cloud-Check", "[traversalFolder(private)] file (dto) : "+dto+", no exist file", true, TOPIC_CLOUD_CHECK_LOG);
                     }
-                    logComponent.sendLog("Cloud-Check", "[traversalFolder(private)] file (dto) : "+dto+", no exist file", true, TOPIC_CLOUD_CHECK_LOG);
                 }
-//                else{
-//                    logComponent.sendLog("Cloud-Check", "[traversalFolder(private)] file (path) : "+file.getPath()+", (name) : "+type+file.getName()+", exist file", true, TOPIC_CLOUD_CHECK_LOG);
-//                }
-
+                catch (Exception e){
+                    logComponent.sendErrorLog("Cloud-Check", "[traversalFolder(private)] file check error : ", e, TOPIC_CLOUD_CHECK_LOG);
+                }
             }
             for(String folder : dirList){
                 traversalFolder(path+File.separator+folder, owner);

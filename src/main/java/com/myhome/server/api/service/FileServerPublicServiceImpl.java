@@ -354,51 +354,53 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
             ArrayList<String> dirList = new ArrayList<>();
             System.out.println("Files size : " + files.length);
             for(File file : files){
-                String type, extension;
-                if(file.isDirectory()) {
-                    type = "dir : ";
-                    extension = "dir";
-                    dirList.add(file.getName());
-                }
-                else {
-                    type = "file : ";
-                    extension = file.getName().substring(file.getName().lastIndexOf(".") + 1); // file type (need to check ex: txt file -> text/plan)
-                }
-                FileServerPublicEntity entity = fileServerRepository.findByPath(file.getPath());
-                int deleteStatus = 0;
-                String tmpPath = changeSeparatorToUnderBar(file.getPath()), tmpLocation = changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
-                if(!mode) {
-                    deleteStatus = 1;
-                }
-                if(entity == null){
-                    String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
-                    FileServerPublicDto dto = new FileServerPublicDto(
-                            tmpPath, // file path
-                            file.getName(), // file name
-                            uuid, // file name to change UUID
-                            extension,
-                            (float)(file.length()/1024), // file size(KB)
-                            tmpLocation, // file folder path (location)
-                            1,
-                            deleteStatus
-                    );
-                    fileServerRepository.save(new FileServerPublicEntity(dto));
-                    if(Arrays.asList(videoExtensionList).contains(extension)){
-                        thumbNailService.makeThumbNail(file, uuid, "public");
+                try{
+                    String type, extension;
+                    if(file.isDirectory()) {
+                        type = "dir : ";
+                        extension = "dir";
+                        dirList.add(file.getName());
                     }
-                    logComponent.sendLog("Cloud-Check", "[traversalFolder(public)] file (dto) : "+dto+", no exist file", true, TOPIC_CLOUD_CHECK_LOG);
+                    else {
+                        type = "file : ";
+                        extension = file.getName().substring(file.getName().lastIndexOf(".") + 1); // file type (need to check ex: txt file -> text/plan)
+                    }
+                    FileServerPublicEntity entity = fileServerRepository.findByPath(file.getPath());
+                    int deleteStatus = 0;
+                    String tmpPath = changeSeparatorToUnderBar(file.getPath()), tmpLocation = changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
+                    if(!mode) {
+                        deleteStatus = 1;
+                    }
+                    if(entity == null){
+                        String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
+                        FileServerPublicDto dto = new FileServerPublicDto(
+                                tmpPath, // file path
+                                file.getName(), // file name
+                                uuid, // file name to change UUID
+                                extension,
+                                (float)(file.length()/1024), // file size(KB)
+                                tmpLocation, // file folder path (location)
+                                1,
+                                deleteStatus
+                        );
+                        fileServerRepository.save(new FileServerPublicEntity(dto));
+                        if(Arrays.asList(videoExtensionList).contains(extension)){
+                            thumbNailService.makeThumbNail(file, uuid, "public");
+                        }
+                        logComponent.sendLog("Cloud-Check", "[traversalFolder(public)] file (dto) : "+dto+", no exist file", true, TOPIC_CLOUD_CHECK_LOG);
+                    }
+                    else{
+                        logComponent.sendLog("Cloud-Check", "[traversalFolder(public)] file (path) : "+file.getPath()+", (name) : "+type+file.getName()+", exist file", true, TOPIC_CLOUD_CHECK_LOG);
+                    }
                 }
-                else{
-                    logComponent.sendLog("Cloud-Check", "[traversalFolder(public)] file (path) : "+file.getPath()+", (name) : "+type+file.getName()+", exist file", true, TOPIC_CLOUD_CHECK_LOG);
+                catch (Exception e){
+                    logComponent.sendErrorLog("Cloud-Check", "[traversalFolder(public)] file check error : ", e, TOPIC_CLOUD_CHECK_LOG);
                 }
             }
             for(String folder : dirList){
                 traversalFolder(path+File.separator+folder, mode);
             }
         }
-//        else{
-//            logComponent.sendLog("Cloud-Check", "[traversalFolder(public)] files is null (path) : "+path, false, TOPIC_CLOUD_CHECK_LOG);
-//        }
 
     }
     @Transactional
