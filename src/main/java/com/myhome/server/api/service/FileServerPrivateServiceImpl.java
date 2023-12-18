@@ -373,8 +373,10 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
         File defaultPath = new File(diskPath);
         File[] files = defaultPath.listFiles();
         if(files != null) {
+            StringBuilder sb = new StringBuilder();
             for (File file : files) {
                 String fileName = file.getName();
+                sb.append(fileName).append("\n");
                 for(UserEntity entity : userList){
                     if(entity.getName().equals(fileName)){
                         String owner = entity.getId();
@@ -383,6 +385,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
                     }
                 }
             }
+            logComponent.sendLog("Cloud-Check", "[traversalFolder(private)] file top list : "+sb.toString(), true, TOPIC_CLOUD_CHECK_LOG);
         }
         deleteThumbNail();
         repository.deleteByState(0);

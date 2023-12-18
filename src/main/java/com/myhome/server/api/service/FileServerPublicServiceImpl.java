@@ -386,10 +386,10 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                     if(Arrays.asList(videoExtensionList).contains(extension)){
                         thumbNailService.makeThumbNail(file, uuid, "public");
                     }
-                    logComponent.sendLog("Cloud-Check", "[traversalFolder(private)] file (dto) : "+dto+", no exist file", true, TOPIC_CLOUD_CHECK_LOG);
+                    logComponent.sendLog("Cloud-Check", "[traversalFolder(public)] file (dto) : "+dto+", no exist file", true, TOPIC_CLOUD_CHECK_LOG);
                 }
                 else{
-                    logComponent.sendLog("Cloud-Check", "[traversalFolder(private)] file (path) : "+file.getPath()+", (name) : "+type+file.getName()+", exist file", true, TOPIC_CLOUD_CHECK_LOG);
+                    logComponent.sendLog("Cloud-Check", "[traversalFolder(public)] file (path) : "+file.getPath()+", (name) : "+type+file.getName()+", exist file", true, TOPIC_CLOUD_CHECK_LOG);
                 }
             }
             for(String folder : dirList){
