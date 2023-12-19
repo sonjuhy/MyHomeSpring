@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -57,19 +59,48 @@ public class FileServerController {
      */
     @GetMapping("/checkFileState")
     public ResponseEntity<String> checkFileState(){
+        StringWriter sw = new StringWriter();
         try {
             service.publicFileStateCheck();
         }
         catch (Exception e){
-            return new ResponseEntity<>("publicFileCheck error", HttpStatus.INTERNAL_SERVER_ERROR);
+            e.printStackTrace(new PrintWriter(sw));
+            return new ResponseEntity<>("publicFileCheck error : "+sw.toString(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
         try {
             privateService.privateFileCheck();
         }
         catch (Exception e){
-            return new ResponseEntity<>("privateFileCheck error", HttpStatus.INTERNAL_SERVER_ERROR);
+            e.printStackTrace(new PrintWriter(sw));
+            return new ResponseEntity<>("privateFileCheck error : "+sw.toString(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
         return new ResponseEntity<>("File check Success", HttpStatus.OK);
+    }
+
+    @GetMapping("/checkPublicFileStatus")
+    public ResponseEntity<String> checkPublicFileStatus(){
+        StringWriter sw = new StringWriter();
+        try {
+            service.publicFileStateCheck();
+        }
+        catch (Exception e){
+            e.printStackTrace(new PrintWriter(sw));
+            return new ResponseEntity<>("publicFileCheck error : "+sw.toString(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        return new ResponseEntity<>("Public file check Success", HttpStatus.OK);
+    }
+
+    @GetMapping("/checkPrivateFileStatus")
+    public ResponseEntity<String> checkPrivateFileStatus(){
+        StringWriter sw = new StringWriter();
+        try {
+            privateService.privateFileCheck();
+        }
+        catch (Exception e){
+            e.printStackTrace(new PrintWriter(sw));
+            return new ResponseEntity<>("Private FileCheck error : "+sw.toString(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        return new ResponseEntity<>("Private file check Success", HttpStatus.OK);
     }
 
     @GetMapping("/downloadThumbNail/{uuid}")
