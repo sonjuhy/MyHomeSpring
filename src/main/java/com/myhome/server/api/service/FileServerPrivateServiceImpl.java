@@ -85,8 +85,8 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
 
     @Override
     public FileServerPrivateEntity findByPath(String path) {
-        String originPath = changeUnderBarToSeparator(path);
-        FileServerPrivateEntity entity = repository.findByPath(originPath);
+//        String originPath = changeUnderBarToSeparator(path);
+        FileServerPrivateEntity entity = repository.findByPath(path);
         return entity;
     }
 
@@ -98,7 +98,8 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
 
     @Override
     public List<FileServerPrivateEntity> findByLocation(String location, int mode) {
-        String originLocation = changeUnderBarToSeparator(location);
+//        String originLocation = changeUnderBarToSeparator(location);
+        String originLocation = location;
         if("default".equals(originLocation)) originLocation = diskPath;
         List<FileServerPrivateEntity> list = repository.findByLocationAndDelete(originLocation, mode);
         return list;
@@ -107,7 +108,8 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
     @Override
     public List<FileServerPrivateEntity> findByLocationPage(String location, int mode, int size, int page) {
         Pageable pageable = PageRequest.of(page, size);
-        String originLocation = changeUnderBarToSeparator(location);
+//        String originLocation = changeUnderBarToSeparator(location);
+        String originLocation = location;
         if("default".equals(originLocation)) originLocation = diskPath;
         List<FileServerPrivateEntity> list = repository.findByLocationAndDelete(originLocation, mode, pageable);
         return list;
@@ -139,25 +141,25 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
             String id = jwtTokenProvider.getUserPk(token);
             Optional<UserEntity> userEntity = service.findById(id);
 //            String fileLocation = defaultUploadPath+File.separator+path+File.separator;
-            String fileLocation = changeUnderBarToSeparator(path);
+//            String fileLocation = changeUnderBarToSeparator(path);
             List<FileServerPrivateEntity> list = new ArrayList<>();
             for(MultipartFile file : files){
                 if(!file.isEmpty()){
                     try{
                         FileServerPrivateDto dto = new FileServerPrivateDto(
-                                fileLocation+file.getOriginalFilename(), // file path (need to change)
+                                path +file.getOriginalFilename(), // file path (need to change)
                                 file.getOriginalFilename(), // file name
                                 UUID.randomUUID().toString(), // file name to change UUID
                                 Objects.requireNonNull(file.getOriginalFilename()).substring(file.getOriginalFilename().lastIndexOf(".") + 1), // file type (need to check ex: txt file -> text/plan)
                                 (float)file.getSize(), // file size(KB)
                                 userEntity.get().getName(),
-                                fileLocation, // file folder path (need to change)
+                                path, // file folder path (need to change)
                                 0,
                                 0
                         );
                         System.out.println(file.getResource());
                         list.add(new FileServerPrivateEntity(dto));
-                        String saveName = fileLocation+dto.getName();
+                        String saveName = path +dto.getName();
                         Path savePath = Paths.get(saveName);
                         file.transferTo(savePath);
                     } catch (IOException e) {
@@ -183,10 +185,10 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
 
     @Override
     public boolean mkdir(String path, String token) {
-        String originPath = changeUnderBarToSeparator(path);
-        File file = new File(originPath);
+//        String originPath = changeUnderBarToSeparator(path);
+        File file = new File(path);
         if(file.mkdir()){
-            String[] paths = originPath.split(File.separator);
+            String[] paths = path.split(File.separator);
             String name = paths[paths.length-1];
             StringBuilder location = new StringBuilder();
             for(int i=0;i<paths.length-1;i++){
@@ -196,7 +198,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
             Optional<UserEntity> userEntity = service.findById(pk);
 
             FileServerPrivateDto dto = new FileServerPrivateDto(
-                    originPath, // file path (need to change)
+                    path, // file path (need to change)
                     name, // file name
                     UUID.randomUUID().toString(), // file name to change UUID
                     "dir",
@@ -218,15 +220,15 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
 
     @Override
     public boolean existsByPath(String path) {
-        String originPath = changeUnderBarToSeparator(path);
-        boolean result = repository.existsByPath(originPath);
+//        String originPath = changeUnderBarToSeparator(path);
+        boolean result = repository.existsByPath(path);
         return result;
     }
 
     @Override
     public long deleteByPath(String path, String accessToken) { // add owner
-        String originPath = changeUnderBarToSeparator(path);
-        FileServerPrivateEntity entity = repository.findByPath(originPath);
+//        String originPath = changeUnderBarToSeparator(path);
+        FileServerPrivateEntity entity = repository.findByPath(path);
         if(ObjectUtils.isEmpty(entity)){
             logComponent.sendLog("Cloud", "[deleteByPath(private)] file entity is null (path) : "+path, false, TOPIC_CLOUD_LOG);
             return -1;
