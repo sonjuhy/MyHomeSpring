@@ -17,11 +17,11 @@ public interface FileServerThumbNailRepository extends JpaRepository<FileServerT
     // SELECT * FROM FILE_THUMBNAIL_TB WHERE NOT EXISTS(SELECT * FROM FILE_PUBLIC_TB WHERE FILE_PUBLIC_TB.UUID_PK = FILE_THUMBNAIL_TB.UUID_PK);
     @Transactional
     @Modifying(clearAutomatically = true)
-    @Query(value = "SELECT * FROM FILE_THUMBNAIL_TB WHERE NOT EXISTS(SELECT * FROM FILE_PUBLIC_TB WHERE FILE_PUBLIC_TB.UUID_PK = FILE_THUMBNAIL_TB.UUID_PK)", nativeQuery = true)
+    @Query(value = "SELECT * FROM FILE_THUMBNAIL_TB WHERE NOT EXISTS(SELECT * FROM FILE_PUBLIC_TB WHERE FILE_PUBLIC_TB.UUID_CHAR = FILE_THUMBNAIL_TB.UUID_PK)", nativeQuery = true)
     List<FileServerThumbNailEntity> findAllNotInPublic();
 
     @Transactional
     @Modifying(clearAutomatically = true)
-    @Query(value = "SELECT * FROM FILE_THUMBNAIL_TB WHERE NOT EXISTS(SELECT * FROM FILE_PRIVATE_TB WHERE FILE_PRIVATE_TB.UUID_PK = FILE_THUMBNAIL_TB.UUID_PK)", nativeQuery = true)
+    @Query(value = "SELECT * FROM FILE_THUMBNAIL_TB WHERE NOT EXISTS(SELECT * FROM FILE_PRIVATE_TB WHERE FILE_PRIVATE_TB.UUID_CHAR = FILE_THUMBNAIL_TB.UUID_PK)", nativeQuery = true)
     List<FileServerThumbNailEntity> findAllNotInPrivate();
 }
