@@ -46,4 +46,12 @@ public interface FileServerPublicRepository extends JpaRepository<FileServerPubl
     @Modifying(clearAutomatically = true)
     @Query(value = "UPDATE FILE_PUBLIC_TB SET STATE_INT=1", nativeQuery = true)
     int updateAllStateToOne();
+
+    @Transactional
+    @Modifying(clearAutomatically = true)
+    @Query(value = "INSERT INFO FILE_PUBLIC_TB(" +
+            "UUID_PK, PATH_CHAR, NAME_CHAR, TYPE_CHAR, SIZE_FLOAT, LOCATION_CHAR, STATE_INT, DELETE_STATUS_INT) " +
+            "SELECT :uuidPk :pathChar :nameChar :typeChar :sizeFloat :locationChar :stateInt :deleteStatusInt FROM DUAL WHERE NOT EXISTS(" +
+            "SELECT FROM FILE_PUBLIC_TB WHERE UUID_PK=:uuid", nativeQuery = true)
+    void insertFileIfNotExists(@Param("uuidPk")String uuid, @Param("pathChar") String path, @Param("nameChar")String name, @Param("typeChar")String type, @Param("sizeFloat")float size, @Param("locationChar")String location, @Param("stateInt")int state, @Param("deleteStatusInt")int deleteStatus);
 }

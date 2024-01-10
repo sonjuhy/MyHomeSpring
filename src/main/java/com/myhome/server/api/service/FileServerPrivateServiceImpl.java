@@ -3,11 +3,13 @@ package com.myhome.server.api.service;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.myhome.server.api.dto.FileServerPrivateDto;
+import com.myhome.server.api.dto.FileServerPublicDto;
 import com.myhome.server.component.KafkaProducer;
 import com.myhome.server.component.LogComponent;
 import com.myhome.server.config.jwt.JwtTokenProvider;
 import com.myhome.server.db.entity.*;
 import com.myhome.server.db.repository.FileDefaultPathRepository;
+import com.myhome.server.db.repository.FileServerCustomRepository;
 import com.myhome.server.db.repository.FileServerPrivateRepository;
 import com.myhome.server.db.repository.FileServerThumbNailRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +32,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.regex.Matcher;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 public class FileServerPrivateServiceImpl implements FileServerPrivateService {
@@ -58,7 +62,8 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
 
     @Autowired
     FileServerThumbNailRepository thumbNailRepository;
-
+    @Autowired
+    FileServerCustomRepository fileServerCustomRepository;
     @Autowired
     FileServerThumbNailService thumbNailService;
 
@@ -382,12 +387,12 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
                 for(UserEntity entity : userList){
                     if(entity.getId().equals(fileName)){
                         String owner = entity.getId();
-                        traversalFolder(diskPath+File.separator+owner, owner);
+                        filesWalk(diskPath+File.separator+owner, owner);
                         break;
                     }
                 }
             }
-            logComponent.sendLog("Cloud-Check", "[traversalFolder(private)] file top list : "+sb.toString(), true, TOPIC_CLOUD_CHECK_LOG);
+            logComponent.sendLog("Cloud-Check", "[privateFileCheck(private)] file top list : "+sb.toString(), true, TOPIC_CLOUD_CHECK_LOG);
         }
         deleteThumbNail();
         repository.deleteByState(0);
@@ -400,74 +405,51 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
         return path.replaceAll(Matcher.quoteReplacement(File.separator), "__");
     }
 
-    private void traversalFolder(String path, String owner){
-        File dir = new File(path);
-        File[] files = dir.listFiles();
-        if(files != null){
-            ArrayList<String> dirList = new ArrayList<>();
-            for(File file : files){
-                try{
-                    String type, extension;
-                    if(file.isDirectory()) {
-                        type = "dir : ";
-                        extension = "dir";
-                        dirList.add(file.getName());
-                    }
-                    else {
-                        type = "file : ";
-                        extension = file.getName().substring(file.getName().lastIndexOf(".")+1);
-                    }
-                    FileServerPrivateEntity entity = repository.findByPath(file.getPath());
+    private void filesWalk(String pathUrl, String owner){
+        Path originPath = Paths.get(pathUrl);
+        List<Path> pathList;
+        try{
+            Stream<Path> pathStream = Files.walk(originPath);
+            pathList = pathStream.collect(Collectors.toList());
+            List<FileServerPrivateDto> fileList = new ArrayList<>();
+            List<File> mediaFileList = new ArrayList<>();
+            for(Path path : pathList){
+                File file = new File(path.toString());
 
-                    if(entity == null){
-                        String tmpPath = changeSeparatorToUnderBar(file.getPath()), tmpLocation = changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
-                        String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
-
-                        FileServerPrivateDto dto = new FileServerPrivateDto(
-                                tmpPath, // file path (need to change)
-                                file.getName(), // file name
-                                uuid, // file name to change UUID
-                                extension, // file type (need to check ex: txt file -> text/plan)
-                                (float)(file.length()/1024), // file size(KB)
-                                owner,
-                                tmpLocation, // file folder path (need to change)
-                                1,
-                                0
-                        );
-                        repository.save(new FileServerPrivateEntity(dto));
-                        if(Arrays.asList(videoExtensionList).contains(extension)){
-                            try {
-                                Path source = Paths.get(file.getPath());
-                                System.out.println(Files.probeContentType(source));
-                            } catch (IOException e) {
-                                logComponent.sendErrorLog("Cloud-Check", "[traversalFolder(private)] Path Source get error : ", e, TOPIC_CLOUD_CHECK_LOG);
-                            }
-                            File thumbNailPath = new File(thumbnailPath);
-                            File[] thumbNailFiles = thumbNailPath.listFiles();
-                            boolean isExist = false;
-                            if(thumbNailFiles != null || thumbNailFiles.length > 0) {
-                                for (File thumbNailFile : thumbNailFiles) {
-                                    if (thumbNailFile.getName().equals(uuid + ".jpg")) {
-                                        isExist = true;
-                                        break;
-                                    }
-                                }
-                            }
-                            if(!isExist) thumbNailService.makeThumbNail(file, uuid, "private");
-                        }
-                        logComponent.sendLog("Cloud-Check", "[traversalFolder(private)] file (dto) : "+dto+", no exist file", true, TOPIC_CLOUD_CHECK_LOG);
-                    }
+                String extension;
+                if(file.isDirectory()) {
+                    extension = "dir";
                 }
-                catch (Exception e){
-                    logComponent.sendErrorLog("Cloud-Check", "[traversalFolder(private)] file check error : ", e, TOPIC_CLOUD_CHECK_LOG);
+                else {
+                    extension = file.getName().substring(file.getName().lastIndexOf(".") + 1); // file type (need to check ex: txt file -> text/plan)
+                }
+                String tmpPath = changeSeparatorToUnderBar(file.getPath()), tmpLocation = changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
+                String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
+                fileList.add( new FileServerPrivateDto(
+                        uuid,
+                        tmpPath,
+                        file.getName(),
+                        extension,
+                        (float)(file.length()/1024),
+                        owner,
+                        tmpLocation,
+                        1,
+                        0
+                ));
+                if(Arrays.asList(videoExtensionList).contains(extension) && !thumbNailRepository.existsByUuid(uuid)){
+                    mediaFileList.add(file);
                 }
             }
-            for(String folder : dirList){
-                traversalFolder(path+File.separator+folder, owner);
+            fileServerCustomRepository.saveBatchPrivate(fileList);
+            for(File file : mediaFileList){
+                thumbNailService.makeThumbNail(file,
+                        UUID.nameUUIDFromBytes(changeSeparatorToUnderBar(file.getPath()).getBytes(StandardCharsets.UTF_8)).toString(),
+                        "private"
+                );
             }
         }
-        else{
-            logComponent.sendLog("Cloud-Check", "[traversalFolder(private)] files is null (path) : "+path, false, TOPIC_CLOUD_CHECK_LOG);
+        catch (Exception e){
+                    logComponent.sendErrorLog("Cloud-Check", "[filesWalk(private)] file check error : ", e, TOPIC_CLOUD_CHECK_LOG);
         }
     }
     @Transactional
