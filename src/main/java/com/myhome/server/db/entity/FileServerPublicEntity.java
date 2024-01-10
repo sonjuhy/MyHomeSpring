@@ -2,6 +2,7 @@ package com.myhome.server.db.entity;
 
 import com.myhome.server.api.dto.FileServerPublicDto;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -9,10 +10,12 @@ import lombok.NoArgsConstructor;
 @Getter
 @Entity
 @Table(name = "FILE_PUBLIC_TB")
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class FileServerPublicEntity {
     @Id
-    @Column(name = "UUID_PK")
+    @Column(name = "ID_PK")
+    private int id;
+    @Column(name = "UUID_CHAR")
     private String uuid;
     @Column(name = "PATH_CHAR")
     private String path;
@@ -30,7 +33,8 @@ public class FileServerPublicEntity {
     private int delete;
 
     @Builder
-    public FileServerPublicEntity(String path, String name, String uuidName, String type, float size, String location, int state, int delete){
+    public FileServerPublicEntity(int id, String path, String name, String uuidName, String type, float size, String location, int state, int delete){
+        this.id = id;
         this.path = path;
         this.name = name;
         this.uuid = uuidName;
@@ -41,7 +45,6 @@ public class FileServerPublicEntity {
         this.delete = delete;
     }
 
-    @Builder
     public FileServerPublicEntity(FileServerPublicDto dto){
         this.path = dto.getPath();
         this.name = dto.getName();

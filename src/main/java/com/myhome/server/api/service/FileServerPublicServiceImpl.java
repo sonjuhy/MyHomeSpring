@@ -7,6 +7,7 @@ import com.myhome.server.component.KafkaProducer;
 import com.myhome.server.component.LogComponent;
 import com.myhome.server.db.entity.*;
 import com.myhome.server.db.repository.FileDefaultPathRepository;
+import com.myhome.server.db.repository.FileServerCustomRepository;
 import com.myhome.server.db.repository.FileServerPublicRepository;
 import com.myhome.server.db.repository.FileServerThumbNailRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +30,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.regex.Matcher;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 public class FileServerPublicServiceImpl implements FileServerPublicService {
@@ -51,6 +54,8 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
 
     @Autowired
     FileServerPublicRepository fileServerRepository;
+    @Autowired
+    FileServerCustomRepository fileServerCustomRepository;
 
     @Autowired
     FileServerThumbNailRepository thumbNailRepository;
@@ -78,7 +83,6 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
 
     @Override
     public FileServerPublicEntity findByPath(String path) {
-//        String originPath = changeUnderBarToSeparator(path);
         String originPath = path;
         if("default".equals(originPath)) originPath = diskPath;
         FileServerPublicEntity entity = fileServerRepository.findByPath(originPath);
@@ -93,8 +97,6 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
 
     @Override
     public List<FileServerPublicEntity> findByLocation(String location, int mode) {
-//        String originLocation = changeUnderBarToSeparator(location);
-//        System.out.println("location : " + originLocation);
         if("default".equals(location)) location = diskPath;
         List<FileServerPublicEntity> list = fileServerRepository.findByLocationAndDelete(location, mode);
         return list;
@@ -103,7 +105,6 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     @Override
     public List<FileServerPublicEntity> findByLocationPage(String location, int mode, int size, int page) {
         Pageable pageable = PageRequest.of(page, size);
-//        String originLocation = changeUnderBarToSeparator(location);
         if("default".equals(location)) location = diskPath;
         List<FileServerPublicEntity> list = fileServerRepository.findByLocationAndDelete(location, mode, pageable);
         return list;
@@ -131,7 +132,6 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         String originPath = path;
         if(originPath != null && originPath.isBlank() && !originPath.isEmpty()) {
             originPath += File.separator;
-            //        String fileLocation = "C:\\Users\\SonJunHyeok\\Desktop\\test\\public"+File.separator+originPath;
             List<FileServerPublicEntity> list = new ArrayList<>();
             for(MultipartFile file : files){
                 if(!file.isEmpty()){
@@ -334,8 +334,8 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     @Override
     public void publicFileStateCheck() {
         fileServerRepository.updateAllStateToOne();
-        traversalFolder(diskPath, true);
-        traversalFolder(trashPath, false);
+        filesWalk(diskPath, true);
+        filesWalk(trashPath, false);
         deleteThumbNail();
         fileServerRepository.deleteByState(0);
     }
@@ -345,64 +345,51 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     private String changeSeparatorToUnderBar(String path){
         return path.replaceAll(Matcher.quoteReplacement(File.separator), "__");
     }
-
-    private void traversalFolder(String path, boolean mode){
-        System.out.println("This is Path : " + path);
-        File dir = new File(path);
-        File[] files = dir.listFiles();
-        if(files != null){
-            ArrayList<String> dirList = new ArrayList<>();
-            System.out.println("Files size : " + files.length);
-            for(File file : files){
-                try{
-                    String type, extension;
-                    if(file.isDirectory()) {
-                        type = "dir : ";
-                        extension = "dir";
-                        dirList.add(file.getName());
-                    }
-                    else {
-                        type = "file : ";
-                        extension = file.getName().substring(file.getName().lastIndexOf(".") + 1); // file type (need to check ex: txt file -> text/plan)
-                    }
-//                    FileServerPublicEntity entity = fileServerRepository.findByPath(file.getPath());
-                    int deleteStatus = 0;
-                    String tmpPath = changeSeparatorToUnderBar(file.getPath()), tmpLocation = changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
-                    if(!mode) {
-                        deleteStatus = 1;
-                    }
-//                    if(entity == null){
-                    if(true){
-                        String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
-                        FileServerPublicDto dto = new FileServerPublicDto(
-                                tmpPath, // file path
-                                file.getName(), // file name
-                                uuid, // file name to change UUID
-                                extension,
-                                (float)(file.length()/1024), // file size(KB)
-                                tmpLocation, // file folder path (location)
-                                1,
-                                deleteStatus
-                        );
-//                        fileServerRepository.save(new FileServerPublicEntity(dto));
-                        if(Arrays.asList(videoExtensionList).contains(extension)){
-                            thumbNailService.makeThumbNail(file, uuid, "public");
-                        }
-//                        logComponent.sendLog("Cloud-Check", "[traversalFolder(public)] file (dto) : "+dto+", no exist file", true, TOPIC_CLOUD_CHECK_LOG);
-                    }
-                    else{
-//                        logComponent.sendLog("Cloud-Check", "[traversalFolder(public)] file (path) : "+file.getPath()+", (name) : "+type+file.getName()+", exist file", true, TOPIC_CLOUD_CHECK_LOG);
-                    }
+    private void filesWalk(String pathUrl, boolean mode){
+        Path originPath = Paths.get(pathUrl);
+        List<Path> pathList;
+        try{
+            Stream<Path> pathStream = Files.walk(originPath);
+            pathList = pathStream.collect(Collectors.toList());
+            List<FileServerPublicDto> fileList = new ArrayList<>();
+            List<File> mediaFileList = new ArrayList<>();
+            for(Path path : pathList){
+                File file = new File(path.toString());
+                String extension;
+                if(file.isDirectory()) {
+                    extension = "dir";
                 }
-                catch (Exception e){
-//                    logComponent.sendErrorLog("Cloud-Check", "[traversalFolder(public)] file check error : ", e, TOPIC_CLOUD_CHECK_LOG);
+                else {
+                    extension = file.getName().substring(file.getName().lastIndexOf(".") + 1); // file type (need to check ex: txt file -> text/plan)
+                }
+                String tmpPath = changeSeparatorToUnderBar(file.getPath()), tmpLocation = changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
+
+                String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
+                fileList.add( new FileServerPublicDto(
+                        uuid,
+                        tmpPath,
+                        file.getName(),
+                        extension,
+                        (float)(file.length()/1024),
+                        tmpLocation,
+                        1,
+                        mode ? 0 : 1
+                ));
+                if(Arrays.asList(videoExtensionList).contains(extension) && !thumbNailRepository.existsByUuid(uuid)){
+                    mediaFileList.add(file);
                 }
             }
-            for(String folder : dirList){
-                traversalFolder(path+File.separator+folder, mode);
+            fileServerCustomRepository.saveBatchPublic(fileList);
+            for(File file : mediaFileList){
+                thumbNailService.makeThumbNail(file,
+                        UUID.nameUUIDFromBytes(changeSeparatorToUnderBar(file.getPath()).getBytes(StandardCharsets.UTF_8)).toString(),
+                        "public"
+                );
             }
         }
-
+        catch (Exception e){
+            logComponent.sendErrorLog("Cloud-Check", "[filesWalk(public)] file check error : ", e, TOPIC_CLOUD_CHECK_LOG);
+        }
     }
 
     @Transactional
