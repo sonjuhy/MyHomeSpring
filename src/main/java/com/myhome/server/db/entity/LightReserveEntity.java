@@ -34,17 +34,20 @@ public class LightReserveEntity {
     private String activated;
     @Column(name = "REITERATION_CHAR")
     private String reiteration;
+    @Column(name = "HOLIDAY_TINYINT", columnDefinition = "TINYINT(4)")
+    private boolean holiday;
 
     @Builder
-    protected LightReserveEntity(int pk, String name, String roomKor, String time, String room, String action, String day, String activated, String reiteration) {
+    public LightReserveEntity(int pk, String name, String room, String roomKor, String time, String action, String day, String activated, String reiteration, boolean holiday) {
         this.pk = pk;
         this.name = name;
+        this.room = room;
         this.roomKor = roomKor;
         this.time = time;
-        this.room = room;
         this.action = action;
         this.day = day;
         this.activated = activated;
         this.reiteration = reiteration;
+        this.holiday = holiday;
     }
 }
