@@ -21,7 +21,7 @@ public class FileServerCustomRepository {
     private final int batchSize = 500000;
     @Transactional
     public void saveBatchPublic(List<FileServerPublicDto> list){
-        jdbcTemplate.execute("DELETE FROM TABLE FILE_PUBLIC_TB");
+        jdbcTemplate.execute("DELETE FROM FILE_PUBLIC_TB");
         jdbcTemplate.execute("ALTER TABLE FILE_PUBLIC_TB AUTO_INCREMENT=1");
         int batchCount = 1;
         List<FileServerPublicDto> subList;
@@ -38,7 +38,7 @@ public class FileServerCustomRepository {
 
     @Transactional
     public void saveBatchPrivate(List<FileServerPrivateDto> list){
-        jdbcTemplate.execute("DELETE FROM TABLE FILE_PRIVATE_TB");
+        jdbcTemplate.execute("DELETE FROM FILE_PRIVATE_TB");
         jdbcTemplate.execute("ALTER TABLE FILE_PRIVATE_TB AUTO_INCREMENT=1");
         int batchCount = 1;
         List<FileServerPrivateDto> subList;
