@@ -21,6 +21,8 @@ public class FileServerCustomRepository {
     private final int batchSize = 500000;
     @Transactional
     public void saveBatchPublic(List<FileServerPublicDto> list){
+        jdbcTemplate.execute("DELETE FROM TABLE FILE_PUBLIC_TB");
+        jdbcTemplate.execute("ALTER TABLE FILE_PUBLIC_TB AUTO_INCREMENT=1");
         int batchCount = 1;
         List<FileServerPublicDto> subList;
         for(int i=0;i<list.size();i=batchCount*batchSize){
@@ -36,6 +38,8 @@ public class FileServerCustomRepository {
 
     @Transactional
     public void saveBatchPrivate(List<FileServerPrivateDto> list){
+        jdbcTemplate.execute("DELETE FROM TABLE FILE_PRIVATE_TB");
+        jdbcTemplate.execute("ALTER TABLE FILE_PRIVATE_TB AUTO_INCREMENT=1");
         int batchCount = 1;
         List<FileServerPrivateDto> subList;
         for(int i=0;i<list.size();i=batchCount*batchSize){
@@ -49,8 +53,6 @@ public class FileServerCustomRepository {
         }
     }
     private void batchPublicInsert(List<FileServerPublicDto> list){
-        jdbcTemplate.execute("DELETE FROM TABLE FILE_PUBLIC_TB");
-        jdbcTemplate.execute("ALTER TABLE FILE_PUBLIC_TB AUTO_INCREMENT=1");
         jdbcTemplate.batchUpdate("INSERT INTO " +
                 "FILE_PUBLIC_TB(UUID_BINARY, PATH_CHAR, NAME_CHAR, TYPE_CHAR, SIZE_FLOAT, LOCATION_CHAR, STATE_INT, DELETE_STATUS_INT) " +
                 "value(?, ?, ?, ?, ?, ?, ?, ?)", new BatchPreparedStatementSetter() {
@@ -75,8 +77,6 @@ public class FileServerCustomRepository {
         list.clear();
     }
     private void batchPrivateInsert(List<FileServerPrivateDto> list){
-        jdbcTemplate.execute("DELETE FROM TABLE FILE_PRIVATE_TB");
-        jdbcTemplate.execute("ALTER TABLE FILE_PRIVATE_TB AUTO_INCREMENT=1");
         jdbcTemplate.batchUpdate("INSERT INTO " +
                 "FILE_PRIVATE_TB(UUID_BINARY, PATH_CHAR, NAME_CHAR, TYPE_CHAR, SIZE_FLOAT, OWNER_CHAR, LOCATION_CHAR, STATE_INT, DELETE_STATUS_INT) " +
                 "value(?, ?, ?, ?, ?, ?, ?, ?, ?)", new BatchPreparedStatementSetter() {
