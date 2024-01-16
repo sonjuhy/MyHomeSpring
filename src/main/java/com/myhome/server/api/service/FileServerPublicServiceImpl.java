@@ -3,13 +3,11 @@ package com.myhome.server.api.service;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.myhome.server.api.dto.FileServerPublicDto;
+import com.myhome.server.api.dto.FileServerPublicTrashDto;
 import com.myhome.server.component.KafkaProducer;
 import com.myhome.server.component.LogComponent;
 import com.myhome.server.db.entity.*;
-import com.myhome.server.db.repository.FileDefaultPathRepository;
-import com.myhome.server.db.repository.FileServerCustomRepository;
-import com.myhome.server.db.repository.FileServerPublicRepository;
-import com.myhome.server.db.repository.FileServerThumbNailRepository;
+import com.myhome.server.db.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
@@ -20,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.util.ObjectUtils;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
@@ -55,11 +54,12 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     @Autowired
     FileServerPublicRepository fileServerRepository;
     @Autowired
+    FileServerPublicTrashRepository fileServerPublicTrashRepository;
+    @Autowired
     FileServerCustomRepository fileServerCustomRepository;
 
     @Autowired
     FileServerThumbNailRepository thumbNailRepository;
-
     @Autowired
     FileServerThumbNailService thumbNailService;
 
@@ -330,14 +330,11 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         return !ObjectUtils.isEmpty(fileServerRepository.save(entity));
     }
 
-    @Transactional
     @Override
     public void publicFileStateCheck() {
-        fileServerRepository.updateAllStateToOne();
-        filesWalk(diskPath, true);
-        filesWalk(trashPath, false);
+        filesWalk(diskPath);
+        filesWalkTrashPath(trashPath);
         deleteThumbNail();
-        fileServerRepository.deleteByState(0);
     }
     private String changeUnderBarToSeparator(String path){
         return path.replaceAll("__", Matcher.quoteReplacement(File.separator));
@@ -345,7 +342,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     private String changeSeparatorToUnderBar(String path){
         return path.replaceAll(Matcher.quoteReplacement(File.separator), "__");
     }
-    private void filesWalk(String pathUrl, boolean mode){
+    private void filesWalk(String pathUrl){
         Path originPath = Paths.get(pathUrl);
         List<Path> pathList;
         try{
@@ -362,21 +359,26 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                 else {
                     extension = file.getName().substring(file.getName().lastIndexOf(".") + 1); // file type (need to check ex: txt file -> text/plan)
                 }
-                String tmpPath = changeSeparatorToUnderBar(file.getPath()), tmpLocation = changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
+                try {
+                    String tmpPath = changeSeparatorToUnderBar(file.getPath()), tmpLocation = changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
 
-                String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
-                fileList.add( new FileServerPublicDto(
-                        uuid,
-                        tmpPath,
-                        file.getName(),
-                        extension,
-                        (float)(file.length()/1024),
-                        tmpLocation,
-                        1,
-                        mode ? 0 : 1
-                ));
-                if(Arrays.asList(videoExtensionList).contains(extension) && !thumbNailRepository.existsByUuid(uuid)){
-                    mediaFileList.add(file);
+                    String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
+                    fileList.add(new FileServerPublicDto(
+                            uuid,
+                            tmpPath,
+                            file.getName(),
+                            extension,
+                            (float) (file.length() / 1024),
+                            tmpLocation,
+                            1,
+                            0
+                    ));
+                    if (Arrays.asList(videoExtensionList).contains(extension) && !thumbNailRepository.existsByUuid(uuid)) {
+                        mediaFileList.add(file);
+                    }
+                }
+                catch(Exception e){
+                    System.out.println(e.getMessage());
                 }
             }
             fileServerCustomRepository.saveBatchPublic(fileList);
@@ -391,7 +393,69 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
             logComponent.sendErrorLog("Cloud-Check", "[filesWalk(public)] file check error : ", e, TOPIC_CLOUD_CHECK_LOG);
         }
     }
+    @Transactional
+    private void filesWalkTrashPath(String pathUrl){
+        /*
+        * 1. load all data from db
+        * 2. compare file list
+        * 3. if file is existed, data is not existed - new data, origin data  = default path
+        * 4. if file is not existed, data is existed - delete data
+        * */
+        List<FileServerPublicTrashEntity> list = fileServerPublicTrashRepository.findAll();
+        Path originPath = Paths.get(pathUrl);
+        List<Path> pathList;
+        try{
+            Stream<Path> pathStream = Files.walk(originPath);
+            pathList = pathStream.collect(Collectors.toList());
+            List<FileServerPublicTrashEntity> existFileList = new ArrayList<>();
+            List<FileServerPublicTrashEntity> newFileList = new ArrayList<>();
+            for(Path path : pathList){
+                File file = path.toFile();
+                try{
+                    String uuid = UUID.nameUUIDFromBytes(changeSeparatorToUnderBar(file.getPath()).getBytes(StandardCharsets.UTF_8)).toString();
+                    List<FileServerPublicTrashEntity> filterList = list.stream()
+                            .filter(entity -> uuid.equals(entity.getUuid()))
+                            .toList();
+                    if(filterList.isEmpty()){
+                        String tmpPath = changeSeparatorToUnderBar(file.getPath()), tmpLocation = changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
+                        String extension;
+                        if(file.isDirectory()) {
+                            extension = "dir";
+                        }
+                        else {
+                            extension = file.getName().substring(file.getName().lastIndexOf(".") + 1); // file type (need to check ex: txt file -> text/plan)
+                        }
+                        newFileList.add(new FileServerPublicTrashEntity(
+                                0,
+                                uuid,
+                                tmpPath,
+                                defaultUploadPath,
+                                file.getName(),
+                                extension,
+                                (float) (file.length() / 1024),
+                                tmpLocation,
+                                0
+                        ));
+                    }
+                    else{
+                        existFileList.addAll(filterList); // db data, file both exist
+                    }
+                }
+                catch(Exception e){
+                    System.out.println("fileswalkTrash public error : "+e.getMessage());
+                }
 
+            }
+            for(FileServerPublicTrashEntity entity : existFileList){
+                list.remove(entity);
+            }
+            fileServerPublicTrashRepository.deleteAll(list);
+            fileServerPublicTrashRepository.saveAll(newFileList);
+        }
+        catch (Exception e){
+            logComponent.sendErrorLog("Cloud-Check", "[filesWalkTrash(public)] file check error : ", e, TOPIC_CLOUD_CHECK_LOG);
+        }
+    }
     @Transactional
     private void deleteThumbNail(){
         List<FileServerThumbNailEntity> thumbNailEntityList = thumbNailRepository.findAllNotInPublic();
@@ -401,7 +465,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
             if(thumbnailFile.exists()){
                 if(thumbnailFile.delete()){
                     thumbNailRepository.deleteByUuid(entity.getUuid());
-                    logComponent.sendLog("Cloud-Check", "[deleteThumbNail(public)] files is deleted (uuid) : "+entity.getUuid(), true, TOPIC_CLOUD_CHECK_LOG);
+//                    logComponent.sendLog("Cloud-Check", "[deleteThumbNail(public)] files is deleted (uuid) : "+entity.getUuid(), true, TOPIC_CLOUD_CHECK_LOG);
                 }
                 else{
                     logComponent.sendLog("Cloud-Check", "[deleteThumbNail(public)] files is doesn't delete (uuid) : "+entity.getUuid(), false, TOPIC_CLOUD_CHECK_LOG);

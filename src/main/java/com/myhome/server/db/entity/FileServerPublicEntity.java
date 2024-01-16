@@ -14,6 +14,7 @@ import lombok.NoArgsConstructor;
 public class FileServerPublicEntity {
     @Id
     @Column(name = "ID_PK")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
     @Column(name = "UUID_CHAR")
     private String uuid;

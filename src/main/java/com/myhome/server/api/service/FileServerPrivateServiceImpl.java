@@ -8,10 +8,7 @@ import com.myhome.server.component.KafkaProducer;
 import com.myhome.server.component.LogComponent;
 import com.myhome.server.config.jwt.JwtTokenProvider;
 import com.myhome.server.db.entity.*;
-import com.myhome.server.db.repository.FileDefaultPathRepository;
-import com.myhome.server.db.repository.FileServerCustomRepository;
-import com.myhome.server.db.repository.FileServerPrivateRepository;
-import com.myhome.server.db.repository.FileServerThumbNailRepository;
+import com.myhome.server.db.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
@@ -56,6 +53,8 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
 
     @Autowired
     FileServerPrivateRepository repository;
+    @Autowired
+    FileServerPrivateTrashRepository trashRepository;
 
     @Autowired
     UserService service;
@@ -376,7 +375,6 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
     @Override
     public void privateFileCheck() {
         List<UserEntity> userList = service.findAll();
-        repository.updateAllStateToOne();
         File defaultPath = new File(diskPath);
         File[] files = defaultPath.listFiles();
         if(files != null) {
@@ -394,9 +392,21 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
             }
             logComponent.sendLog("Cloud-Check", "[privateFileCheck(private)] file top list : "+sb.toString(), true, TOPIC_CLOUD_CHECK_LOG);
         }
+        File trashDefaultPath = new File(trashPath);
+        File[] trashFiles = trashDefaultPath.listFiles();
+        if(trashFiles != null){
+            for(File file : trashFiles){
+                String fileName = file.getName();
+                for(UserEntity entity : userList){
+                    if(entity.getId().equals(fileName)){
+                        String owner = entity.getId();
+                        filesWalkTrash(trashPath+File.separator+owner, owner);
+                        break;
+                    }
+                }
+            }
+        }
         deleteThumbNail();
-        repository.deleteByState(0);
-        repository.updateAllStateToZero();
     }
     private String changeUnderBarToSeparator(String path){
         return path.replaceAll("__", Matcher.quoteReplacement(File.separator));
@@ -423,21 +433,26 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
                 else {
                     extension = file.getName().substring(file.getName().lastIndexOf(".") + 1); // file type (need to check ex: txt file -> text/plan)
                 }
-                String tmpPath = changeSeparatorToUnderBar(file.getPath()), tmpLocation = changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
-                String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
-                fileList.add( new FileServerPrivateDto(
-                        uuid,
-                        tmpPath,
-                        file.getName(),
-                        extension,
-                        (float)(file.length()/1024),
-                        owner,
-                        tmpLocation,
-                        1,
-                        0
-                ));
-                if(Arrays.asList(videoExtensionList).contains(extension) && !thumbNailRepository.existsByUuid(uuid)){
-                    mediaFileList.add(file);
+                try {
+                    String tmpPath = changeSeparatorToUnderBar(file.getPath()), tmpLocation = changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
+                    String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
+                    fileList.add(new FileServerPrivateDto(
+                            uuid,
+                            tmpPath,
+                            file.getName(),
+                            extension,
+                            (float) (file.length() / 1024),
+                            owner,
+                            tmpLocation,
+                            1,
+                            0
+                    ));
+                    if (Arrays.asList(videoExtensionList).contains(extension) && !thumbNailRepository.existsByUuid(uuid)) {
+                        mediaFileList.add(file);
+                    }
+                }
+                catch (Exception e){
+                    System.out.println(e.getMessage());
                 }
             }
             fileServerCustomRepository.saveBatchPrivate(fileList);
@@ -450,6 +465,63 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
         }
         catch (Exception e){
                     logComponent.sendErrorLog("Cloud-Check", "[filesWalk(private)] file check error : ", e, TOPIC_CLOUD_CHECK_LOG);
+        }
+    }
+    @Transactional
+    private void filesWalkTrash(String pathUrl, String owner){
+        List<FileServerPrivateTrashEntity> list = trashRepository.findAll();
+        Path originPath = Paths.get(pathUrl);
+        List<Path> pathList;
+        try {
+            Stream<Path> pathStream = Files.walk(originPath);
+            pathList = pathStream.collect(Collectors.toList());
+            List<FileServerPrivateTrashEntity> existFileList = new ArrayList<>();
+            List<FileServerPrivateTrashEntity> newFileList = new ArrayList<>();
+            for(Path path : pathList){
+                File file = path.toFile();
+                try {
+                    String tmpPath = changeSeparatorToUnderBar(file.getPath());
+                    String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
+                    List<FileServerPrivateTrashEntity> filterList = list.stream()
+                            .filter(entity -> uuid.equals(entity.getUuid()))
+                            .toList();
+                    if(filterList.isEmpty()){
+                        String tmpLocation = changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
+                        String extension = "dir";
+                        if(!file.isDirectory()) {
+                            extension = file.getName().substring(file.getName().lastIndexOf(".") + 1); // file type (need to check ex: txt file -> text/plan)
+                        }
+                        //int id, String uuid, String path, String originPath, String name, String type, float size, String owner, String location, int state
+                        newFileList.add(new FileServerPrivateTrashEntity(
+                                0,
+                                uuid,
+                                tmpPath,
+                                defaultUploadPath,
+                                file.getName(),
+                                extension,
+                                (float) (file.length() / 1024),
+                                owner,
+                                tmpLocation,
+                                0
+                        ));
+                    }
+                    else{
+                        existFileList.addAll(filterList);
+                    }
+
+                }
+                catch (Exception e){
+                    System.out.println(e.getMessage());
+                }
+            }
+            for(FileServerPrivateTrashEntity entity : existFileList){
+                list.remove(entity);
+            }
+            trashRepository.deleteAll(list);
+            trashRepository.saveAll(newFileList);
+        }
+        catch (Exception e){
+            logComponent.sendErrorLog("Cloud-Check", "[filesWalkTrash(private)] file check error : ", e, TOPIC_CLOUD_CHECK_LOG);
         }
     }
     @Transactional
