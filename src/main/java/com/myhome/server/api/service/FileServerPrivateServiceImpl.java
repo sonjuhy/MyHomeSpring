@@ -467,6 +467,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
                     logComponent.sendErrorLog("Cloud-Check", "[filesWalk(private)] file check error : ", e, TOPIC_CLOUD_CHECK_LOG);
         }
     }
+    @Transactional
     private void filesWalkTrash(String pathUrl, String owner){
         List<FileServerPrivateTrashEntity> list = trashRepository.findAll();
         Path originPath = Paths.get(pathUrl);
@@ -521,6 +522,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
         }
         catch (Exception e){
             System.out.println("fileswalkTrash private error : "+e.getMessage());
+            e.printStackTrace();
         }
     }
     @Transactional
