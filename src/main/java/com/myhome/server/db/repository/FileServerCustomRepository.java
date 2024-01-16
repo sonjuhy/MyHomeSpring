@@ -29,17 +29,18 @@ public class FileServerCustomRepository {
     public void saveBatchPublic(List<FileServerPublicDto> list){
         jdbcTemplate.execute("DELETE FROM FILE_PUBLIC_TB");
         jdbcTemplate.execute("ALTER TABLE FILE_PUBLIC_TB AUTO_INCREMENT=1");
-        int batchCount = 1;
-        List<FileServerPublicDto> subList;
-        for(int i=0;i<list.size();i=batchCount*batchSize){
-            int end;
-            batchCount++;
-            if(batchCount*batchSize >= list.size()) end = list.size()-1;
-            else end = batchCount*batchSize;
-
-            subList = new ArrayList<>(list.subList(i, end));
-            batchPublicInsert(subList);
-        }
+        batchPublicInsert(list);
+//        int batchCount = 1;
+//        List<FileServerPublicDto> subList;
+//        for(int i=0;i<list.size();i=batchCount*batchSize){
+//            int end;
+//            batchCount++;
+//            if(batchCount*batchSize >= list.size()) end = list.size()-1;
+//            else end = batchCount*batchSize;
+//
+//            subList = new ArrayList<>(list.subList(i, end));
+//            batchPublicInsert(subList);
+//        }
     }
 
     @Transactional
