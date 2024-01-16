@@ -1,10 +1,7 @@
 package com.myhome.server.db.entity;
 
 import com.myhome.server.api.dto.FileServerPrivateTrashDto;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -17,6 +14,7 @@ import lombok.NoArgsConstructor;
 public class FileServerPrivateTrashEntity {
     @Id
     @Column(name = "ID_PK")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
     @Column(name = "UUID_CHAR")
     private String uuid;
