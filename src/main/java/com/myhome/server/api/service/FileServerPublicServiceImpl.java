@@ -423,7 +423,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                                 0,
                                 uuid,
                                 tmpPath,
-                                commonService.changeUnderBarToSeparator(diskPath),
+                                commonService.changeSeparatorToUnderBar(diskPath),
                                 file.getName(),
                                 extension,
                                 (float) (file.length() / 1024),
