@@ -29,4 +29,7 @@ public interface FileServerPrivateService {
     int updateByFileServerPrivateEntity(FileServerPrivateEntity entity);
     boolean save(FileServerPrivateEntity entity);
     void privateFileCheck();
+    void filesWalk(String pathUrl, String owner);
+    void filesWalkTrash(String pathUrl, String owner);
+    void deleteThumbNail();
 }
