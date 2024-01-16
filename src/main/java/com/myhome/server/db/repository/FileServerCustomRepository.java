@@ -53,7 +53,7 @@ public class FileServerCustomRepository {
         }
     }
     private void batchPublicInsert(List<FileServerPublicDto> list){
-        jdbcTemplate.batchUpdate("INSERT INTO " +
+        int[] result = jdbcTemplate.batchUpdate("INSERT INTO " +
                 "FILE_PUBLIC_TB(UUID_CHAR, PATH_CHAR, NAME_CHAR, TYPE_CHAR, SIZE_FLOAT, LOCATION_CHAR, STATE_INT, DELETE_STATUS_INT) " +
                 "value(?, ?, ?, ?, ?, ?, ?, ?)", new BatchPreparedStatementSetter() {
             @Override
@@ -73,7 +73,7 @@ public class FileServerCustomRepository {
                 return list.size();
             }
         });
-
+        System.out.println("batchPublicInsert result size : " + result.length);
         list.clear();
     }
     private void batchPrivateInsert(List<FileServerPrivateDto> list){

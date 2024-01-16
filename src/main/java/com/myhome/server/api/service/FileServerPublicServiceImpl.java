@@ -406,7 +406,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
             if(thumbnailFile.exists()){
                 if(thumbnailFile.delete()){
                     thumbNailRepository.deleteByUuid(entity.getUuid());
-                    logComponent.sendLog("Cloud-Check", "[deleteThumbNail(public)] files is deleted (uuid) : "+entity.getUuid(), true, TOPIC_CLOUD_CHECK_LOG);
+//                    logComponent.sendLog("Cloud-Check", "[deleteThumbNail(public)] files is deleted (uuid) : "+entity.getUuid(), true, TOPIC_CLOUD_CHECK_LOG);
                 }
                 else{
                     logComponent.sendLog("Cloud-Check", "[deleteThumbNail(public)] files is doesn't delete (uuid) : "+entity.getUuid(), false, TOPIC_CLOUD_CHECK_LOG);
