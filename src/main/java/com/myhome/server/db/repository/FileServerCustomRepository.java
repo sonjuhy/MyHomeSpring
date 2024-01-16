@@ -2,6 +2,7 @@ package com.myhome.server.db.repository;
 
 import com.myhome.server.api.dto.FileServerPrivateDto;
 import com.myhome.server.api.dto.FileServerPublicDto;
+import com.myhome.server.api.dto.FileServerPublicTrashDto;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,32 +62,26 @@ public class FileServerCustomRepository {
     }
     private void batchPublicInsert(List<FileServerPublicDto> list){
         if(list.isEmpty()) return;
-        try {
-            int[] result = jdbcTemplate.batchUpdate("INSERT INTO " +
-                    "FILE_PUBLIC_TB(UUID_CHAR, PATH_CHAR, NAME_CHAR, TYPE_CHAR, SIZE_FLOAT, LOCATION_CHAR, STATE_INT, DELETE_STATUS_INT) " +
-                    "value(?, ?, ?, ?, ?, ?, ?, ?)", new BatchPreparedStatementSetter() {
-                @Override
-                public void setValues(@NonNull PreparedStatement ps, int i) throws SQLException {
-                    ps.setString(1, list.get(i).getUuidName());
-                    ps.setString(2, list.get(i).getPath());
-                    ps.setString(3, list.get(i).getName());
-                    ps.setString(4, list.get(i).getType());
-                    ps.setString(5, String.valueOf(list.get(i).getSize()));
-                    ps.setString(6, list.get(i).getLocation());
-                    ps.setString(7, String.valueOf(list.get(i).getState()));
-                    ps.setString(8, String.valueOf(list.get(i).getDeleteStatus()));
-                }
+        jdbcTemplate.batchUpdate("INSERT INTO " +
+                "FILE_PUBLIC_TB(UUID_CHAR, PATH_CHAR, NAME_CHAR, TYPE_CHAR, SIZE_FLOAT, LOCATION_CHAR, STATE_INT, DELETE_STATUS_INT) " +
+                "value(?, ?, ?, ?, ?, ?, ?, ?)", new BatchPreparedStatementSetter() {
+            @Override
+            public void setValues(@NonNull PreparedStatement ps, int i) throws SQLException {
+                ps.setString(1, list.get(i).getUuidName());
+                ps.setString(2, list.get(i).getPath());
+                ps.setString(3, list.get(i).getName());
+                ps.setString(4, list.get(i).getType());
+                ps.setString(5, String.valueOf(list.get(i).getSize()));
+                ps.setString(6, list.get(i).getLocation());
+                ps.setString(7, String.valueOf(list.get(i).getState()));
+                ps.setString(8, String.valueOf(list.get(i).getDeleteStatus()));
+            }
 
-                @Override
-                public int getBatchSize() {
-                    return list.size();
-                }
-            });
-            System.out.println("batchPublicInsert result size : " + result.length);
-        }
-        catch(Exception e){
-            System.out.println("batchPublicInsert error : "+e.getMessage());
-        }
+            @Override
+            public int getBatchSize() {
+                return list.size();
+            }
+        });
         list.clear();
     }
     private void batchPrivateInsert(List<FileServerPrivateDto> list){

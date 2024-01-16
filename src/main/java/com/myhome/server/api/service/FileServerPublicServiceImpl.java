@@ -332,11 +332,10 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
 
     @Override
     public void publicFileStateCheck() {
-//        fileServerRepository.updateAllStateToOne();
-        filesWalk(diskPath, true);
-        filesWalk(trashPath, false);
-//        deleteThumbNail();
-//        fileServerRepository.deleteByState(0);
+        filesWalk(diskPath);
+        // need to make new style trashPath search
+//        filesWalk(trashPath, false);
+        deleteThumbNail();
     }
     private String changeUnderBarToSeparator(String path){
         return path.replaceAll("__", Matcher.quoteReplacement(File.separator));
@@ -344,7 +343,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     private String changeSeparatorToUnderBar(String path){
         return path.replaceAll(Matcher.quoteReplacement(File.separator), "__");
     }
-    private void filesWalk(String pathUrl, boolean mode){
+    private void filesWalk(String pathUrl){
         Path originPath = Paths.get(pathUrl);
         List<Path> pathList;
         try{
@@ -373,7 +372,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                             (float) (file.length() / 1024),
                             tmpLocation,
                             1,
-                            mode ? 0 : 1
+                            0
                     ));
                     if (Arrays.asList(videoExtensionList).contains(extension) && !thumbNailRepository.existsByUuid(uuid)) {
                         mediaFileList.add(file);
@@ -384,18 +383,25 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                 }
             }
             fileServerCustomRepository.saveBatchPublic(fileList);
-//            for(File file : mediaFileList){
-//                thumbNailService.makeThumbNail(file,
-//                        UUID.nameUUIDFromBytes(changeSeparatorToUnderBar(file.getPath()).getBytes(StandardCharsets.UTF_8)).toString(),
-//                        "public"
-//                );
-//            }
+            for(File file : mediaFileList){
+                thumbNailService.makeThumbNail(file,
+                        UUID.nameUUIDFromBytes(changeSeparatorToUnderBar(file.getPath()).getBytes(StandardCharsets.UTF_8)).toString(),
+                        "public"
+                );
+            }
         }
         catch (Exception e){
             logComponent.sendErrorLog("Cloud-Check", "[filesWalk(public)] file check error : ", e, TOPIC_CLOUD_CHECK_LOG);
         }
     }
-
+    private void filesWalkTrashPath(String path){
+        /*
+        * 1. load all data from db
+        * 2. compare file list
+        * 3. if file is existed, data is not existed - new data, origin data  = default path
+        * 4. if file is not existed, data is existed - delete data
+        * */
+    }
     @Transactional
     private void deleteThumbNail(){
         List<FileServerThumbNailEntity> thumbNailEntityList = thumbNailRepository.findAllNotInPublic();
