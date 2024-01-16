@@ -4,10 +4,13 @@ import com.myhome.server.api.dto.FileServerPrivateDto;
 import com.myhome.server.api.dto.FileServerPublicDto;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -18,6 +21,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class FileServerCustomRepository {
     private final JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private PlatformTransactionManager transactionManager;
     private final int batchSize = 500000;
     @Transactional
     public void saveBatchPublic(List<FileServerPublicDto> list){
@@ -53,27 +59,32 @@ public class FileServerCustomRepository {
         }
     }
     private void batchPublicInsert(List<FileServerPublicDto> list){
-        int[] result = jdbcTemplate.batchUpdate("INSERT INTO " +
-                "FILE_PUBLIC_TB(UUID_CHAR, PATH_CHAR, NAME_CHAR, TYPE_CHAR, SIZE_FLOAT, LOCATION_CHAR, STATE_INT, DELETE_STATUS_INT) " +
-                "value(?, ?, ?, ?, ?, ?, ?, ?)", new BatchPreparedStatementSetter() {
-            @Override
-            public void setValues(@NonNull PreparedStatement ps, int i) throws SQLException {
-                ps.setString(1, list.get(i).getUuidName());
-                ps.setString(2, list.get(i).getPath());
-                ps.setString(3, list.get(i).getName());
-                ps.setString(4, list.get(i).getType());
-                ps.setString(5, String.valueOf(list.get(i).getSize()));
-                ps.setString(6, list.get(i).getLocation());
-                ps.setString(7, String.valueOf(list.get(i).getState()));
-                ps.setString(8, String.valueOf(list.get(i).getDeleteStatus()));
-            }
+        try {
+            int[] result = jdbcTemplate.batchUpdate("INSERT INTO " +
+                    "FILE_PUBLIC_TB(UUID_CHAR, PATH_CHAR, NAME_CHAR, TYPE_CHAR, SIZE_FLOAT, LOCATION_CHAR, STATE_INT, DELETE_STATUS_INT) " +
+                    "value(?, ?, ?, ?, ?, ?, ?, ?)", new BatchPreparedStatementSetter() {
+                @Override
+                public void setValues(@NonNull PreparedStatement ps, int i) throws SQLException {
+                    ps.setString(1, list.get(i).getUuidName());
+                    ps.setString(2, list.get(i).getPath());
+                    ps.setString(3, list.get(i).getName());
+                    ps.setString(4, list.get(i).getType());
+                    ps.setString(5, String.valueOf(list.get(i).getSize()));
+                    ps.setString(6, list.get(i).getLocation());
+                    ps.setString(7, String.valueOf(list.get(i).getState()));
+                    ps.setString(8, String.valueOf(list.get(i).getDeleteStatus()));
+                }
 
-            @Override
-            public int getBatchSize() {
-                return list.size();
-            }
-        });
-        System.out.println("batchPublicInsert result size : " + result.length);
+                @Override
+                public int getBatchSize() {
+                    return list.size();
+                }
+            });
+            System.out.println("batchPublicInsert result size : " + result.length);
+        }
+        catch(Exception e){
+            System.out.println("batchPublicInsert error : "+e.getMessage());
+        }
         list.clear();
     }
     private void batchPrivateInsert(List<FileServerPrivateDto> list){
