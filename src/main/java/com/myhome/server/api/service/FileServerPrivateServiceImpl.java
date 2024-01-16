@@ -516,8 +516,8 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
             for(FileServerPrivateTrashEntity entity : existFileList){
                 list.remove(entity);
             }
-            trashRepository.saveAll(newFileList);
             trashRepository.deleteAll(list);
+            trashRepository.saveAll(newFileList);
         }
         catch (Exception e){
             System.out.println("fileswalkTrash private error : "+e.getMessage());
