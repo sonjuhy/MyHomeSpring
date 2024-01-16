@@ -6,6 +6,7 @@ import com.myhome.server.api.service.*;
 import com.myhome.server.component.LogComponent;
 import com.myhome.server.db.entity.*;
 import com.myhome.server.db.repository.FileDefaultPathRepository;
+import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.InputStreamResource;
@@ -30,9 +31,6 @@ import java.util.List;
 @RequestMapping("/file")
 public class FileServerController {
 
-    @Value("${part4.upload.path}")
-    private String defaultUploadPath;
-
     private final static String TOPIC_CLOUD_LOG = "cloud-log-topic";
 
     @Autowired
@@ -53,7 +51,7 @@ public class FileServerController {
     @Autowired
     LogComponent logComponent;
 
-    /**
+    /*
      * COMMON PART
      * check File(Public, Private both) : O
      * downloadThumbnail : O
@@ -135,13 +133,20 @@ public class FileServerController {
         return new ResponseEntity<>(list, HttpStatus.OK);
     }
 
-    @GetMapping("/getStorageUsage")
-    public ResponseEntity<int[]> getStorageUsage(){
-        int[] usage = commonService.getStorageUsage();
+    /*
+     * mode specific
+     * MB : total(mb), free(mb)
+     * GB : total(gb), free(gb)
+     * percent : 100, percent
+     * */
+    @Operation(description = "mode 에 들어갈 값 : 결과값) MB : total(mb), free(mb) | GB : total(gb), free(gb) | percent : 100, percent info")
+    @GetMapping("/getStorageUsage/{mode}")
+    public ResponseEntity<int[]> getStorageUsage(@PathVariable String mode){
+        int[] usage = commonService.getStorageUsage(mode);
         return new ResponseEntity<>(usage, HttpStatus.OK);
     }
 
-    /**
+    /*
      * file server public
      * upload : O
      * download : O
@@ -261,7 +266,7 @@ public class FileServerController {
         long result = service.deleteByPath(path); // delete file
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
-    /**
+    /*
      * file server private
      * upload : O
      * download : O
