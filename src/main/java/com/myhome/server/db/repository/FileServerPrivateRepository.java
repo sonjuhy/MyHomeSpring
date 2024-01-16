@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-public interface FileServerPrivateRepository extends JpaRepository<FileServerPrivateEntity, String> {
+public interface FileServerPrivateRepository extends JpaRepository<FileServerPrivateEntity, Integer> {
     FileServerPrivateEntity findByPath(String path);
 
     FileServerPrivateEntity findByUuid(String uuid);

@@ -32,7 +32,7 @@ public class FileServerCustomRepository {
         for(int i=0;i<list.size();i=batchCount*batchSize){
             int end;
             batchCount++;
-            if(batchCount*batchSize >= list.size()) end = list.size()-1;
+            if(batchCount*batchSize >= list.size()) end = list.size();
             else end = batchCount*batchSize;
 
             subList = new ArrayList<>(list.subList(i, end));
@@ -49,7 +49,7 @@ public class FileServerCustomRepository {
         for(int i=0;i<list.size();i=batchCount*batchSize){
             int end;
             batchCount++;
-            if(batchCount*batchSize >= list.size()) end = list.size()-1;
+            if(batchCount*batchSize >= list.size()) end = list.size();
             else end = batchCount*batchSize;
 
             subList = new ArrayList<>(list.subList(i, end));

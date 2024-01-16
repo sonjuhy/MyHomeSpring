@@ -9,6 +9,7 @@ import lombok.*;
 public class FileServerPrivateTrashDto {
     private String uuid;
     private String path;
+    private String originPath;
     private String name;
     private String type;
     private float size;
@@ -17,9 +18,10 @@ public class FileServerPrivateTrashDto {
     private int state;
 
     @Builder
-    public FileServerPrivateTrashDto(String uuid, String path, String name, String type, float size, String owner, String location, int state) {
+    public FileServerPrivateTrashDto(String uuid, String path, String originPath, String name, String type, float size, String owner, String location, int state) {
         this.uuid = uuid;
         this.path = path;
+        this.originPath = originPath;
         this.name = name;
         this.type = type;
         this.size = size;

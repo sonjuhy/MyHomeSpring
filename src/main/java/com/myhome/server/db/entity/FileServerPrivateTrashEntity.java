@@ -22,6 +22,8 @@ public class FileServerPrivateTrashEntity {
     private String uuid;
     @Column(name = "PATH_CHAR")
     private String path;
+    @Column(name = "ORIGIN_PATH_CHAR")
+    private String originPath;
     @Column(name = "NAME_CHAR")
     private String name;
     @Column(name = "TYPE_CHAR")
@@ -36,10 +38,11 @@ public class FileServerPrivateTrashEntity {
     private int state;
 
     @Builder
-    public FileServerPrivateTrashEntity(int id, String uuid, String path, String name, String type, float size, String owner, String location, int state) {
+    public FileServerPrivateTrashEntity(int id, String uuid, String path, String originPath, String name, String type, float size, String owner, String location, int state) {
         this.id = id;
         this.uuid = uuid;
         this.path = path;
+        this.originPath = originPath;
         this.name = name;
         this.type = type;
         this.size = size;
@@ -47,9 +50,11 @@ public class FileServerPrivateTrashEntity {
         this.location = location;
         this.state = state;
     }
+
     @Builder
     public FileServerPrivateTrashEntity(FileServerPrivateTrashDto dto){
         this.path = dto.getPath();
+        this.originPath = dto.getOriginPath();
         this.uuid = dto.getUuid();
         this.name = dto.getName();
         this.type = dto.getType();
