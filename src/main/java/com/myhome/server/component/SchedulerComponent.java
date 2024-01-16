@@ -22,6 +22,8 @@ public class SchedulerComponent {
 
     @Scheduled(cron = "0 0 0 * * *") // top of e every day
     public void checkCloudFile() {
+        fileServerPublicService.publicFileStateCheck();
+        fileServerPrivateService.privateFileCheck();
 //        try {
 //            fileServerPublicService.publicFileStateCheck();
 //            logComponent.sendLog("cloud-Check", "[checkCloudFile(public)] check success", true, TOPIC_CLOUD_CHECK_LOG);
