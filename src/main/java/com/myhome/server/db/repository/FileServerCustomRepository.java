@@ -22,33 +22,29 @@ import java.util.List;
 @RequiredArgsConstructor
 public class FileServerCustomRepository {
     private final JdbcTemplate jdbcTemplate;
-
-    @Autowired
-    private PlatformTransactionManager transactionManager;
     private final int batchSize = 500000;
     @Transactional
     public void saveBatchPublic(List<FileServerPublicDto> list){
         jdbcTemplate.execute("DELETE FROM FILE_PUBLIC_TB");
         jdbcTemplate.execute("ALTER TABLE FILE_PUBLIC_TB AUTO_INCREMENT=1");
-        batchPublicInsert(list);
-//        int batchCount = 1;
-//        List<FileServerPublicDto> subList;
-//        for(int i=0;i<list.size();i=batchCount*batchSize){
-//            int end;
-//            batchCount++;
-//            if(batchCount*batchSize >= list.size()) end = list.size()-1;
-//            else end = batchCount*batchSize;
-//
-//            subList = new ArrayList<>(list.subList(i, end));
-//            batchPublicInsert(subList);
-//        }
+        int batchCount = 0;
+        List<FileServerPublicDto> subList;
+        for(int i=0;i<list.size();i=batchCount*batchSize){
+            int end;
+            batchCount++;
+            if(batchCount*batchSize >= list.size()) end = list.size()-1;
+            else end = batchCount*batchSize;
+
+            subList = new ArrayList<>(list.subList(i, end));
+            batchPublicInsert(subList);
+        }
     }
 
     @Transactional
     public void saveBatchPrivate(List<FileServerPrivateDto> list){
         jdbcTemplate.execute("DELETE FROM FILE_PRIVATE_TB");
         jdbcTemplate.execute("ALTER TABLE FILE_PRIVATE_TB AUTO_INCREMENT=1");
-        int batchCount = 1;
+        int batchCount = 0;
         List<FileServerPrivateDto> subList;
         for(int i=0;i<list.size();i=batchCount*batchSize){
             int end;
