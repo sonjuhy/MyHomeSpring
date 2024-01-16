@@ -45,6 +45,9 @@ public class FileServerController {
     FileServerPrivateService privateService;
 
     @Autowired
+    FileServerCommonService commonService;
+
+    @Autowired
     FileDefaultPathRepository defaultPathRepository;
 
     @Autowired
@@ -130,6 +133,12 @@ public class FileServerController {
     public ResponseEntity<List<FileDefaultPathEntity>> getDefaultPath(){
         List<FileDefaultPathEntity> list = defaultPathRepository.findAll();
         return new ResponseEntity<>(list, HttpStatus.OK);
+    }
+
+    @GetMapping("/getStorageUsage")
+    public ResponseEntity<int[]> getStorageUsage(){
+        int[] usage = commonService.getStorageUsage();
+        return new ResponseEntity<>(usage, HttpStatus.OK);
     }
 
     /**

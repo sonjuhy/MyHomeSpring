@@ -62,15 +62,16 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     FileServerThumbNailRepository thumbNailRepository;
     @Autowired
     FileServerThumbNailService thumbNailService;
-
     @Autowired
-    public FileServerPublicServiceImpl(FileDefaultPathRepository fileDefaultPathRepository, KafkaProducer kafkaProducer, LogComponent component){
+    FileServerCommonService commonService;
+    @Autowired
+    public FileServerPublicServiceImpl(FileDefaultPathRepository fileDefaultPathRepository, FileServerCommonService commonService, KafkaProducer kafkaProducer, LogComponent component){
         FileDefaultPathEntity storeEntity = fileDefaultPathRepository.findByPathName("store");
         FileDefaultPathEntity trashEntity = fileDefaultPathRepository.findByPathName("trash");
         FileDefaultPathEntity thumbnailEntity = fileDefaultPathRepository.findByPathName("thumbnail");
-        diskPath = changeUnderBarToSeparator(storeEntity.getPublicDefaultPath());
-        trashPath = changeUnderBarToSeparator(trashEntity.getPublicDefaultPath());
-        thumbnailPath = changeUnderBarToSeparator(thumbnailEntity.getPublicDefaultPath());
+        diskPath = commonService.changeUnderBarToSeparator(storeEntity.getPublicDefaultPath());
+        trashPath = commonService.changeUnderBarToSeparator(trashEntity.getPublicDefaultPath());
+        thumbnailPath = commonService.changeUnderBarToSeparator(thumbnailEntity.getPublicDefaultPath());
 
         producer = kafkaProducer;
         logComponent = component;
@@ -336,13 +337,8 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         filesWalkTrashPath(trashPath);
         deleteThumbNail();
     }
-    private String changeUnderBarToSeparator(String path){
-        return path.replaceAll("__", Matcher.quoteReplacement(File.separator));
-    }
-    private String changeSeparatorToUnderBar(String path){
-        return path.replaceAll(Matcher.quoteReplacement(File.separator), "__");
-    }
-    private void filesWalk(String pathUrl){
+    @Override
+    public void filesWalk(String pathUrl){
         Path originPath = Paths.get(pathUrl);
         List<Path> pathList;
         try{
@@ -360,7 +356,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                     extension = file.getName().substring(file.getName().lastIndexOf(".") + 1); // file type (need to check ex: txt file -> text/plan)
                 }
                 try {
-                    String tmpPath = changeSeparatorToUnderBar(file.getPath()), tmpLocation = changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
+                    String tmpPath = commonService.changeSeparatorToUnderBar(file.getPath()), tmpLocation = commonService.changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
 
                     String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
                     fileList.add(new FileServerPublicDto(
@@ -384,7 +380,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
             fileServerCustomRepository.saveBatchPublic(fileList);
             for(File file : mediaFileList){
                 thumbNailService.makeThumbNail(file,
-                        UUID.nameUUIDFromBytes(changeSeparatorToUnderBar(file.getPath()).getBytes(StandardCharsets.UTF_8)).toString(),
+                        UUID.nameUUIDFromBytes(commonService.changeSeparatorToUnderBar(file.getPath()).getBytes(StandardCharsets.UTF_8)).toString(),
                         "public"
                 );
             }
@@ -394,7 +390,8 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         }
     }
     @Transactional
-    private void filesWalkTrashPath(String pathUrl){
+    @Override
+    public void filesWalkTrashPath(String pathUrl){
         /*
         * 1. load all data from db
         * 2. compare file list
@@ -412,12 +409,12 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
             for(Path path : pathList){
                 File file = path.toFile();
                 try{
-                    String uuid = UUID.nameUUIDFromBytes(changeSeparatorToUnderBar(file.getPath()).getBytes(StandardCharsets.UTF_8)).toString();
+                    String uuid = UUID.nameUUIDFromBytes(commonService.changeSeparatorToUnderBar(file.getPath()).getBytes(StandardCharsets.UTF_8)).toString();
                     List<FileServerPublicTrashEntity> filterList = list.stream()
                             .filter(entity -> uuid.equals(entity.getUuid()))
                             .toList();
                     if(filterList.isEmpty()){
-                        String tmpPath = changeSeparatorToUnderBar(file.getPath()), tmpLocation = changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
+                        String tmpPath = commonService.changeSeparatorToUnderBar(file.getPath()), tmpLocation = commonService.changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
                         String extension;
                         if(file.isDirectory()) {
                             extension = "dir";
@@ -457,10 +454,11 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         }
     }
     @Transactional
-    private void deleteThumbNail(){
+    @Override
+    public void deleteThumbNail(){
         List<FileServerThumbNailEntity> thumbNailEntityList = thumbNailRepository.findAllNotInPublic();
         for(FileServerThumbNailEntity entity : thumbNailEntityList){
-            String path = changeUnderBarToSeparator(entity.getPath());
+            String path = commonService.changeUnderBarToSeparator(entity.getPath());
             File thumbnailFile = new File(path);
             if(thumbnailFile.exists()){
                 if(thumbnailFile.delete()){

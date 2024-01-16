@@ -65,18 +65,19 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
     FileServerCustomRepository fileServerCustomRepository;
     @Autowired
     FileServerThumbNailService thumbNailService;
-
+    @Autowired
+    FileServerCommonService commonService;
     @Autowired
     JwtTokenProvider jwtTokenProvider;
 
     @Autowired
-    public FileServerPrivateServiceImpl(FileDefaultPathRepository fileDefaultPathRepository, KafkaProducer kafkaProducer, LogComponent component){
+    public FileServerPrivateServiceImpl(FileDefaultPathRepository fileDefaultPathRepository, FileServerCommonService commonService, KafkaProducer kafkaProducer, LogComponent component){
         FileDefaultPathEntity storeEntity = fileDefaultPathRepository.findByPathName("store");
         FileDefaultPathEntity trashEntity = fileDefaultPathRepository.findByPathName("trash");
         FileDefaultPathEntity thumbnailEntity = fileDefaultPathRepository.findByPathName("thumbnail");
-        diskPath = changeUnderBarToSeparator(storeEntity.getPrivateDefaultPath());
-        trashPath = changeUnderBarToSeparator(trashEntity.getPrivateDefaultPath());
-        thumbnailPath = changeUnderBarToSeparator(thumbnailEntity.getPrivateDefaultPath());
+        diskPath = commonService.changeUnderBarToSeparator(storeEntity.getPrivateDefaultPath());
+        trashPath = commonService.changeUnderBarToSeparator(trashEntity.getPrivateDefaultPath());
+        thumbnailPath = commonService.changeUnderBarToSeparator(thumbnailEntity.getPrivateDefaultPath());
 
         producer = kafkaProducer;
         logComponent = component;
@@ -408,14 +409,8 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
         }
         deleteThumbNail();
     }
-    private String changeUnderBarToSeparator(String path){
-        return path.replaceAll("__", Matcher.quoteReplacement(File.separator));
-    }
-    private String changeSeparatorToUnderBar(String path){
-        return path.replaceAll(Matcher.quoteReplacement(File.separator), "__");
-    }
-
-    private void filesWalk(String pathUrl, String owner){
+    @Override
+    public void filesWalk(String pathUrl, String owner){
         Path originPath = Paths.get(pathUrl);
         List<Path> pathList;
         try{
@@ -434,7 +429,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
                     extension = file.getName().substring(file.getName().lastIndexOf(".") + 1); // file type (need to check ex: txt file -> text/plan)
                 }
                 try {
-                    String tmpPath = changeSeparatorToUnderBar(file.getPath()), tmpLocation = changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
+                    String tmpPath = commonService.changeSeparatorToUnderBar(file.getPath()), tmpLocation = commonService.changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
                     String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
                     fileList.add(new FileServerPrivateDto(
                             uuid,
@@ -458,7 +453,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
             fileServerCustomRepository.saveBatchPrivate(fileList);
             for(File file : mediaFileList){
                 thumbNailService.makeThumbNail(file,
-                        UUID.nameUUIDFromBytes(changeSeparatorToUnderBar(file.getPath()).getBytes(StandardCharsets.UTF_8)).toString(),
+                        UUID.nameUUIDFromBytes(commonService.changeSeparatorToUnderBar(file.getPath()).getBytes(StandardCharsets.UTF_8)).toString(),
                         "private"
                 );
             }
@@ -468,7 +463,8 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
         }
     }
     @Transactional
-    private void filesWalkTrash(String pathUrl, String owner){
+    @Override
+    public void filesWalkTrash(String pathUrl, String owner){
         List<FileServerPrivateTrashEntity> list = trashRepository.findAll();
         Path originPath = Paths.get(pathUrl);
         List<Path> pathList;
@@ -480,13 +476,13 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
             for(Path path : pathList){
                 File file = path.toFile();
                 try {
-                    String tmpPath = changeSeparatorToUnderBar(file.getPath());
+                    String tmpPath = commonService.changeSeparatorToUnderBar(file.getPath());
                     String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
                     List<FileServerPrivateTrashEntity> filterList = list.stream()
                             .filter(entity -> uuid.equals(entity.getUuid()))
                             .toList();
                     if(filterList.isEmpty()){
-                        String tmpLocation = changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
+                        String tmpLocation = commonService.changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
                         String extension = "dir";
                         if(!file.isDirectory()) {
                             extension = file.getName().substring(file.getName().lastIndexOf(".") + 1); // file type (need to check ex: txt file -> text/plan)
@@ -525,10 +521,11 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
         }
     }
     @Transactional
-    private void deleteThumbNail(){
+    @Override
+    public void deleteThumbNail(){
         List<FileServerThumbNailEntity> thumbNailEntityList = thumbNailRepository.findAllNotInPrivate();
         for(FileServerThumbNailEntity entity : thumbNailEntityList){
-            File out = new File(changeUnderBarToSeparator(entity.getPath()));
+            File out = new File(commonService.changeUnderBarToSeparator(entity.getPath()));
             if(out.exists()){
                 if(out.delete()){
                     thumbNailRepository.deleteByUuid(entity.getUuid());
