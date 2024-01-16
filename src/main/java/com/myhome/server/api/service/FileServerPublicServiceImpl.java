@@ -330,7 +330,6 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         return !ObjectUtils.isEmpty(fileServerRepository.save(entity));
     }
 
-    @Transactional
     @Override
     public void publicFileStateCheck() {
         fileServerRepository.updateAllStateToOne();
