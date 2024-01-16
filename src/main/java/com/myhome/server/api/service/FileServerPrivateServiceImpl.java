@@ -45,9 +45,6 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
 
     private final String[] videoExtensionList = {"mp4", "avi", "mov", "wmv", "avchd", "webm", "mpeg4"};
 
-    @Value("${part4.upload.path}")
-    private String defaultUploadPath;
-
     KafkaProducer producer;
     LogComponent logComponent;
 
@@ -492,7 +489,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
                                 0,
                                 uuid,
                                 tmpPath,
-                                defaultUploadPath,
+                                diskPath,
                                 file.getName(),
                                 extension,
                                 (float) (file.length() / 1024),
