@@ -332,11 +332,11 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
 
     @Override
     public void publicFileStateCheck() {
-        fileServerRepository.updateAllStateToOne();
+//        fileServerRepository.updateAllStateToOne();
         filesWalk(diskPath, true);
         filesWalk(trashPath, false);
         deleteThumbNail();
-        fileServerRepository.deleteByState(0);
+//        fileServerRepository.deleteByState(0);
     }
     private String changeUnderBarToSeparator(String path){
         return path.replaceAll("__", Matcher.quoteReplacement(File.separator));
