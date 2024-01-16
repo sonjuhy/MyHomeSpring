@@ -54,7 +54,7 @@ public class FileServerCustomRepository {
     }
     private void batchPublicInsert(List<FileServerPublicDto> list){
         jdbcTemplate.batchUpdate("INSERT INTO " +
-                "FILE_PUBLIC_TB(UUID_BINARY, PATH_CHAR, NAME_CHAR, TYPE_CHAR, SIZE_FLOAT, LOCATION_CHAR, STATE_INT, DELETE_STATUS_INT) " +
+                "FILE_PUBLIC_TB(UUID_CHAR, PATH_CHAR, NAME_CHAR, TYPE_CHAR, SIZE_FLOAT, LOCATION_CHAR, STATE_INT, DELETE_STATUS_INT) " +
                 "value(?, ?, ?, ?, ?, ?, ?, ?)", new BatchPreparedStatementSetter() {
             @Override
             public void setValues(@NonNull PreparedStatement ps, int i) throws SQLException {
@@ -78,7 +78,7 @@ public class FileServerCustomRepository {
     }
     private void batchPrivateInsert(List<FileServerPrivateDto> list){
         jdbcTemplate.batchUpdate("INSERT INTO " +
-                "FILE_PRIVATE_TB(UUID_BINARY, PATH_CHAR, NAME_CHAR, TYPE_CHAR, SIZE_FLOAT, OWNER_CHAR, LOCATION_CHAR, STATE_INT, DELETE_STATUS_INT) " +
+                "FILE_PRIVATE_TB(UUID_CHAR, PATH_CHAR, NAME_CHAR, TYPE_CHAR, SIZE_FLOAT, OWNER_CHAR, LOCATION_CHAR, STATE_INT, DELETE_STATUS_INT) " +
                 "value(?, ?, ?, ?, ?, ?, ?, ?, ?)", new BatchPreparedStatementSetter() {
             @Override
             public void setValues(@NonNull PreparedStatement ps, int i) throws SQLException {

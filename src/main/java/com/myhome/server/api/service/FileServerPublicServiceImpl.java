@@ -362,21 +362,26 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                 else {
                     extension = file.getName().substring(file.getName().lastIndexOf(".") + 1); // file type (need to check ex: txt file -> text/plan)
                 }
-                String tmpPath = changeSeparatorToUnderBar(file.getPath()), tmpLocation = changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
+                try {
+                    String tmpPath = changeSeparatorToUnderBar(file.getPath()), tmpLocation = changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
 
-                String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
-                fileList.add( new FileServerPublicDto(
-                        uuid,
-                        tmpPath,
-                        file.getName(),
-                        extension,
-                        (float)(file.length()/1024),
-                        tmpLocation,
-                        1,
-                        mode ? 0 : 1
-                ));
-                if(Arrays.asList(videoExtensionList).contains(extension) && !thumbNailRepository.existsByUuid(uuid)){
-                    mediaFileList.add(file);
+                    String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
+                    fileList.add(new FileServerPublicDto(
+                            uuid,
+                            tmpPath,
+                            file.getName(),
+                            extension,
+                            (float) (file.length() / 1024),
+                            tmpLocation,
+                            1,
+                            mode ? 0 : 1
+                    ));
+                    if (Arrays.asList(videoExtensionList).contains(extension) && !thumbNailRepository.existsByUuid(uuid)) {
+                        mediaFileList.add(file);
+                    }
+                }
+                catch(Exception e){
+                    System.out.println(e.getMessage());
                 }
             }
             fileServerCustomRepository.saveBatchPublic(fileList);

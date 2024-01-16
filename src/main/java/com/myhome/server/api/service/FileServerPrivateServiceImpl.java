@@ -423,21 +423,26 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
                 else {
                     extension = file.getName().substring(file.getName().lastIndexOf(".") + 1); // file type (need to check ex: txt file -> text/plan)
                 }
-                String tmpPath = changeSeparatorToUnderBar(file.getPath()), tmpLocation = changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
-                String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
-                fileList.add( new FileServerPrivateDto(
-                        uuid,
-                        tmpPath,
-                        file.getName(),
-                        extension,
-                        (float)(file.length()/1024),
-                        owner,
-                        tmpLocation,
-                        1,
-                        0
-                ));
-                if(Arrays.asList(videoExtensionList).contains(extension) && !thumbNailRepository.existsByUuid(uuid)){
-                    mediaFileList.add(file);
+                try {
+                    String tmpPath = changeSeparatorToUnderBar(file.getPath()), tmpLocation = changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
+                    String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
+                    fileList.add(new FileServerPrivateDto(
+                            uuid,
+                            tmpPath,
+                            file.getName(),
+                            extension,
+                            (float) (file.length() / 1024),
+                            owner,
+                            tmpLocation,
+                            1,
+                            0
+                    ));
+                    if (Arrays.asList(videoExtensionList).contains(extension) && !thumbNailRepository.existsByUuid(uuid)) {
+                        mediaFileList.add(file);
+                    }
+                }
+                catch (Exception e){
+                    System.out.println(e.getMessage());
                 }
             }
             fileServerCustomRepository.saveBatchPrivate(fileList);
