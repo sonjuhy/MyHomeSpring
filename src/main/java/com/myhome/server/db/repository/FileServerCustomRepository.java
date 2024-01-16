@@ -59,6 +59,7 @@ public class FileServerCustomRepository {
         }
     }
     private void batchPublicInsert(List<FileServerPublicDto> list){
+        if(list.isEmpty()) return;
         try {
             int[] result = jdbcTemplate.batchUpdate("INSERT INTO " +
                     "FILE_PUBLIC_TB(UUID_CHAR, PATH_CHAR, NAME_CHAR, TYPE_CHAR, SIZE_FLOAT, LOCATION_CHAR, STATE_INT, DELETE_STATUS_INT) " +
