@@ -521,8 +521,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
             trashRepository.saveAll(newFileList);
         }
         catch (Exception e){
-            System.out.println("fileswalkTrash private error : "+e.getMessage());
-            e.printStackTrace();
+            logComponent.sendErrorLog("Cloud-Check", "[filesWalkTrash(private)] file check error : ", e, TOPIC_CLOUD_CHECK_LOG);
         }
     }
     @Transactional

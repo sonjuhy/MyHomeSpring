@@ -51,7 +51,6 @@ public class FileServerThumbNailServiceImpl implements FileServerThumbNailServic
 
     @Override
     public void makeThumbNail(File file, String uuid, String type) {
-//        System.out.println("makeThumbNail : " + file.getName());
         File thumbnail = new File(uploadPath, uuid+".png");
         try{
             FrameGrab frameGrab = FrameGrab.createFrameGrab(NIOUtils.readableChannel(file));

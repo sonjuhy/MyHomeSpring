@@ -2,6 +2,7 @@ package com.myhome.server.db.entity;
 
 import com.myhome.server.api.dto.FileDefaultPathDto;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -10,10 +11,11 @@ import lombok.NoArgsConstructor;
 @Getter
 @Entity
 @Table(name = "FILE_DEFAULT_PATH_TB")
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class FileDefaultPathEntity {
     @Id
     @Column(name = "ID")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
     @Column(name = "PATH_NAME")
     private String pathName;

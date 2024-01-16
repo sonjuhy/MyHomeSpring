@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-public interface FileServerPublicRepository extends JpaRepository<FileServerPublicEntity, String> {
+public interface FileServerPublicRepository extends JpaRepository<FileServerPublicEntity, Integer> {
 //    @Lock(LockModeType.PESSIMISTIC_FORCE_INCREMENT)
     FileServerPublicEntity findByPath(String path);
 
