@@ -335,7 +335,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
 //        fileServerRepository.updateAllStateToOne();
         filesWalk(diskPath, true);
         filesWalk(trashPath, false);
-        deleteThumbNail();
+//        deleteThumbNail();
 //        fileServerRepository.deleteByState(0);
     }
     private String changeUnderBarToSeparator(String path){
