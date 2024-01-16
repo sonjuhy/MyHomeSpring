@@ -384,12 +384,12 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                 }
             }
             fileServerCustomRepository.saveBatchPublic(fileList);
-            for(File file : mediaFileList){
-                thumbNailService.makeThumbNail(file,
-                        UUID.nameUUIDFromBytes(changeSeparatorToUnderBar(file.getPath()).getBytes(StandardCharsets.UTF_8)).toString(),
-                        "public"
-                );
-            }
+//            for(File file : mediaFileList){
+//                thumbNailService.makeThumbNail(file,
+//                        UUID.nameUUIDFromBytes(changeSeparatorToUnderBar(file.getPath()).getBytes(StandardCharsets.UTF_8)).toString(),
+//                        "public"
+//                );
+//            }
         }
         catch (Exception e){
             logComponent.sendErrorLog("Cloud-Check", "[filesWalk(public)] file check error : ", e, TOPIC_CLOUD_CHECK_LOG);

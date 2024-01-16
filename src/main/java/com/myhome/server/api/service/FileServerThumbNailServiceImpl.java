@@ -51,7 +51,7 @@ public class FileServerThumbNailServiceImpl implements FileServerThumbNailServic
 
     @Override
     public void makeThumbNail(File file, String uuid, String type) {
-        System.out.println("makeThumbNail : " + file.getName());
+//        System.out.println("makeThumbNail : " + file.getName());
         File thumbnail = new File(uploadPath, uuid+".png");
         try{
             FrameGrab frameGrab = FrameGrab.createFrameGrab(NIOUtils.readableChannel(file));
@@ -70,7 +70,7 @@ public class FileServerThumbNailServiceImpl implements FileServerThumbNailServic
             repository.save(new FileServerThumbNailEntity(thumbNailDto));
 
         } catch (JCodecException | IOException e) {
-            logComponent.sendErrorLog("Cloud", "makeThumbNail Error : ", e, TOPIC_CLOUD_LOG);
+//            logComponent.sendErrorLog("Cloud", "makeThumbNail Error : ", e, TOPIC_CLOUD_LOG);
         }
     }
 
