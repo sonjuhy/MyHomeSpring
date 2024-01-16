@@ -489,7 +489,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
                                 0,
                                 uuid,
                                 tmpPath,
-                                diskPath,
+                                commonService.changeUnderBarToSeparator(diskPath),
                                 file.getName(),
                                 extension,
                                 (float) (file.length() / 1024),
