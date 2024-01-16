@@ -42,9 +42,6 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     private final static String TOPIC_CLOUD_LOG = "cloud-log-topic";
     private final static String TOPIC_CLOUD_CHECK_LOG = "cloud-check-log";
 
-    @Value("${part4.upload.path}")
-    private String defaultUploadPath;
-
     private final String[] videoExtensionList = {"mp4", "avi", "mov", "wmv", "avchd", "webm", "mpeg4"};
 
     KafkaProducer producer;
@@ -128,7 +125,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     @Override
     public List<String> uploadFiles(MultipartFile[] files, String path, Model model) {
 
-        String fileLocation = defaultUploadPath+File.separator+path+File.separator;
+//        String fileLocation = diskPath+File.separator+path+File.separator;
 //        String originPath = changeUnderBarToSeparator(path);
         String originPath = path;
         if(originPath != null && originPath.isBlank() && !originPath.isEmpty()) {
@@ -138,18 +135,18 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                 if(!file.isEmpty()){
                     try{
                         FileServerPublicDto dto = new FileServerPublicDto(
-                                fileLocation+file.getOriginalFilename(), // file path (need to change)
+                                originPath+file.getOriginalFilename(), // file path (need to change)
                                 file.getOriginalFilename(), // file name
                                 UUID.randomUUID().toString(), // file name to change UUID
                                 Objects.requireNonNull(file.getOriginalFilename()).substring(file.getOriginalFilename().lastIndexOf(".") + 1), // file type (need to check ex: txt file -> text/plan)
                                 (float)file.getSize(), // file size(KB)
-                                fileLocation, // file folder path (need to change)
+                                originPath, // file folder path (need to change)
                                 0,
                                 0
                         );
                         System.out.println(file.getResource());
                         list.add(new FileServerPublicEntity(dto));
-                        String saveName = fileLocation+dto.getName();
+                        String saveName = originPath+dto.getName();
                         Path savePath = Paths.get(saveName);
                         file.transferTo(savePath);
                     } catch (IOException e) {
@@ -426,7 +423,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                                 0,
                                 uuid,
                                 tmpPath,
-                                defaultUploadPath,
+                                diskPath,
                                 file.getName(),
                                 extension,
                                 (float) (file.length() / 1024),

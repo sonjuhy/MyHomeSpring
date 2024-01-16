@@ -14,17 +14,34 @@ public class FileServerCommonServiceImpl implements FileServerCommonService{
     @Autowired
     private FileDefaultPathRepository defaultPathRepository;
     @Override
-    public int[] getStorageUsage() {
+    public int[] getStorageUsage(String mode) {
         FileDefaultPathEntity entity = defaultPathRepository.findByPathName("top");
         String topPath = entity.getPublicDefaultPath();
         File file = new File(changeUnderBarToSeparator(topPath));
         int[] usage = new int[2];
-        usage[0] = toMB(file.getTotalSpace());
-        usage[1] = toMB(file.getFreeSpace());
+        switch(mode){
+            case "MB":
+                usage[0] = toMB(file.getTotalSpace());
+                usage[1] = toMB(file.getFreeSpace());
+                break;
+            case "GB":
+                usage[0] = toGB(file.getTotalSpace());
+                usage[1] = toGB(file.getFreeSpace());
+                break;
+            case "percent":
+                int total = toGB(file.getTotalSpace());
+                int free = toGB(file.getFreeSpace());
+                usage[0] = 100;
+                usage[1] = free/total*100;
+                break;
+        }
         return usage;
     }
     public int toMB(long size){
         return (int)(size/(1024*1024));
+    }
+    public int toGB(long size){
+        return (int)(size/(1024*1024*1024));
     }
     @Override
     public String changeUnderBarToSeparator(String path){
