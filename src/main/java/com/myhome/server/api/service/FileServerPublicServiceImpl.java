@@ -130,10 +130,10 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     public ResponseEntity<Resource> downloadFile(String uuid) {
         FileServerPublicEntity entity = fileServerRepository.findByUuid(uuid);
         if(entity != null){
-            Path path = Paths.get(entity.getPath()); // file path setting
+            String pathStr = commonService.changeUnderBarToSeparator(entity.getPath());
+            Path path = Paths.get(pathStr);
             try{
-                String fileName = commonService.changeUnderBarToSeparator(entity.getName());
-                HttpHeaders httpHeaders = getHttpHeader(path, fileName);
+                HttpHeaders httpHeaders = getHttpHeader(path, entity.getName());
                 Resource resource = new InputStreamResource(Files.newInputStream(path)); // save file resource
                 return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
             } catch (IOException e) {
@@ -149,10 +149,10 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     public ResponseEntity<Resource> downloadPublicMedia(String uuid) {
         FileServerPublicEntity entity = fileServerRepository.findByUuid(uuid);
         if(entity != null){
-            Path path = Paths.get(entity.getPath()); // file path setting
+            String pathStr = commonService.changeUnderBarToSeparator(entity.getPath());
+            Path path = Paths.get(pathStr);
             try{
-                String fileName = commonService.changeUnderBarToSeparator(entity.getName());
-                HttpHeaders httpHeaders = getHttpHeader(path, fileName);
+                HttpHeaders httpHeaders = getHttpHeader(path, entity.getName());
                 Resource resource = new InputStreamResource(Files.newInputStream(path)); // save file resource
                 return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
             } catch (IOException e) {
