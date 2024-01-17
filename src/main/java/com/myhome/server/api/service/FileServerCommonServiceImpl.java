@@ -31,7 +31,7 @@ public class FileServerCommonServiceImpl implements FileServerCommonService{
             case "percent":
                 int total = toGB(file.getTotalSpace());
                 int free = toGB(file.getFreeSpace());
-                usage[0] = 100;
+                usage[0] = 100 - (int) ((free*1.0)/total*100);
                 usage[1] = (int) ((free*1.0)/total*100);
                 break;
         }

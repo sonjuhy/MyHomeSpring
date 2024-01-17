@@ -139,7 +139,7 @@ public class FileServerController {
      * GB : total(gb), free(gb)
      * percent : 100, percent
      * */
-    @Operation(description = "mode 에 들어갈 값 : 결과값) MB : total(mb), free(mb) | GB : total(gb), free(gb) | percent : 100, percent info")
+    @Operation(description = "mode 에 들어갈 값 : 결과값) MB : total(mb), free(mb) | GB : total(gb), free(gb) | percent : free, usage percent info")
     @GetMapping("/getStorageUsage/{mode}")
     public ResponseEntity<int[]> getStorageUsage(@PathVariable String mode){
         int[] usage = commonService.getStorageUsage(mode);
