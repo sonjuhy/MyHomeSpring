@@ -65,7 +65,7 @@ public class FileServerThumbNailServiceImpl implements FileServerThumbNailServic
             ImageIO.write(bi, "png", thumbnail);
 
             String fileLocation = uploadPath+File.separator+uuid+".png";
-            FileServerThumbNailDto thumbNailDto = new FileServerThumbNailDto(uuid, fileLocation, file.getName(), type);
+            FileServerThumbNailDto thumbNailDto = new FileServerThumbNailDto(0, uuid, fileLocation, file.getName(), type);
             repository.save(new FileServerThumbNailEntity(thumbNailDto));
 
         } catch (JCodecException | IOException e) {
