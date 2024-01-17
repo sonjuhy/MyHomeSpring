@@ -2,8 +2,10 @@ package com.myhome.server.api.service;
 
 import com.myhome.server.db.entity.FileServerPrivateEntity;
 import jakarta.transaction.Transactional;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.ui.Model;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -18,6 +20,8 @@ public interface FileServerPrivateService {
     List<FileServerPrivateEntity> findByLocationPage(String location, int mode, int size, int page);
     List<FileServerPrivateEntity> findByOwner(String owner);
     HttpHeaders getHttpHeaders(Path path, String fileName) throws IOException;
+    ResponseEntity<Resource> downloadFile(String uuid);
+    ResponseEntity<Resource> downloadPrivateMedia(String uuid);
     List<String> uploadFiles(MultipartFile[] files, String path, String token, Model model);
     boolean mkdir(String path, String token);
     boolean existsByPath(String path);

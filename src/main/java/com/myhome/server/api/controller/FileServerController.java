@@ -137,7 +137,7 @@ public class FileServerController {
      * mode specific
      * MB : total(mb), free(mb)
      * GB : total(gb), free(gb)
-     * percent : 100, percent
+     * percent : free, usage percent
      * */
     @Operation(description = "mode 에 들어갈 값 : 결과값) MB : total(mb), free(mb) | GB : total(gb), free(gb) | percent : free, usage percent info")
     @GetMapping("/getStorageUsage/{mode}")
@@ -180,38 +180,13 @@ public class FileServerController {
     }
     @PostMapping("/downloadPublicFile")
     public ResponseEntity<Resource> downloadPublicFile(@RequestBody FileServerPublicDto dto){
-        System.out.println("downloadPublic : " + dto.toString());
-        FileServerPublicEntity entity = service.findByUuidName(dto.getUuidName());
-        if(entity != null){
-            Path path = Paths.get(entity.getPath()); // file path setting
-            try{
-                HttpHeaders httpHeaders = service.getHttpHeader(path, dto.getName());
-                Resource resource = new InputStreamResource(Files.newInputStream(path)); // save file resource
-                return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
-            } catch (IOException e) {
-                logComponent.sendErrorLog("Cloud","downloadPublicFile error : ", e, TOPIC_CLOUD_LOG);
-                return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
-            }
-        }
-        return new ResponseEntity<>(null, HttpStatus.OK);
+        return service.downloadFile(dto.getUuidName());
     }
 
     @CrossOrigin(origins = "*")
     @GetMapping("/downloadPublicMedia/{uuid}")
     public ResponseEntity<Resource> downloadPublicMedia(@PathVariable String uuid){
-        FileServerPublicEntity entity = service.findByUuidName(uuid);
-        if(entity != null){
-            Path path = Paths.get(entity.getPath());
-            try{
-                HttpHeaders httpHeaders = service.getHttpHeader(path, entity.getName());
-                Resource resource = new InputStreamResource(Files.newInputStream(path)); // save file resource
-                return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
-            } catch (IOException e) {
-                logComponent.sendErrorLog("Cloud","downloadPublicMedia error : ", e, TOPIC_CLOUD_LOG);
-                return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
-            }
-        }
-        return new ResponseEntity<>(null, HttpStatus.OK);
+        return service.downloadPublicMedia(uuid);
     }
 
     @GetMapping("/getPublicTrashFiles")
@@ -301,38 +276,13 @@ public class FileServerController {
     }
     @PostMapping("/downloadPrivateFile")
     public ResponseEntity<Resource> downloadPrivateFile(@RequestBody FileServerPrivateDto dto){
-        FileServerPrivateEntity entity = privateService.findByUuid(dto.getUuidName());
-        if(entity != null){
-            Path path = Paths.get(entity.getPath()); // file path setting
-            try{
-                System.out.println("FileServerControl private file download : " + dto);
-                HttpHeaders httpHeaders = privateService.getHttpHeaders(path, dto.getName());
-                Resource resource = new InputStreamResource(Files.newInputStream(path)); // save file resource
-                return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
-            } catch (IOException e) {
-                logComponent.sendErrorLog("Cloud","downloadPrivateFile error : ", e, TOPIC_CLOUD_LOG);
-                return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
-            }
-        }
-        return new ResponseEntity<>(null, HttpStatus.OK);
+        return privateService.downloadFile(dto.getUuidName());
     }
 
     @CrossOrigin(origins = "*")
     @GetMapping("/downloadPrivateMedia/{uuid}")
     public ResponseEntity<Resource> downloadPrivateMedia(@PathVariable String uuid){
-        FileServerPrivateEntity entity = privateService.findByUuid(uuid);
-        if(entity != null){
-            Path path = Paths.get(entity.getPath());
-            try{
-                HttpHeaders httpHeaders = privateService.getHttpHeaders(path, entity.getName());
-                Resource resource = new InputStreamResource(Files.newInputStream(path)); // save file resource
-                return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
-            } catch (IOException e) {
-                logComponent.sendErrorLog("Cloud","downloadPrivateMedia error : ", e, TOPIC_CLOUD_LOG);
-                return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
-            }
-        }
-        return new ResponseEntity<>(null, HttpStatus.OK);
+        return privateService.downloadPrivateMedia(uuid);
     }
     @GetMapping("/getPrivateTrashFilesInfo")
     public ResponseEntity<List<FileServerPrivateEntity>> getPrivateTrashFiles(@RequestParam String location){
