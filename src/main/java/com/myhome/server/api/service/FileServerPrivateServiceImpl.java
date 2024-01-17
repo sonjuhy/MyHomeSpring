@@ -429,9 +429,9 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
                     String tmpPath = commonService.changeSeparatorToUnderBar(file.getPath()), tmpLocation = commonService.changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
                     String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
                     fileList.add(new FileServerPrivateDto(
-                            uuid,
                             tmpPath,
                             file.getName(),
+                            uuid,
                             extension,
                             (float) (file.length() / 1024),
                             owner,
