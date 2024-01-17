@@ -144,10 +144,10 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
     public ResponseEntity<Resource> downloadFile(String uuid) {
         FileServerPrivateEntity entity = repository.findByUuid(uuid);
         if(entity!= null){
-            Path path = Paths.get(entity.getPath());
-            String fileName = commonService.changeUnderBarToSeparator(entity.getName());
+            String pathStr = commonService.changeUnderBarToSeparator(entity.getPath());
+            Path path = Paths.get(pathStr);
             try {
-                HttpHeaders httpHeaders = getHttpHeaders(path, fileName);
+                HttpHeaders httpHeaders = getHttpHeaders(path, entity.getName());
                 Resource resource = new InputStreamResource(Files.newInputStream(path));
                 return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
             } catch (IOException e) {
@@ -163,10 +163,10 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
     public ResponseEntity<Resource> downloadPrivateMedia(String uuid) {
         FileServerPrivateEntity entity = repository.findByUuid(uuid);
         if(entity!= null){
-            Path path = Paths.get(entity.getPath());
-            String fileName = commonService.changeUnderBarToSeparator(entity.getName());
+            String pathStr = commonService.changeUnderBarToSeparator(entity.getPath());
+            Path path = Paths.get(pathStr);
             try {
-                HttpHeaders httpHeaders = getHttpHeaders(path, fileName);
+                HttpHeaders httpHeaders = getHttpHeaders(path, entity.getName());
                 Resource resource = new InputStreamResource(Files.newInputStream(path));
                 return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
             } catch (IOException e) {
