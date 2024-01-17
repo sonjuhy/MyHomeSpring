@@ -357,9 +357,9 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
 
                     String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
                     fileList.add(new FileServerPublicDto(
-                            uuid,
                             tmpPath,
                             file.getName(),
+                            uuid,
                             extension,
                             (float) (file.length() / 1024),
                             tmpLocation,
