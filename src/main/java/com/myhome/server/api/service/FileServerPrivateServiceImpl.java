@@ -11,10 +11,14 @@ import com.myhome.server.db.entity.*;
 import com.myhome.server.db.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
@@ -134,6 +138,44 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
                 .build());
         httpHeaders.add(HttpHeaders.CONTENT_TYPE, contentType);
         return httpHeaders;
+    }
+
+    @Override
+    public ResponseEntity<Resource> downloadFile(String uuid) {
+        FileServerPrivateEntity entity = repository.findByUuid(uuid);
+        if(entity!= null){
+            Path path = Paths.get(entity.getPath());
+            String fileName = commonService.changeUnderBarToSeparator(entity.getName());
+            try {
+                HttpHeaders httpHeaders = getHttpHeaders(path, fileName);
+                Resource resource = new InputStreamResource(Files.newInputStream(path));
+                return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
+            } catch (IOException e) {
+                logComponent.sendErrorLog("Cloud","downloadPrivateFile error : ", e, TOPIC_CLOUD_LOG);
+                return new ResponseEntity<>(null, HttpStatus.OK);
+            }
+        }
+        logComponent.sendLog("Cloud","downloadPrivateFile error : file doesn't exist", false, TOPIC_CLOUD_LOG);
+        return new ResponseEntity<>(null, HttpStatus.OK);
+    }
+
+    @Override
+    public ResponseEntity<Resource> downloadPrivateMedia(String uuid) {
+        FileServerPrivateEntity entity = repository.findByUuid(uuid);
+        if(entity!= null){
+            Path path = Paths.get(entity.getPath());
+            String fileName = commonService.changeUnderBarToSeparator(entity.getName());
+            try {
+                HttpHeaders httpHeaders = getHttpHeaders(path, fileName);
+                Resource resource = new InputStreamResource(Files.newInputStream(path));
+                return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
+            } catch (IOException e) {
+                logComponent.sendErrorLog("Cloud","downloadPrivateMedia error : ", e, TOPIC_CLOUD_LOG);
+                return new ResponseEntity<>(null, HttpStatus.OK);
+            }
+        }
+        logComponent.sendLog("Cloud","downloadPrivateMedia error : file doesn't exist", false, TOPIC_CLOUD_LOG);
+        return new ResponseEntity<>(null, HttpStatus.OK);
     }
 
     @Override
