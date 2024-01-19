@@ -1,13 +1,19 @@
 package com.myhome.server.api.service;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.myhome.server.api.dto.FileServerPrivateDto;
+import com.myhome.server.api.dto.LoginDto;
 import com.myhome.server.api.dto.UserDto;
 import com.myhome.server.component.LogComponent;
 import com.myhome.server.config.jwt.JwtTokenProvider;
 import com.myhome.server.db.entity.FileDefaultPathEntity;
+import com.myhome.server.db.entity.FileServerPrivateEntity;
 import com.myhome.server.db.entity.UserEntity;
 import com.myhome.server.db.repository.FileDefaultPathRepository;
+import com.myhome.server.db.repository.FileServerPrivateRepository;
 import com.myhome.server.db.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,19 +24,25 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
-public class UserServiceImpl implements UserService, UserDetailsService {
+//public class UserServiceImpl implements UserService, UserDetailsService {
+public class UserServiceImpl implements UserService {
     @Autowired
     UserRepository repository;
+
+    @Autowired
+    FileServerPrivateRepository fileServerPrivateRepository;
 
     @Autowired
     LogComponent logComponent;
 
     @Autowired
-    FileServerPrivateService fileServerPrivateService;
+    FileServerCommonService fileServerCommonService;
 
     @Autowired
     FileDefaultPathRepository fileDefaultPathRepository;
@@ -51,6 +63,12 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     }
 
     @Override
+    public UserEntity findByAccessToken(String accessToken) {
+        Optional<UserEntity> entity = repository.findByAccessToken(accessToken);
+        return entity.orElse(null);
+    }
+
+    @Override
     public List<UserEntity> findAll() {
         List<UserEntity> list = repository.findAll();
         return list;
@@ -68,33 +86,6 @@ public class UserServiceImpl implements UserService, UserDetailsService {
         repository.updateTokens(accessToken, refreshToken, Id);
     }
 
-
-    @Transactional
-    @Override
-    public boolean checkPassword(String inputPassword, String id) {
-        BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-        return passwordEncoder.matches(inputPassword, loadUserByUsername(id).getPassword());
-    }
-
-    @Override
-    public String getAccessToken(String refreshToken) {
-        Gson gson = new Gson();
-        JsonObject jsonObject = new JsonObject();
-
-        boolean result = jwtTokenProvider.validateToken(refreshToken); // check accessToken validate
-        if(result){
-            String userId = jwtTokenProvider.getUserPk(refreshToken); // get userId from refreshToken
-            Optional<UserEntity> entity = findById(userId); // get userInfo with refreshToken for getting authList
-
-            String newAccessToken = jwtTokenProvider.createToken(userId, entity.get().getAuth(), true); // re-create AccessToken
-            jsonObject.addProperty("accessToken", newAccessToken); //save accessToken
-        }
-        else{
-            jsonObject.addProperty("error","need login again"); //expired refreshToken
-        }
-        return gson.toJson(jsonObject);
-    }
-
     @Override
     public UserEntity getUserInfo(String accessToken) {
         String userId = jwtTokenProvider.getUserPk(accessToken); // get userId from accessToken
@@ -103,125 +94,34 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     }
 
     @Override
-    public boolean validateAccessToken(String accessToken) {
-        return jwtTokenProvider.validateToken(accessToken); // check validation
-    }
-
-    @Override
-    public boolean validateRefreshToken(String refreshToken) {
-        return jwtTokenProvider.validateToken(refreshToken); // check validation
-    }
-
-    @Override
-    public String validateAuth(String accessToken) {
-        String newAccessToken = "";
-        boolean auth = false, accessTokenValidate;
+    public String signIn(LoginDto dto) {
         Gson gson = new Gson();
         JsonObject jsonObject = new JsonObject();
-
-        String userId = jwtTokenProvider.getUserPk(accessToken); // get userId from accessToken
-        Optional<UserEntity> optionalUserEntity = findById(userId); // get userInfo with userId
-        UserEntity entity = optionalUserEntity.orElseThrow(()->new RuntimeException(userId)); // get UserEntity when Optional Entity is present
-        if(!entity.getAuth().equals("associate")){
-            auth = true;
-        }
-        accessTokenValidate = jwtTokenProvider.validateToken(accessToken);
-        if(!accessTokenValidate){
-            newAccessToken = jwtTokenProvider.createToken(entity.getId(), entity.getAuth(),true);
-        }
-        else{
-            newAccessToken = accessToken;
-        }
-
-        jsonObject.addProperty("authValidate", auth);
-        jsonObject.addProperty("accessTokenValidate", accessTokenValidate);
-        jsonObject.addProperty("newAccessToken", newAccessToken);
-
-        try{
-            updateTokens(newAccessToken, entity.getRefreshToken(), entity.getId());
-        }
-        catch(Exception e){
-//            logComponent.sendErrorLog("serviceName", "[validateAuth] content : ", e, "topic");
-            jsonObject.addProperty("error", "failed to update token info");
-            return gson.toJson(jsonObject);
-        }
-        return gson.toJson(jsonObject);
-    }
-
-    @Override
-    public String reissueAccessToken(String accessToken) {
-        Gson gson = new Gson();
-        JsonObject jsonObject = new JsonObject();
-        String userId = jwtTokenProvider.getUserPk(accessToken); // get userId from accessToken
-        Optional<UserEntity> optionalUserEntity = findById(userId); // get userInfo with userId
-        UserEntity entity = optionalUserEntity.orElseThrow(()->new RuntimeException(userId)); // get UserEntity when Optional Entity is present
-        String newAccessToken = jwtTokenProvider.createToken(entity.getId(), entity.getAuth(),true);
-
-        try{
-            updateTokens(newAccessToken, entity.getRefreshToken(), entity.getId());
-            jsonObject.addProperty("accessToken", newAccessToken);
-        }
-        catch(Exception e){
-//            logComponent.sendErrorLog("serviceName", "[reissueAccessToken] content : ", e, "topic");
-            jsonObject.addProperty("error", "failed");
-            return gson.toJson(jsonObject);
-        }
-        return gson.toJson(jsonObject);
-    }
-
-    @Override
-    public String reissueRefreshToken(String refreshToken) {
-        Gson gson = new Gson();
-        JsonObject jsonObject = new JsonObject();
-        String userId = jwtTokenProvider.getUserPk(refreshToken); // get userId from accessToken
-        Optional<UserEntity> optionalUserEntity = findById(userId); // get userInfo with userId
-        UserEntity entity = optionalUserEntity.orElseThrow(()->new RuntimeException(userId)); // get UserEntity when Optional Entity is present
-        String newAccessToken = jwtTokenProvider.createToken(entity.getId(), entity.getAuth(),true);
-        String newRefreshToken = jwtTokenProvider.createToken(entity.getId(), entity.getAuth(),false);
-
-        try{
-            updateTokens(newAccessToken, newRefreshToken, entity.getId());
-            jsonObject.addProperty("accessToken", newAccessToken);
-            jsonObject.addProperty("refreshToken", newRefreshToken);
-        }
-        catch(Exception e){
-//            logComponent.sendErrorLog("serviceName", "[reissueRefreshToken] content : ", e, "topic");
-            jsonObject.addProperty("error", "failed");
-            return gson.toJson(jsonObject);
-        }
-        return gson.toJson(jsonObject);
-    }
-
-    @Override
-    public String signIn(UserDto dto) {
-        Gson gson = new Gson();
-        JsonObject jsonObject = new JsonObject();
-        if(findById(dto.getId()).isEmpty()){ // not user in this service
+        Optional<UserEntity> userEntity = findById(dto.getId());
+        if(!userEntity.isPresent()){ // not user in this service
             jsonObject.addProperty("error","this Id is not user");
         }
         else {
-            boolean loginResult = checkPassword(dto.getPassword(), dto.getId()); // check login info
-            if(loginResult){ // password match result is correct
-                String accessToken = jwtTokenProvider.createToken(dto.getId(), dto.getAuth(), true);
-                String refreshToken = jwtTokenProvider.createToken(dto.getId(), dto.getAuth(), false);
-                jsonObject.addProperty("accessToken", accessToken);
-                jsonObject.addProperty("refreshToken", refreshToken);
-                dto.setAccessToken(accessToken);
-                dto.setRefreshToken(accessToken);
-                dto.setPassword(null);
-                try{
-                    updateTokens(accessToken, refreshToken, dto.getId()); // update token data
-                }
-                catch(Exception e){
-//                    logComponent.sendErrorLog("serviceName", "[signIn] content : ", e, "topic");
-                    jsonObject.remove("accessToken");
-                    jsonObject.remove("refreshToken");
-                    jsonObject.addProperty("error", "failed to update user info");
-                    return gson.toJson(jsonObject);
-                }
+//            boolean loginResult = checkPassword(dto.getPassword(), dto.getId()); // check login info
+            UserEntity user = userEntity.get();
+
+            String accessToken = jwtTokenProvider.createToken(dto.getId(), user.getAuth(), true);
+            String refreshToken = jwtTokenProvider.createToken(dto.getId(), user.getAuth(), false);
+            jsonObject.addProperty("accessToken", accessToken);
+            jsonObject.addProperty("refreshToken", refreshToken);
+
+            UserDto userDto = new UserDto();
+            userDto.setAccessToken(accessToken);
+            userDto.setRefreshToken(accessToken);
+            userDto.setPassword(null);
+            try{
+                updateTokens(accessToken, refreshToken, dto.getId()); // update token data
             }
-            else{ // password match result is not correct
-                jsonObject.addProperty("error","incorrect password");
+            catch(Exception e){
+//                    logComponent.sendErrorLog("serviceName", "[signIn] content : ", e, "topic");
+                jsonObject.remove("accessToken");
+                jsonObject.remove("refreshToken");
+                jsonObject.addProperty("error", "failed to update user info");
                 return gson.toJson(jsonObject);
             }
         }
@@ -238,10 +138,13 @@ public class UserServiceImpl implements UserService, UserDetailsService {
         }
         else{
             try{
-                String accessToken = jwtTokenProvider.createToken(dto.getId(), dto.getAuth(), true);
-                String refreshToken = jwtTokenProvider.createToken(dto.getId(), dto.getAuth(), false);
+                String accessToken = jwtTokenProvider.createToken(dto.getId(), "associate", true);
+                String refreshToken = jwtTokenProvider.createToken(dto.getId(), "associate", false);
+
                 dto.setAccessToken(accessToken);
                 dto.setRefreshToken(refreshToken);
+                dto.setAuth("associate");
+
                 BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder();
                 String cryptPW = bCryptPasswordEncoder.encode(dto.getPassword()); // encoding pw with bCrypt
                 dto.setPassword(cryptPW); // setting encoding pw
@@ -252,7 +155,36 @@ public class UserServiceImpl implements UserService, UserDetailsService {
                 jsonObject.addProperty("refreshToken", refreshToken);
 
                 FileDefaultPathEntity storeEntity = fileDefaultPathRepository.findByPathName("store");
-                fileServerPrivateService.mkdir(storeEntity.getPrivateDefaultPath()+ File.separator+dto.getId(), accessToken);
+
+                String path = storeEntity.getPrivateDefaultPath()+ File.separator+dto.getId();
+                String originPath = fileServerCommonService.changeUnderBarToSeparator(path);
+                File file = new File(originPath);
+                if(file.mkdir()){
+                    String underBar = "__";
+                    String[] paths = path.split(underBar);
+                    String name = paths[paths.length-1];
+                    StringBuilder location = new StringBuilder();
+                    for(int i=0;i<paths.length-1;i++){
+                        location.append(paths[i]).append(underBar);
+                    }
+                    String uuid = UUID.nameUUIDFromBytes(path.getBytes(StandardCharsets.UTF_8)).toString();
+                    FileServerPrivateDto serverPrivateDto = new FileServerPrivateDto(
+                            path, // file path (need to change)
+                            name, // file name
+                            uuid, // file name to change UUID
+                            "dir",
+                            0, // file size(KB)
+                            dto.getName(),
+                            location.toString(), // file folder path (need to change)
+                            0,
+                            0
+                    );
+                    fileServerPrivateRepository.save(new FileServerPrivateEntity(serverPrivateDto));
+//                    logComponent.sendLog("Cloud", "[mkdir(private)] mkdir dto : "+dto, true, TOPIC_CLOUD_LOG);
+                }
+                else{
+//                    logComponent.sendLog("Cloud", "[mkdir(private)] failed to mkdir (path) : "+path, false, TOPIC_CLOUD_LOG);
+                }
             }
             catch(Exception e){
 //                logComponent.sendErrorLog("serviceName", "[signUp] content : ", e, "topic");
@@ -262,11 +194,5 @@ public class UserServiceImpl implements UserService, UserDetailsService {
             }
         }
         return gson.toJson(jsonObject);
-    }
-
-    @Override
-    public UserDetails loadUserByUsername(String id) throws UsernameNotFoundException {
-        System.out.println("loadUserByUserName : " + repository.findById(id));
-        return repository.findById(id).orElseThrow(()->new UsernameNotFoundException(id));
     }
 }
