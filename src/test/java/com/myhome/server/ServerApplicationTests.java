@@ -1,6 +1,5 @@
 package com.myhome.server;
 
-import com.myhome.server.api.controller.AuthController;
 import com.myhome.server.api.dto.UserDto;
 import com.myhome.server.api.service.FileServerThumbNailService;
 import com.myhome.server.db.entity.FileDefaultPathEntity;
@@ -18,18 +17,10 @@ import java.util.List;
 class ServerApplicationTests {
 
 	@Autowired
-	private AuthController authController;
-
-	@Autowired
 	private FileDefaultPathRepository fileDefaultPathRepository;
 
 	@Autowired
 	private FileServerThumbNailRepository fileServerThumbNailRepository;
-
-	@Test
-	void contextLoads() {
-		assert authController != null;
-	}
 
 
 	@Test

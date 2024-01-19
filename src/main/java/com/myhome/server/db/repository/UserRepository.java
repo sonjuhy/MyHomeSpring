@@ -12,6 +12,7 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository <UserEntity, Long>{
     UserEntity findByUserId(long Id);
     Optional<UserEntity> findById(String userId);
+    Optional<UserEntity> findByAccessToken(String accessToken);
     @Transactional
     @Modifying(clearAutomatically = true)
     @Query(value = "update USER_TB set ACCESS_CHAR=:accessToken, REFRESH_CHAR=:refreshToken where ID_CHAR=:Id", nativeQuery = true)

@@ -46,7 +46,8 @@ public class SecurityConfiguration {
                 .requestMatchers(
                         new AntPathRequestMatcher("/auth/**"),
                         new AntPathRequestMatcher("/swagger-ui/**")).permitAll()
-                .anyRequest().authenticated())
+                        .anyRequest().hasAnyAuthority("regular", "admin"))
+//                .anyRequest().authenticated())
                 .httpBasic(Customizer.withDefaults()).cors(cors->corsConfigurationSource())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
