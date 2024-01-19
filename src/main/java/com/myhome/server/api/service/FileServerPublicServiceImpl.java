@@ -3,13 +3,11 @@ package com.myhome.server.api.service;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.myhome.server.api.dto.FileServerPublicDto;
-import com.myhome.server.api.dto.FileServerPublicTrashDto;
 import com.myhome.server.component.KafkaProducer;
 import com.myhome.server.component.LogComponent;
 import com.myhome.server.db.entity.*;
 import com.myhome.server.db.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.PageRequest;
@@ -22,7 +20,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.util.ObjectUtils;
-import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
@@ -32,7 +29,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -119,8 +115,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.setContentDisposition(ContentDisposition
                 .builder("attachment") //builder type
-//                .filename(entity.getOriginName(), StandardCharsets.UTF_8) // filename setting by utf-8
-                .filename(fileName, StandardCharsets.UTF_8)
+                .filename(fileName)
                 .build());
         httpHeaders.add(HttpHeaders.CONTENT_TYPE, contentType);
         return httpHeaders;
@@ -166,29 +161,28 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
 
     @Override
     public List<String> uploadFiles(MultipartFile[] files, String path, Model model) {
-
-//        String fileLocation = diskPath+File.separator+path+File.separator;
-//        String originPath = changeUnderBarToSeparator(path);
-        String originPath = path;
-        if(originPath != null && originPath.isBlank() && !originPath.isEmpty()) {
-            originPath += File.separator;
+        if(path != null && path.isBlank() && !path.isEmpty()) {
+            path += File.separator;
+            String originPath = commonService.changeSeparatorToUnderBar(path);
             List<FileServerPublicEntity> list = new ArrayList<>();
             for(MultipartFile file : files){
                 if(!file.isEmpty()){
                     try{
+                        String tmpPath = commonService.changeSeparatorToUnderBar(originPath+file.getOriginalFilename());
+                        String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
+
                         FileServerPublicDto dto = new FileServerPublicDto(
-                                originPath+file.getOriginalFilename(), // file path (need to change)
+                                tmpPath,
                                 file.getOriginalFilename(), // file name
-                                UUID.randomUUID().toString(), // file name to change UUID
+                                uuid, // file name to change UUID
                                 Objects.requireNonNull(file.getOriginalFilename()).substring(file.getOriginalFilename().lastIndexOf(".") + 1), // file type (need to check ex: txt file -> text/plan)
                                 (float)file.getSize(), // file size(KB)
                                 originPath, // file folder path (need to change)
                                 0,
                                 0
                         );
-                        System.out.println(file.getResource());
                         list.add(new FileServerPublicEntity(dto));
-                        String saveName = originPath+dto.getName();
+                        String saveName = path+dto.getName();
                         Path savePath = Paths.get(saveName);
                         file.transferTo(savePath);
                     } catch (IOException e) {
@@ -214,22 +208,21 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
 
     @Override
     public boolean mkdir(String path) {
-        File file = new File(path);
+        String originPath = commonService.changeUnderBarToSeparator(path);
+        File file = new File(originPath);
         if(file.mkdir()){
-            System.out.println("Public mkdir : " + path);
-
-            String[] paths = path.split(File.separator);
+            String underBar = "__";
+            String[] paths = path.split(underBar);
             String name = paths[paths.length-1];
             StringBuilder location = new StringBuilder();
             for(int i=0;i<paths.length-1;i++){
-                location.append(paths[i]).append(File.separator);
+                location.append(paths[i]).append(underBar);
             }
-            System.out.println("Public mkdir location : " + location.toString());
-
+            String uuid = UUID.nameUUIDFromBytes(path.getBytes(StandardCharsets.UTF_8)).toString();
             FileServerPublicDto dto = new FileServerPublicDto(
                     path, // file path (need to change)
                     name, // file name
-                    UUID.randomUUID().toString(), // file name to change UUID
+                    uuid, // file name to change UUID
                     "dir",
                     0, // file size(KB)
                     location.toString(), // file folder path (need to change)
@@ -262,17 +255,10 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
             return -1;
         }
         // json type { file : origin file path, path : destination to move file }
-        Gson gson = new Gson();
-        JsonObject jsonObject = new JsonObject();
-        jsonObject.addProperty("purpose", "delete");
-        jsonObject.addProperty("action", "delete");
-        jsonObject.addProperty("uuid", entity.getUuid());
-        jsonObject.addProperty("file", trashPath+File.separator+entity.getName());
-        jsonObject.addProperty("path", entity.getPath());
-        String jsonResult = gson.toJson(jsonObject);
+        String jsonResult = encodingJSON("delete", "delete", entity.getUuid(), entity.getPath(), entity.getLocation());
         System.out.println("deleteByPath : " + jsonResult);
         // kafka send
-        producer.sendMessage(jsonResult);
+        producer.sendCloudMessage(jsonResult);
         logComponent.sendLog("Cloud", "[deleteByPath(public)] json : "+jsonResult, true, TOPIC_CLOUD_LOG);
         return 0;
     }
@@ -286,16 +272,9 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
             return -1; // file info doesn't exist
         }
         // json type { file : origin file path, path : destination to move file }
-        Gson gson = new Gson();
-        JsonObject jsonObject = new JsonObject();
-        jsonObject.addProperty("purpose", "move");
-        jsonObject.addProperty("action", "move");
-        jsonObject.addProperty("uuid", entity.getUuid());
-        jsonObject.addProperty("file", path);
-        jsonObject.addProperty("path", location);
-        String jsonResult = gson.toJson(jsonObject);
+        String jsonResult = encodingJSON("move", "move", entity.getUuid(), path, location);
         // kafka send
-        producer.sendMessage(jsonResult);
+        producer.sendCloudMessage(jsonResult);
         logComponent.sendLog("Cloud", "[moveFile(public)] json : "+jsonResult, true, TOPIC_CLOUD_LOG);
         return 0;
     }
@@ -305,16 +284,9 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         FileServerPublicEntity entity = fileServerRepository.findByUuid(uuid);
         if(entity != null){
             // json type { file : origin file path, path : destination to move file }
-            Gson gson = new Gson();
-            JsonObject jsonObject = new JsonObject();
-            jsonObject.addProperty("purpose", "move");
-            jsonObject.addProperty("action", "delete");
-            jsonObject.addProperty("uuid", entity.getUuid());
-            jsonObject.addProperty("file", entity.getPath());
-            jsonObject.addProperty("path", trashPath);
-            String jsonResult = gson.toJson(jsonObject);
+            String jsonResult = encodingJSON("move", "delete", entity.getUuid(), entity.getPath(), trashPath);
             // kafka send
-            producer.sendMessage(jsonResult);
+            producer.sendCloudMessage(jsonResult);
             logComponent.sendLog("Cloud", "[moveTrash(public)] file info send to django (json) : "+jsonResult, true, TOPIC_CLOUD_LOG);
             return 0;
         }
@@ -328,14 +300,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
 
         if(entity != null){
             // json type { file : origin file path, path : destination to move file }
-            Gson gson = new Gson();
-            JsonObject jsonObject = new JsonObject();
-            jsonObject.addProperty("purpose", "move");
-            jsonObject.addProperty("action", "restore");
-            jsonObject.addProperty("uuid", entity.getUuid());
-            jsonObject.addProperty("file", trashPath+File.separator+entity.getName());
-            jsonObject.addProperty("path", entity.getPath());
-            String jsonResult = gson.toJson(jsonObject);
+            String jsonResult = encodingJSON("move", "restore", entity.getUuid(), entity.getPath(), entity.getLocation());
             // kafka send
             producer.sendMessage(jsonResult);
             logComponent.sendLog("Cloud", "[restore(public)] file info send to django (json) : "+jsonResult, true, TOPIC_CLOUD_LOG);
@@ -343,6 +308,18 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         }
         logComponent.sendLog("Cloud", "[restore(public)] file entity is null (uuid) : "+uuid, false, TOPIC_CLOUD_LOG);
         return -1;
+    }
+
+    @Override
+    public String encodingJSON(String purpose, String action, String uuid, String file, String path) {
+        Gson gson = new Gson();
+        JsonObject jsonObject = new JsonObject();
+        jsonObject.addProperty("purpose", purpose);
+        jsonObject.addProperty("action", action);
+        jsonObject.addProperty("uuid", uuid);
+        jsonObject.addProperty("file", file);
+        jsonObject.addProperty("path", path);
+        return gson.toJson(jsonObject);
     }
 
     @Override
@@ -387,11 +364,8 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
             List<File> mediaFileList = new ArrayList<>();
             for(Path path : pathList){
                 File file = new File(path.toString());
-                String extension;
-                if(file.isDirectory()) {
-                    extension = "dir";
-                }
-                else {
+                String extension = "dir";
+                if(!file.isDirectory()) {
                     extension = file.getName().substring(file.getName().lastIndexOf(".") + 1); // file type (need to check ex: txt file -> text/plan)
                 }
                 try {
@@ -454,11 +428,8 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                             .toList();
                     if(filterList.isEmpty()){
                         String tmpPath = commonService.changeSeparatorToUnderBar(file.getPath()), tmpLocation = commonService.changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
-                        String extension;
-                        if(file.isDirectory()) {
-                            extension = "dir";
-                        }
-                        else {
+                        String extension = "dir";
+                        if(!file.isDirectory()) {
                             extension = file.getName().substring(file.getName().lastIndexOf(".") + 1); // file type (need to check ex: txt file -> text/plan)
                         }
                         newFileList.add(new FileServerPublicTrashEntity(

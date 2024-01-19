@@ -24,9 +24,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.util.ObjectUtils;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.util.UriUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -39,7 +41,6 @@ import java.util.stream.Stream;
 @Service
 public class FileServerPrivateServiceImpl implements FileServerPrivateService {
 
-//    private final String diskPath = "/home/disk1/home/private";
     private final String diskPath;
     private final String trashPath;
     private final String thumbnailPath;
@@ -130,11 +131,10 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
     @Override
     public HttpHeaders getHttpHeaders(Path path, String fileName) throws IOException {
         String contentType = Files.probeContentType(path); // content type setting
-
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.setContentDisposition(ContentDisposition
                 .builder("attachment") //builder type
-                .filename(fileName, StandardCharsets.UTF_8)
+                .filename(fileName)
                 .build());
         httpHeaders.add(HttpHeaders.CONTENT_TYPE, contentType);
         return httpHeaders;
@@ -146,6 +146,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
         if(entity!= null){
             String pathStr = commonService.changeUnderBarToSeparator(entity.getPath());
             Path path = Paths.get(pathStr);
+            System.out.println("path : "+path.toFile().getPath());
             try {
                 HttpHeaders httpHeaders = getHttpHeaders(path, entity.getName());
                 Resource resource = new InputStreamResource(Files.newInputStream(path));
@@ -180,71 +181,77 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
 
     @Override
     public List<String> uploadFiles(MultipartFile[] files, String path, String token, Model model) {
-        boolean result = jwtTokenProvider.validateToken(token);
-        if(result){
-            String id = jwtTokenProvider.getUserPk(token);
-            Optional<UserEntity> userEntity = service.findById(id);
-//            String fileLocation = defaultUploadPath+File.separator+path+File.separator;
-//            String fileLocation = changeUnderBarToSeparator(path);
-            List<FileServerPrivateEntity> list = new ArrayList<>();
-            for(MultipartFile file : files){
-                if(!file.isEmpty()){
-                    try{
-                        FileServerPrivateDto dto = new FileServerPrivateDto(
-                                path +file.getOriginalFilename(), // file path (need to change)
-                                file.getOriginalFilename(), // file name
-                                UUID.randomUUID().toString(), // file name to change UUID
-                                Objects.requireNonNull(file.getOriginalFilename()).substring(file.getOriginalFilename().lastIndexOf(".") + 1), // file type (need to check ex: txt file -> text/plan)
-                                (float)file.getSize(), // file size(KB)
-                                userEntity.get().getName(),
-                                path, // file folder path (need to change)
-                                0,
-                                0
-                        );
-                        System.out.println(file.getResource());
-                        list.add(new FileServerPrivateEntity(dto));
-                        String saveName = path +dto.getName();
-                        Path savePath = Paths.get(saveName);
-                        file.transferTo(savePath);
-                    } catch (IOException e) {
-                        logComponent.sendErrorLog("Cloud", "[uploadFiles(private)] error : ", e, TOPIC_CLOUD_CHECK_LOG);
+        if(path != null && path.isBlank() && !path.isEmpty()) {
+            boolean result = jwtTokenProvider.validateToken(token);
+            if(result){
+                String id = jwtTokenProvider.getUserPk(token);
+                Optional<UserEntity> userEntity = service.findById(id);
+                List<FileServerPrivateEntity> list = new ArrayList<>();
+                path += File.separator;
+                String originPath = commonService.changeSeparatorToUnderBar(path);
+                for(MultipartFile file : files){
+                    if(!file.isEmpty()){
+                        try{
+                            String tmpPath = commonService.changeSeparatorToUnderBar(originPath+file.getOriginalFilename());
+                            String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
+
+                            FileServerPrivateDto dto = new FileServerPrivateDto(
+                                    tmpPath,
+                                    file.getOriginalFilename(), // file name
+                                    uuid,
+                                    Objects.requireNonNull(file.getOriginalFilename()).substring(file.getOriginalFilename().lastIndexOf(".") + 1), // file type (need to check ex: txt file -> text/plan)
+                                    (float)file.getSize(), // file size(KB)
+                                    userEntity.get().getName(),
+                                    originPath, // file folder path (need to change)
+                                    0,
+                                    0
+                            );
+                            list.add(new FileServerPrivateEntity(dto));
+                            String saveName = path +dto.getName();
+                            Path savePath = Paths.get(saveName);
+                            file.transferTo(savePath);
+                        } catch (IOException e) {
+                            logComponent.sendErrorLog("Cloud", "[uploadFiles(private)] error : ", e, TOPIC_CLOUD_CHECK_LOG);
+                        }
                     }
                 }
-            }
-            model.addAttribute("files", list);
-            List<String> resultArr = new ArrayList<>();
-            for (FileServerPrivateEntity entity : list) {
-                if (save(entity)) {
-                    resultArr.add(entity.getName());
+                model.addAttribute("files", list);
+                List<String> resultArr = new ArrayList<>();
+                for (FileServerPrivateEntity entity : list) {
+                    if (save(entity)) {
+                        resultArr.add(entity.getName());
+                    }
                 }
+                logComponent.sendLog("Cloud", "[uploadFiles(private)] file size : "+resultArr.size(), true, TOPIC_CLOUD_LOG);
+                return resultArr;
             }
-            logComponent.sendLog("Cloud", "[uploadFiles(private)] file size : "+resultArr.size(), true, TOPIC_CLOUD_LOG);
-            return resultArr;
+            else{
+                logComponent.sendLog("Cloud", "[uploadFiles(private)] jwtToken validate failed", false, TOPIC_CLOUD_LOG);
+                return null;
+            }
         }
-        else{
-            logComponent.sendLog("Cloud", "[uploadFiles(private)] jwtToken validate failed", false, TOPIC_CLOUD_LOG);
-        }
-        return null;
+        else return null;
     }
 
     @Override
     public boolean mkdir(String path, String token) {
-//        String originPath = changeUnderBarToSeparator(path);
-        File file = new File(path);
+        String originPath = commonService.changeUnderBarToSeparator(path);
+        File file = new File(originPath);
         if(file.mkdir()){
-            String[] paths = path.split(File.separator);
+            String underBar = "__";
+            String[] paths = path.split(underBar);
             String name = paths[paths.length-1];
             StringBuilder location = new StringBuilder();
             for(int i=0;i<paths.length-1;i++){
-                location.append(paths[i]).append(File.separator);
+                location.append(paths[i]).append(underBar);
             }
             String pk = jwtTokenProvider.getUserPk(token);
             Optional<UserEntity> userEntity = service.findById(pk);
-
+            String uuid = UUID.nameUUIDFromBytes(path.getBytes(StandardCharsets.UTF_8)).toString();
             FileServerPrivateDto dto = new FileServerPrivateDto(
                     path, // file path (need to change)
                     name, // file name
-                    UUID.randomUUID().toString(), // file name to change UUID
+                    uuid, // file name to change UUID
                     "dir",
                     0, // file size(KB)
                     userEntity.get().getName(),
@@ -270,8 +277,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
     }
 
     @Override
-    public long deleteByPath(String path, String accessToken) { // add owner
-//        String originPath = changeUnderBarToSeparator(path);
+    public long deleteByPath(String path, String accessToken) {
         FileServerPrivateEntity entity = repository.findByPath(path);
         if(ObjectUtils.isEmpty(entity)){
             logComponent.sendLog("Cloud", "[deleteByPath(private)] file entity is null (path) : "+path, false, TOPIC_CLOUD_LOG);
@@ -280,21 +286,14 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
         Optional<UserEntity> entityUser = service.findById(accessToken);
         if(entityUser.isPresent()){
             // json type { file : origin file path, path : destination to move file }
-            Gson gson = new Gson();
-            JsonObject jsonObject = new JsonObject();
-            jsonObject.addProperty("purpose", "delete");
-            jsonObject.addProperty("action", "delete");
-            jsonObject.addProperty("uuid", entity.getUuid());
-            jsonObject.addProperty("file", entity.getPath());
-            jsonObject.addProperty("path", trashPath+File.separator+entityUser.get().getUserId()+File.separator+entity.getName());
-            String jsonResult = gson.toJson(jsonObject);
+            String jsonResult = encodingJSON("delete", "delete", entity.getUuid(), entity.getPath(), entity.getLocation());
             // kafka send
-            producer.sendMessage(jsonResult);
+            producer.sendCloudMessage(jsonResult);
             logComponent.sendLog("Cloud", "[deleteByPath(private)] json : "+jsonResult, true, TOPIC_CLOUD_LOG);
             return 0;
         }
         else{
-            logComponent.sendLog("Cloud", "[deleteByPath(private)] file doesn't exist (path) : "+path, false, TOPIC_CLOUD_LOG);
+            logComponent.sendLog("Cloud", "[deleteByPath(private)] user info doesn't exist (path) : "+path, false, TOPIC_CLOUD_LOG);
             return -1;
         }
     }
@@ -309,45 +308,29 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
         String filePath = entity.getPath();
         String movePath = location+entity.getName();
 
-//        Optional<UserEntity> entityUser = service.findById(accessToken);
-
         // json type { file : origin file path, path : destination to move file }
-        Gson gson = new Gson();
-        JsonObject jsonObject = new JsonObject();
-        jsonObject.addProperty("purpose", "delete");
-        jsonObject.addProperty("action", "delete");
-        jsonObject.addProperty("uuid", uuid);
-        jsonObject.addProperty("file", filePath);
-        jsonObject.addProperty("path", movePath);
-        String jsonResult = gson.toJson(jsonObject);
+        String jsonResult = encodingJSON("move", "move", uuid, filePath, movePath);
         System.out.println("deleteByPath : " + jsonResult);
         // kafka send
-        producer.sendMessage(jsonResult);
+        producer.sendCloudMessage(jsonResult);
         logComponent.sendLog("Cloud", "[moveFile(private)] json : "+jsonResult, true, TOPIC_CLOUD_LOG);
         return 0;
     }
 
     @Override
     public int moveTrash(String uuid, String accessToken) {
-        // Will change to send Kafka
         FileServerPrivateEntity entity = repository.findByUuid(uuid);
         if(ObjectUtils.isEmpty(entity)){
             logComponent.sendLog("Cloud", "[moveTrash(private)] file entity is null (uuid) : "+uuid, false, TOPIC_CLOUD_LOG);
             return -1;
         }
+
         Optional<UserEntity> entityUser = service.findById(accessToken);
         if(entityUser.isPresent()){
-            Gson gson = new Gson();
-            JsonObject jsonObject = new JsonObject();
-            jsonObject.addProperty("purpose", "delete");
-            jsonObject.addProperty("action", "delete");
-            jsonObject.addProperty("uuid", entity.getUuid());
-            jsonObject.addProperty("file", trashPath+File.separator+entityUser.get().getUserId()+File.separator+entity.getName());
-            jsonObject.addProperty("path", entity.getPath());
-            String jsonResult = gson.toJson(jsonObject);
+            String jsonResult = encodingJSON("move", "delete", entity.getUuid(), entity.getPath(), entity.getLocation());
             System.out.println("deleteByPath : " + jsonResult);
             // kafka send
-            producer.sendMessage(jsonResult);
+            producer.sendCloudMessage(jsonResult);
             logComponent.sendLog("Cloud", "[moveTrash(private)] file info send to django (json) : "+jsonResult, true, TOPIC_CLOUD_LOG);
             return 0;
         }
@@ -359,7 +342,6 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
 
     @Override
     public int restore(String uuid, String accessToken) {
-        // Will change to send Kafka
         FileServerPrivateEntity entity = repository.findByUuid(uuid);
         if(ObjectUtils.isEmpty(entity)){
             logComponent.sendLog("Cloud", "[restore(private)] file entity is null (uuid) : "+uuid, false, TOPIC_CLOUD_LOG);
@@ -367,14 +349,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
         }
         Optional<UserEntity> entityUser = service.findById(accessToken);
         if(entityUser.isPresent()){
-            Gson gson = new Gson();
-            JsonObject jsonObject = new JsonObject();
-            jsonObject.addProperty("purpose", "delete");
-            jsonObject.addProperty("action", "delete");
-            jsonObject.addProperty("uuid", entity.getUuid());
-            jsonObject.addProperty("file", trashPath+File.separator+entityUser.get().getUserId()+File.separator+entity.getName());
-            jsonObject.addProperty("path", entity.getPath());
-            String jsonResult = gson.toJson(jsonObject);
+            String jsonResult = encodingJSON("move", "restore", entity.getUuid(), entity.getPath(), entity.getLocation());
             System.out.println("deleteByPath : " + jsonResult);
             // kafka send
             producer.sendMessage(jsonResult);
@@ -385,6 +360,18 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
             logComponent.sendLog("Cloud", "[restore(private)] file doesn't exist (accessToken) : "+accessToken, false, TOPIC_CLOUD_LOG);
             return -1;
         }
+    }
+
+    @Override
+    public String encodingJSON(String purpose, String action, String uuid, String file, String path) {
+        Gson gson = new Gson();
+        JsonObject jsonObject = new JsonObject();
+        jsonObject.addProperty("purpose", purpose);
+        jsonObject.addProperty("action", action);
+        jsonObject.addProperty("uuid", uuid);
+        jsonObject.addProperty("file", file);
+        jsonObject.addProperty("path", path);
+        return gson.toJson(jsonObject);
     }
 
     @Override
@@ -459,12 +446,8 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
             List<File> mediaFileList = new ArrayList<>();
             for(Path path : pathList){
                 File file = new File(path.toString());
-
-                String extension;
-                if(file.isDirectory()) {
-                    extension = "dir";
-                }
-                else {
+                String extension = "dir";
+                if(!file.isDirectory()) {
                     extension = file.getName().substring(file.getName().lastIndexOf(".") + 1); // file type (need to check ex: txt file -> text/plan)
                 }
                 try {
@@ -498,7 +481,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
             }
         }
         catch (Exception e){
-                    logComponent.sendErrorLog("Cloud-Check", "[filesWalk(private)] file check error : ", e, TOPIC_CLOUD_CHECK_LOG);
+            logComponent.sendErrorLog("Cloud-Check", "[filesWalk(private)] file check error : ", e, TOPIC_CLOUD_CHECK_LOG);
         }
     }
     @Transactional
