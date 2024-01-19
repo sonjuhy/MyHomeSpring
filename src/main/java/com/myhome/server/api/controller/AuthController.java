@@ -113,7 +113,7 @@ public class AuthController {
     })
     @PostMapping("/signIn") // sign in
     public ResponseEntity<String> signIn(@RequestBody LoginDto dto){
-        if(authService.checkPassword(dto.getPw(), dto.getId())) {
+        if(authService.checkPassword(dto.getPassword(), dto.getId())) {
             String result = service.signIn(dto);
             return new ResponseEntity<>(result, HttpStatus.OK);
         }

@@ -10,5 +10,5 @@ import lombok.*;
 @Builder
 public class LoginDto {
     private String id;
-    private String pw;
+    private String password;
 }
