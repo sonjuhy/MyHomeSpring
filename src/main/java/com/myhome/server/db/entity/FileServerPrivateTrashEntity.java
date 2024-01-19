@@ -1,6 +1,6 @@
 package com.myhome.server.db.entity;
 
-import com.myhome.server.api.dto.FileServerPublicDto;
+import com.myhome.server.api.dto.FileServerPrivateTrashDto;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -9,9 +9,9 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @Entity
-@Table(name = "FILE_PUBLIC_TB")
+@Table(name = "FILE_PRIVATE_TRASH_TB")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class FileServerPublicEntity {
+public class FileServerPrivateTrashEntity {
     @Id
     @Column(name = "ID_PK")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -20,41 +20,46 @@ public class FileServerPublicEntity {
     private String uuid;
     @Column(name = "PATH_CHAR")
     private String path;
+    @Column(name = "ORIGIN_PATH_CHAR")
+    private String originPath;
     @Column(name = "NAME_CHAR")
     private String name;
     @Column(name = "TYPE_CHAR")
     private String type;
     @Column(name = "SIZE_FLOAT")
     private float size;
+    @Column(name = "OWNER_CHAR")
+    private String owner;
     @Column(name = "LOCATION_CHAR")
     private String location;
     @Column(name = "STATE_INT")
-    private  int state;
-    @Column(name = "DELETE_STATUS_INT")
-    private int delete;
+    private int state;
 
     @Builder
-    public FileServerPublicEntity(int id, String path, String name, String uuidName, String type, float size, String location, int state, int delete){
+    public FileServerPrivateTrashEntity(int id, String uuid, String path, String originPath, String name, String type, float size, String owner, String location, int state) {
         this.id = id;
+        this.uuid = uuid;
         this.path = path;
+        this.originPath = originPath;
         this.name = name;
-        this.uuid = uuidName;
         this.type = type;
         this.size = size;
+        this.owner = owner;
         this.location = location;
         this.state = state;
-        this.delete = delete;
     }
 
-    public FileServerPublicEntity(FileServerPublicDto dto){
+    @Builder
+    public FileServerPrivateTrashEntity(FileServerPrivateTrashDto dto){
         this.path = dto.getPath();
+        this.originPath = dto.getOriginPath();
+        this.uuid = dto.getUuid();
         this.name = dto.getName();
-        this.uuid = dto.getUuidName();
         this.type = dto.getType();
         this.size = dto.getSize();
+        this.owner = dto.getOwner();
         this.location = dto.getLocation();
         this.state = dto.getState();
-        this.delete = dto.getDeleteStatus();
     }
 
     public void changePathAndLocation(String movePath, String location) {

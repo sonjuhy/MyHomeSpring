@@ -8,19 +8,20 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-public interface FileServerThumbNailRepository extends JpaRepository<FileServerThumbNailEntity, String> {
+public interface FileServerThumbNailRepository extends JpaRepository<FileServerThumbNailEntity, Long> {
     FileServerThumbNailEntity findByUuid(String uuid);
     List<FileServerThumbNailEntity> findByType(String type);
     void deleteByUuid(String uuid);
+    boolean existsByUuid(String uuid);
 
     // SELECT * FROM FILE_THUMBNAIL_TB WHERE NOT EXISTS(SELECT * FROM FILE_PUBLIC_TB WHERE FILE_PUBLIC_TB.UUID_PK = FILE_THUMBNAIL_TB.UUID_PK);
     @Transactional
     @Modifying(clearAutomatically = true)
-    @Query(value = "SELECT * FROM FILE_THUMBNAIL_TB WHERE NOT EXISTS(SELECT * FROM FILE_PUBLIC_TB WHERE FILE_PUBLIC_TB.UUID_PK = FILE_THUMBNAIL_TB.UUID_PK)", nativeQuery = true)
+    @Query(value = "SELECT * FROM FILE_THUMBNAIL_TB WHERE NOT EXISTS(SELECT * FROM FILE_PUBLIC_TB WHERE FILE_PUBLIC_TB.UUID_CHAR = FILE_THUMBNAIL_TB.UUID_CHAR)", nativeQuery = true)
     List<FileServerThumbNailEntity> findAllNotInPublic();
 
     @Transactional
     @Modifying(clearAutomatically = true)
-    @Query(value = "SELECT * FROM FILE_THUMBNAIL_TB WHERE NOT EXISTS(SELECT * FROM FILE_PRIVATE_TB WHERE FILE_PRIVATE_TB.UUID_PK = FILE_THUMBNAIL_TB.UUID_PK)", nativeQuery = true)
+    @Query(value = "SELECT * FROM FILE_THUMBNAIL_TB WHERE NOT EXISTS(SELECT * FROM FILE_PRIVATE_TB WHERE FILE_PRIVATE_TB.UUID_CHAR = FILE_THUMBNAIL_TB.UUID_CHAR)", nativeQuery = true)
     List<FileServerThumbNailEntity> findAllNotInPrivate();
 }

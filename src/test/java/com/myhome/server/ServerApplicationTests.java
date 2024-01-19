@@ -3,8 +3,6 @@ package com.myhome.server;
 import com.myhome.server.api.controller.AuthController;
 import com.myhome.server.api.dto.UserDto;
 import com.myhome.server.api.service.FileServerThumbNailService;
-import com.myhome.server.api.service.ScheduleService;
-import com.myhome.server.api.service.ScheduleServiceImpl;
 import com.myhome.server.db.entity.FileDefaultPathEntity;
 import com.myhome.server.db.entity.FileServerThumbNailEntity;
 import com.myhome.server.db.entity.UserEntity;
@@ -23,9 +21,6 @@ class ServerApplicationTests {
 	private AuthController authController;
 
 	@Autowired
-	ScheduleService service;
-
-	@Autowired
 	private FileDefaultPathRepository fileDefaultPathRepository;
 
 	@Autowired
@@ -36,11 +31,6 @@ class ServerApplicationTests {
 		assert authController != null;
 	}
 
-	@Test
-	void testSchedule(){
-		service = new ScheduleServiceImpl();
-//		service.test();
-	}
 
 	@Test
 	public void getDefaultPath(){

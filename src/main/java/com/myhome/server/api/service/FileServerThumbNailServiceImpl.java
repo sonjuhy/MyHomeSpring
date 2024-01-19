@@ -1,6 +1,7 @@
 package com.myhome.server.api.service;
 
 import com.myhome.server.api.dto.FileServerThumbNailDto;
+import com.myhome.server.component.LogComponent;
 import com.myhome.server.db.entity.FileDefaultPathEntity;
 import com.myhome.server.db.entity.FileServerThumbNailEntity;
 import com.myhome.server.db.repository.FileDefaultPathRepository;
@@ -24,6 +25,11 @@ public class FileServerThumbNailServiceImpl implements FileServerThumbNailServic
 
     private final String uploadPath;
 
+    private final static String TOPIC_CLOUD_LOG = "cloud-log-topic";
+
+    @Autowired
+    LogComponent logComponent;
+
     @Autowired
     FileServerThumbNailRepository repository;
 
@@ -45,7 +51,6 @@ public class FileServerThumbNailServiceImpl implements FileServerThumbNailServic
 
     @Override
     public void makeThumbNail(File file, String uuid, String type) {
-        System.out.println("makeThumbNail : " + file.getName());
         File thumbnail = new File(uploadPath, uuid+".png");
         try{
             FrameGrab frameGrab = FrameGrab.createFrameGrab(NIOUtils.readableChannel(file));
@@ -60,17 +65,23 @@ public class FileServerThumbNailServiceImpl implements FileServerThumbNailServic
             ImageIO.write(bi, "png", thumbnail);
 
             String fileLocation = uploadPath+File.separator+uuid+".png";
-            FileServerThumbNailDto thumbNailDto = new FileServerThumbNailDto(uuid, fileLocation, file.getName(), type);
+            FileServerThumbNailDto thumbNailDto = new FileServerThumbNailDto(0, uuid, fileLocation, file.getName(), type);
             repository.save(new FileServerThumbNailEntity(thumbNailDto));
 
         } catch (JCodecException | IOException e) {
-            e.printStackTrace();
+//            logComponent.sendErrorLog("Cloud", "makeThumbNail Error : ", e, TOPIC_CLOUD_LOG);
         }
     }
+
+    @Override
+    public boolean checkThumbNailExist(String uuid) {
+        return repository.existsByUuid(uuid);
+    }
+
     private String changeUnderBarToSeparator(String path){
-        return path.replaceAll("_", Matcher.quoteReplacement(File.separator));
+        return path.replaceAll("__", Matcher.quoteReplacement(File.separator));
     }
     private String changeSeparatorToUnderBar(String path){
-        return path.replaceAll(Matcher.quoteReplacement(File.separator), "_");
+        return path.replaceAll(Matcher.quoteReplacement(File.separator), "__");
     }
 }
