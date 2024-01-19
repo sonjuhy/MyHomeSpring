@@ -270,8 +270,8 @@ public class FileServerController {
     }
 
     @GetMapping("/movePrivateFileInfo")
-    public ResponseEntity<Integer> movePrivateFileInfo(@RequestParam String path, @RequestParam String location, @RequestParam String accessToken){
-        int result = privateService.moveFile(path, location, accessToken);
+    public ResponseEntity<Integer> movePrivateFileInfo(@RequestParam String uuid, @RequestParam String location, @RequestParam String accessToken){
+        int result = privateService.moveFile(uuid, location, accessToken);
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
     @PostMapping("/downloadPrivateFile")
