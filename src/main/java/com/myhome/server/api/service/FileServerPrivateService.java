@@ -30,6 +30,7 @@ public interface FileServerPrivateService {
     int moveFile(String path, String location, String accessToken);
     int moveTrash(String uuid, String accessToken);
     int restore(String uuid, String accessToken);
+    String encodingJSON(String purpose, String action, String uuid, String file, String path);
     int updateByFileServerPrivateEntity(FileServerPrivateEntity entity);
     boolean save(FileServerPrivateEntity entity);
     void privateFileCheck();

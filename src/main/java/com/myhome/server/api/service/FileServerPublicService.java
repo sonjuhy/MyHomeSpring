@@ -30,6 +30,7 @@ public interface FileServerPublicService {
     int moveFile(String path, String location);
     int moveTrash(String uuid);
     int restore(String uuid);
+    String encodingJSON(String purpose, String action, String uuid, String file, String path);
     int updateByFileServerPublicEntity(FileServerPublicEntity entity);
     boolean save(FileServerPublicEntity entity);
     void publicFileStateCheck();

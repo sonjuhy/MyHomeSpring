@@ -28,7 +28,9 @@ public class KafkaProducer {
         System.out.println("Produce message : "+message);
         this.kafkaTemplate.send(TOPIC_TEST, message);
     }
-
+    public void sendCloudMessage(String message){
+        this.kafkaTemplate.send(TOPIC_CLOUD, message);
+    }
     public void sendIotMessage(LightDto dto, String user){
         Gson gson = new Gson();
         JsonObject object = new JsonObject();
