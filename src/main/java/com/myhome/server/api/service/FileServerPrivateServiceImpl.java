@@ -59,7 +59,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
     FileServerPrivateTrashRepository trashRepository;
 
     @Autowired
-    UserService service;
+    UserService userService;
 
     @Autowired
     FileServerThumbNailRepository thumbNailRepository;
@@ -185,7 +185,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
             boolean result = jwtTokenProvider.validateToken(token);
             if(result){
                 String id = jwtTokenProvider.getUserPk(token);
-                Optional<UserEntity> userEntity = service.findById(id);
+                Optional<UserEntity> userEntity = userService.findById(id);
                 List<FileServerPrivateEntity> list = new ArrayList<>();
                 path += File.separator;
                 String originPath = commonService.changeSeparatorToUnderBar(path);
@@ -246,7 +246,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
                 location.append(paths[i]).append(underBar);
             }
             String pk = jwtTokenProvider.getUserPk(token);
-            Optional<UserEntity> userEntity = service.findById(pk);
+            Optional<UserEntity> userEntity = userService.findById(pk);
             String uuid = UUID.nameUUIDFromBytes(path.getBytes(StandardCharsets.UTF_8)).toString();
             FileServerPrivateDto dto = new FileServerPrivateDto(
                     path, // file path (need to change)
@@ -283,8 +283,8 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
             logComponent.sendLog("Cloud", "[deleteByPath(private)] file entity is null (path) : "+path, false, TOPIC_CLOUD_LOG);
             return -1;
         }
-        Optional<UserEntity> entityUser = service.findById(accessToken);
-        if(entityUser.isPresent()){
+        UserEntity userEntity = userService.findByAccessToken(accessToken);
+        if(userEntity != null){
             // json type { file : origin file path, path : destination to move file }
             String jsonResult = encodingJSON("delete", "delete", entity.getUuid(), entity.getPath(), entity.getLocation());
             // kafka send
@@ -325,8 +325,8 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
             return -1;
         }
 
-        Optional<UserEntity> entityUser = service.findById(accessToken);
-        if(entityUser.isPresent()){
+        UserEntity userEntity = userService.findByAccessToken(accessToken);
+        if(userEntity != null){
             String jsonResult = encodingJSON("move", "delete", entity.getUuid(), entity.getPath(), entity.getLocation());
             System.out.println("deleteByPath : " + jsonResult);
             // kafka send
@@ -347,8 +347,8 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
             logComponent.sendLog("Cloud", "[restore(private)] file entity is null (uuid) : "+uuid, false, TOPIC_CLOUD_LOG);
             return -1;
         }
-        Optional<UserEntity> entityUser = service.findById(accessToken);
-        if(entityUser.isPresent()){
+        UserEntity userEntity = userService.findByAccessToken(accessToken);
+        if(userEntity != null){
             String jsonResult = encodingJSON("move", "restore", entity.getUuid(), entity.getPath(), entity.getLocation());
             System.out.println("deleteByPath : " + jsonResult);
             // kafka send
@@ -401,7 +401,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
     @Transactional
     @Override
     public void privateFileCheck() {
-        List<UserEntity> userList = service.findAll();
+        List<UserEntity> userList = userService.findAll();
         File defaultPath = new File(diskPath);
         File[] files = defaultPath.listFiles();
         if(files != null) {
