@@ -9,8 +9,8 @@ import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -20,7 +20,6 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import java.security.Key;
 import java.util.*;
 
-@RequiredArgsConstructor
 @Configuration
 public class JwtTokenProvider implements InitializingBean {
     private String secretKey = "MyHomeProjectHS256AlgorithmPrivateSecretKey"; //must over 256 bit
@@ -29,6 +28,8 @@ public class JwtTokenProvider implements InitializingBean {
     // 토큰 유효시간 30분
     private final static long accessTokenValidTime = 10 * 3600 * 60 * 1000L; // 10일
     private final static long refreshTokenValidTime = 20 * 3600 * 60 * 1000L; // 10일
+
+    @Autowired
     UserRepository userRepository;
 
     // 객체 초기화, secretKey를 Base64로 인코딩한다.
