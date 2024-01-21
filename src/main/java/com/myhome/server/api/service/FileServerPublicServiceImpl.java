@@ -271,8 +271,9 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
             logComponent.sendLog("Cloud", "[moveFile(public)] file entity is null (path) : "+path+", location : " + location, false, TOPIC_CLOUD_LOG);
             return -1; // file info doesn't exist
         }
+        String movePath = location + entity.getPath();
         // json type { file : origin file path, path : destination to move file }
-        String jsonResult = encodingJSON("move", "move", entity.getUuid(), path, location);
+        String jsonResult = encodingJSON("move", "move", entity.getUuid(), path, movePath);
         // kafka send
         producer.sendCloudMessage(jsonResult);
         logComponent.sendLog("Cloud", "[moveFile(public)] json : "+jsonResult, true, TOPIC_CLOUD_LOG);
@@ -283,8 +284,10 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     public int moveTrash(String uuid) {
         FileServerPublicEntity entity = fileServerRepository.findByUuid(uuid);
         if(entity != null){
+            String underBar = "__";
+            String tmpTrashPath = commonService.changeSeparatorToUnderBar(trashPath)+underBar;
             // json type { file : origin file path, path : destination to move file }
-            String jsonResult = encodingJSON("move", "delete", entity.getUuid(), entity.getPath(), trashPath);
+            String jsonResult = encodingJSON("move", "delete", entity.getUuid(), entity.getPath(), tmpTrashPath);
             // kafka send
             producer.sendCloudMessage(jsonResult);
             logComponent.sendLog("Cloud", "[moveTrash(public)] file info send to django (json) : "+jsonResult, true, TOPIC_CLOUD_LOG);
@@ -296,13 +299,12 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
 
     @Override
     public int restore(String uuid) {
-        FileServerPublicEntity entity = fileServerRepository.findByUuid(uuid);
-
-        if(entity != null){
+        FileServerPublicTrashEntity trashEntity = fileServerPublicTrashRepository.findByUuid(uuid);
+        if(trashEntity != null){
             // json type { file : origin file path, path : destination to move file }
-            String jsonResult = encodingJSON("move", "restore", entity.getUuid(), entity.getPath(), entity.getLocation());
+            String jsonResult = encodingJSON("move", "restore", trashEntity.getUuid(), trashEntity.getPath(), trashEntity.getOriginPath());
             // kafka send
-            producer.sendMessage(jsonResult);
+            producer.sendCloudMessage(jsonResult);
             logComponent.sendLog("Cloud", "[restore(public)] file info send to django (json) : "+jsonResult, true, TOPIC_CLOUD_LOG);
             return 0;
         }
