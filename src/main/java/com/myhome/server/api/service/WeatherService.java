@@ -2,6 +2,9 @@ package com.myhome.server.api.service;
 
 import com.google.gson.JsonArray;
 import com.myhome.server.api.dto.LocationDto;
+import com.myhome.server.api.dto.SGISDto.SGISAddressDto;
+import com.myhome.server.api.dto.openWeatherDto.OpenWeatherCurrentDto;
+import com.myhome.server.api.dto.openWeatherDto.OpenWeatherForecastDto;
 import com.myhome.server.api.dto.WeatherDto;
 
 import java.util.ArrayList;
@@ -22,4 +25,12 @@ public interface WeatherService {
     ArrayList<LocationDto> getLeafPlace(String code);
     String ApiTime();
     String ApiTimeChange(String time);
+
+    String getSGISAccessToken();
+    SGISAddressDto getSGISAddressInfo(int cd);
+    double[] convertCoordinate(double x, double y);
+    OpenWeatherCurrentDto getCurrentWeatherInfo(double lat, double lon);
+    OpenWeatherForecastDto getForecastWeatherInfo(double lat, double lon);
+    OpenWeatherCurrentDto getCurrentWeatherInfoByCoordinate(int x, int y);
+    OpenWeatherForecastDto getForecastWeatherInfoByCoordinate(int x, int y);
 }

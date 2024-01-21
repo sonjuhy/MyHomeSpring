@@ -2,15 +2,25 @@ package com.myhome.server.api.service;
 
 import com.google.gson.*;
 import com.myhome.server.api.dto.LocationDto;
+import com.myhome.server.api.dto.SGISDto.SGISAddressDto;
+import com.myhome.server.api.dto.SGISDto.geoCodeDto.GeoCodeDto;
+import com.myhome.server.api.dto.SGISDto.tokenDto.SGISTokenDto;
+import com.myhome.server.api.dto.SGISDto.tokenDto.SGISTokenResultDto;
+import com.myhome.server.api.dto.openWeatherDto.OpenWeatherCurrentDto;
+import com.myhome.server.api.dto.openWeatherDto.OpenWeatherForecastDto;
 import com.myhome.server.api.dto.WeatherDto;
 import com.myhome.server.component.KafkaProducer;
 import com.myhome.server.component.LogComponent;
+import com.myhome.server.db.entity.WeatherAPIKeyEntity;
 import com.myhome.server.db.entity.WeatherKeyEntity;
+import com.myhome.server.db.repository.WeatherAPIKeyRepository;
+import com.myhome.server.db.repository.WeatherAPIRepository;
 import com.myhome.server.db.repository.WeatherRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -18,10 +28,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.Objects;
-import java.util.StringTokenizer;
+import java.util.*;
 
 @Service
 public class WeatherServiceImpl implements WeatherService{
@@ -31,6 +38,9 @@ public class WeatherServiceImpl implements WeatherService{
     private String url_UltraFcst = ""; //need key, pageNo, numOfRows, base_date, base_time, x, y | 초단기예보
     private String url_VilageFcst = "";// need key, pageNo, numOfRows, dataType, base_date, base_time, x, y | 동네예보조회
     private String url_main = null;
+    private String SGIS_SECURITY_KEY;
+    private String SGIS_SERVICE_KEY;
+    private String OPENWEATHERAPI_KEY;
 
     private final String TOPIC_WEATHER_LOG = "weather-log-topic";
 
@@ -41,9 +51,23 @@ public class WeatherServiceImpl implements WeatherService{
 
     @Autowired
     WeatherRepository repository;
+    @Autowired
+    WeatherAPIRepository weatherAPIRepository;
+    @Autowired
+    WeatherAPIKeyRepository weatherAPIKeyRepository;
 
     @Autowired
     KafkaProducer producer;
+
+    @Autowired
+    public WeatherServiceImpl(WeatherAPIKeyRepository weatherAPIKeyRepository){
+        OPENWEATHERAPI_KEY = weatherAPIKeyRepository.findByServiceName("OpenWeatherAPI").getKey();
+        SGIS_SERVICE_KEY = weatherAPIKeyRepository.findByServiceName("SGISServiceKey").getKey();
+        SGIS_SECURITY_KEY = weatherAPIKeyRepository.findByServiceName("SGISSecurityKey").getKey();
+        System.out.println("open api : "+OPENWEATHERAPI_KEY);
+        System.out.println("service key : "+SGIS_SERVICE_KEY);
+        System.out.println("security key : "+SGIS_SECURITY_KEY);
+    }
 
     @Override
     public String getKey() {
@@ -775,4 +799,133 @@ public class WeatherServiceImpl implements WeatherService{
         }
         return baseTime;
     }
+
+    @Override
+    public String getSGISAccessToken() {
+        WebClient webClient = WebClient.builder().baseUrl("https://sgisapi.kostat.go.kr/OpenAPI3").build();
+
+        SGISTokenDto token = webClient
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/auth/authentication.json")
+                        .queryParam("consumer_key", SGIS_SERVICE_KEY)
+                        .queryParam("consumer_secret", SGIS_SECURITY_KEY)
+                        .build()
+                )
+                .retrieve()
+                .bodyToMono(SGISTokenDto.class)
+                .block();
+        if(token.getErrCd() == 0) return token.getResult().getAccessToken();
+        else return "error";
+    }
+
+    @Override
+    public SGISAddressDto getSGISAddressInfo(int cd) {
+        String key = getSGISAccessToken();
+        if("error".equals(key)) return null;
+        WebClient webClient = WebClient.builder().baseUrl("https://sgisapi.kostat.go.kr/OpenAPI3").build();
+        SGISAddressDto addressDto;
+        if(cd == 0){
+            addressDto = webClient
+                    .get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/addr/stage.json")
+                            .queryParam("accessToken", key)
+                            .build()
+                    )
+                    .retrieve()
+                    .bodyToMono(SGISAddressDto.class)
+                    .block();
+        }
+        else{
+            addressDto = webClient
+                    .get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/addr/stage.json")
+                            .queryParam("accessToken", key)
+                            .queryParam("cd", String.valueOf(cd))
+                            .build()
+                    )
+                    .retrieve()
+                    .bodyToMono(SGISAddressDto.class)
+                    .block();
+        }
+        return addressDto;
+    }
+
+    @Override
+    public double[] convertCoordinate(double x, double y) {
+        String key = getSGISAccessToken();
+        if("error".equals(key)) return null;
+        WebClient webClient = WebClient.builder().baseUrl("https://sgisapi.kostat.go.kr/OpenAPI3").build();
+        GeoCodeDto geoCodeDto = webClient
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/transformation/transcoord.json")
+                        .queryParam("accessToken", key)
+                        .queryParam("src","5179")
+                        .queryParam("dst","4326")
+                        .queryParam("posX", x)
+                        .queryParam("posY", y)
+                        .build()
+                )
+                .retrieve()
+                .bodyToMono(GeoCodeDto.class)
+                .block();
+        if(geoCodeDto != null && geoCodeDto.getErrCd() == 0) {
+            return new double[]{geoCodeDto.getResult().getPosX(), geoCodeDto.getResult().getPosY()};
+        }
+        else{
+            return new double[]{};
+        }
+    }
+
+    @Override
+    public OpenWeatherCurrentDto getCurrentWeatherInfo(double lat, double lon) {
+        WebClient webClient = WebClient.builder().baseUrl("https://api.openweathermap.org/data/2.5/").build();
+        return webClient
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/weather")
+                        .queryParam("lon", lon)
+                        .queryParam("lat", lat)
+                        .queryParam("appid", OPENWEATHERAPI_KEY)
+                        .build()
+                )
+                .retrieve()
+                .bodyToMono(OpenWeatherCurrentDto.class)
+                .block();
+    }
+
+    @Override
+    public OpenWeatherForecastDto getForecastWeatherInfo(double lat, double lon) {
+        WebClient webClient = WebClient.builder().baseUrl("https://api.openweathermap.org/data/2.5/").build();
+        return webClient
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/forecast")
+                        .queryParam("lon", lon)
+                        .queryParam("lat", lat)
+                        .queryParam("appid", OPENWEATHERAPI_KEY)
+                        .build()
+                )
+                .retrieve()
+                .bodyToMono(OpenWeatherForecastDto.class)
+                .block();
+    }
+
+    @Override
+    public OpenWeatherCurrentDto getCurrentWeatherInfoByCoordinate(int x, int y) {
+        double[] lonLat = convertCoordinate(x, y);
+        if(lonLat == null) return null;
+        return getCurrentWeatherInfo(lonLat[1], lonLat[0]);
+    }
+
+    @Override
+    public OpenWeatherForecastDto getForecastWeatherInfoByCoordinate(int x, int y) {
+        double[] lonLat = convertCoordinate(x, y);
+        if(lonLat == null) return null;
+        return getForecastWeatherInfo(lonLat[1], lonLat[0]);
+    }
 }
+
