@@ -327,7 +327,9 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
 
         UserEntity userEntity = userService.findByAccessToken(accessToken);
         if(userEntity != null){
-            String jsonResult = encodingJSON("move", "delete", entity.getUuid(), entity.getPath(), entity.getLocation());
+            String underBar = "__";
+            String tmpTrashPath = commonService.changeSeparatorToUnderBar(trashPath)+underBar+userEntity.getId()+underBar;
+            String jsonResult = encodingJSON("move", "delete", entity.getUuid(), entity.getPath(), tmpTrashPath);
             System.out.println("deleteByPath : " + jsonResult);
             // kafka send
             producer.sendCloudMessage(jsonResult);
@@ -342,17 +344,17 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
 
     @Override
     public int restore(String uuid, String accessToken) {
-        FileServerPrivateEntity entity = repository.findByUuid(uuid);
-        if(ObjectUtils.isEmpty(entity)){
+        FileServerPrivateTrashEntity trashEntity = trashRepository.findByUuid(uuid);
+        if(ObjectUtils.isEmpty(trashEntity)){
             logComponent.sendLog("Cloud", "[restore(private)] file entity is null (uuid) : "+uuid, false, TOPIC_CLOUD_LOG);
             return -1;
         }
         UserEntity userEntity = userService.findByAccessToken(accessToken);
         if(userEntity != null){
-            String jsonResult = encodingJSON("move", "restore", entity.getUuid(), entity.getPath(), entity.getLocation());
+            String jsonResult = encodingJSON("move", "restore", trashEntity.getUuid(), trashEntity.getPath(), trashEntity.getOriginPath());
             System.out.println("deleteByPath : " + jsonResult);
             // kafka send
-            producer.sendMessage(jsonResult);
+            producer.sendCloudMessage(jsonResult);
             logComponent.sendLog("Cloud", "[restore(private)] file info send to django (json) : "+jsonResult, true, TOPIC_CLOUD_LOG);
             return 0;
         }
