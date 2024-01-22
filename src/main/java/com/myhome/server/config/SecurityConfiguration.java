@@ -5,15 +5,19 @@ import com.myhome.server.config.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -25,6 +29,8 @@ public class SecurityConfiguration {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
+    private final CustomAccessDeniedHandler customAccessDeniedHandler;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception{
@@ -42,21 +48,31 @@ public class SecurityConfiguration {
 //                .logout()
 //                .logoutSuccessUrl("/")
 //                .invalidateHttpSession(true);
-        httpSecurity.authorizeHttpRequests(auth->auth
-                .requestMatchers(
-                        new AntPathRequestMatcher("/auth/**"),
-                        new AntPathRequestMatcher("/file/downloadPublicMedia/**"),
-                        new AntPathRequestMatcher("/file/downloadPrivateMedia/**"),
-                        new AntPathRequestMatcher("/file/downloadThumbNail/**"),
-                        new AntPathRequestMatcher("/swagger-ui/**")).permitAll()
-                        .anyRequest().hasAnyAuthority("regular", "admin"))
-//                .anyRequest().authenticated())
-                .httpBasic(Customizer.withDefaults()).cors(cors->corsConfigurationSource())
+        httpSecurity
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
+                                new AntPathRequestMatcher("/auth/**"),
+                                new AntPathRequestMatcher("/file/downloadPublicMedia/**"),
+                                new AntPathRequestMatcher("/file/downloadPrivateMedia/**"),
+                                new AntPathRequestMatcher("/file/downloadThumbNail/**"),
+                                new AntPathRequestMatcher("/swagger-ui/**")
+                        ).permitAll()
+                        .anyRequest().hasAnyAuthority("regular", "admin")
+                )
+
+                .httpBasic(Customizer.withDefaults())
+                .cors(cors->corsConfigurationSource())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .csrf(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
-                .rememberMe(Customizer.withDefaults());
+                .rememberMe(Customizer.withDefaults())
+                .exceptionHandling((exceptionConfig) ->{
+                    exceptionConfig
+                            .authenticationEntryPoint(customAuthenticationEntryPoint)
+                            .accessDeniedHandler(customAccessDeniedHandler);
+                })
+        ;
         return httpSecurity.build();
     }
 
