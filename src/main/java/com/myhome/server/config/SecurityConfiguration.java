@@ -45,6 +45,9 @@ public class SecurityConfiguration {
         httpSecurity.authorizeHttpRequests(auth->auth
                 .requestMatchers(
                         new AntPathRequestMatcher("/auth/**"),
+                        new AntPathRequestMatcher("/file/downloadPublicMedia/**"),
+                        new AntPathRequestMatcher("/file/downloadPrivateMedia/**"),
+                        new AntPathRequestMatcher("/file/downloadThumbNail/**"),
                         new AntPathRequestMatcher("/swagger-ui/**")).permitAll()
                         .anyRequest().hasAnyAuthority("regular", "admin"))
 //                .anyRequest().authenticated())
