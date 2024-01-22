@@ -20,6 +20,7 @@ public class OpenWeatherForecastItemDto {
     private int visibility;
     private int pop;
     private OpenWeatherForecastItemRainDto rain;
+    private OpenWeatherForecastItemSnowDto snow;
     private OpenWeatherForecastItemSysDto sys;
     @JsonProperty(value = "dt_txt")
     private String dtTxt;
