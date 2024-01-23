@@ -180,6 +180,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                     System.out.println("contentLength : "+contentLength+", start : "+start+", end : "+end+", rangeLength : "+rangeLength);
 
                     resourceRegion = new ResourceRegion(resource, start, rangeLength);
+                    System.out.println("resourceRegion size : " + resourceRegion.getResource().contentLength());
                 }
                 catch(Exception e){
                     long rangeLength = Long.min(chunkSize, resource.contentLength());
@@ -188,7 +189,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
                        .cacheControl(CacheControl.maxAge(10, TimeUnit.MINUTES)) // 10초
                        .contentType(MediaTypeFactory.getMediaType(resource).orElse(MediaType.APPLICATION_OCTET_STREAM))
-                       .header("Accept-Ranges", "bytes")
+                       .header(HttpHeaders.ACCEPT_RANGES, "bytes")
                        .body(resourceRegion);
             } catch (IOException e) {
                 logComponent.sendErrorLog("Cloud","streamingPublicVideo error : ", e, TOPIC_CLOUD_LOG);
