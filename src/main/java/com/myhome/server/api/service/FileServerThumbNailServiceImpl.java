@@ -53,8 +53,8 @@ public class FileServerThumbNailServiceImpl implements FileServerThumbNailServic
     @Transactional
     @Override
     public void makeThumbNail(File file, String uuid, String type) {
+        File thumbnail = new File(uploadPath, uuid+".png");
         try{
-            File thumbnail = new File(uploadPath, uuid+".png");
             FrameGrab frameGrab = FrameGrab.createFrameGrab(NIOUtils.readableChannel(file));
 
             // 첫 프레임의 데이터
@@ -66,12 +66,13 @@ public class FileServerThumbNailServiceImpl implements FileServerThumbNailServic
             BufferedImage bi = AWTUtil.toBufferedImage(picture);
             ImageIO.write(bi, "png", thumbnail);
 
+        } catch (JCodecException | IOException e) {
+            logComponent.sendErrorLog("Cloud-Check", "makeThumbNail Error : ", e, TOPIC_CLOUD_LOG);
+        }
+        if(thumbnail.exists()) {
             String fileLocation = changeSeparatorToUnderBar(uploadPath+File.separator+uuid+".png");
             FileServerThumbNailDto thumbNailDto = new FileServerThumbNailDto(0, uuid, fileLocation, file.getName(), type);
             repository.save(new FileServerThumbNailEntity(thumbNailDto));
-
-        } catch (JCodecException | IOException e) {
-            logComponent.sendErrorLog("Cloud", "makeThumbNail Error : ", e, TOPIC_CLOUD_LOG);
         }
     }
 
