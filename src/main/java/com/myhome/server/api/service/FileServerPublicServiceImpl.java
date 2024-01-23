@@ -182,6 +182,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         FileServerPublicEntity entity = fileServerRepository.findByUuid(uuid);
         if(entity != null){
             String pathStr = commonService.changeUnderBarToSeparator(entity.getPath());
+            String encodingPath = new String(pathStr.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8);
             Path path = Paths.get(pathStr);
             System.out.println("path : "+path.toFile().getPath());
             try{
@@ -208,7 +209,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                        .cacheControl(CacheControl.maxAge(10, TimeUnit.MINUTES)) // 10초
                        .contentType(MediaTypeFactory.getMediaType(resource).orElse(MediaType.APPLICATION_OCTET_STREAM))
                        .header("Accept-Ranges", "bytes")
-                       .eTag(pathStr)
+                       .eTag(encodingPath)
                        .body(resourceRegion);
             } catch (IOException e) {
                 logComponent.sendErrorLog("Cloud","streamingPublicVideo error : ", e, TOPIC_CLOUD_LOG);
