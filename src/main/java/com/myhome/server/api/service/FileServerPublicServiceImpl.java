@@ -209,7 +209,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                        .cacheControl(CacheControl.maxAge(10, TimeUnit.MINUTES)) // 10초
                        .contentType(MediaTypeFactory.getMediaType(resource).orElse(MediaType.APPLICATION_OCTET_STREAM))
                        .header("Accept-Ranges", "bytes")
-                       .eTag(encodingPath)
+//                       .eTag(encodingPath)
                        .body(resourceRegion);
             } catch (IOException e) {
                 logComponent.sendErrorLog("Cloud","streamingPublicVideo error : ", e, TOPIC_CLOUD_LOG);
