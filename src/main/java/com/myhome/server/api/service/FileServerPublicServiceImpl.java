@@ -175,25 +175,18 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                     HttpRange httpRange;
                     if(httpHeaders.getRange().stream().findFirst().isPresent()){
                         httpRange = httpHeaders.getRange().stream().findFirst().get();
+                        long start = httpRange.getRangeStart(contentLength);
+                        long end = httpRange.getRangeEnd(contentLength);
+                        long rangeLength = Long.min(chunkSize, end-start+1);
+                        System.out.println("contentLength : "+contentLength+", start : "+start+", end : "+end+", rangeLength : "+rangeLength);
+
+                        resourceRegion = new ResourceRegion(resource, start, rangeLength);
                     }
                     else{
-                        httpRange = httpHeaders.getRange().get(0);
+                        resourceRegion = new ResourceRegion(resource, 0, Long.min(chunkSize, resource.contentLength()));
                     }
-                    for(HttpRange range : httpHeaders.getRange()){
-                        System.out.println(range.toString());
-                    }
-
-                    long start = httpRange.getRangeStart(contentLength);
-                    long end = httpRange.getRangeEnd(contentLength);
-                    long rangeLength = Long.min(chunkSize, end-start+1);
-                    System.out.println("contentLength : "+contentLength+", start : "+start+", end : "+end+", rangeLength : "+rangeLength);
-
-                    resourceRegion = new ResourceRegion(resource, start, rangeLength);
-                    System.out.println("resourceRegion size : " + resourceRegion.getResource().contentLength());
                 }
                 catch(Exception e){
-                    System.out.println("StreamPublicVideo Exception e : "+e.getMessage());
-                    e.printStackTrace();
                     long rangeLength = Long.min(chunkSize, resource.contentLength());
                     resourceRegion = new ResourceRegion(resource, 0, rangeLength);
                 }
@@ -403,9 +396,9 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
 
     @Override
     public void publicFileStateCheck() {
+        deleteThumbNail();
         filesWalk(diskPath);
         filesWalkTrashPath(trashPath);
-        deleteThumbNail();
     }
     @Override
     public void filesWalk(String pathUrl){
@@ -520,19 +513,24 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     @Transactional
     @Override
     public void deleteThumbNail(){
-        List<FileServerThumbNailEntity> thumbNailEntityList = thumbNailRepository.findAllNotInPublic();
-        for(FileServerThumbNailEntity entity : thumbNailEntityList){
-            String path = commonService.changeUnderBarToSeparator(entity.getPath());
-            File thumbnailFile = new File(path);
-            if(thumbnailFile.exists()){
-                if(thumbnailFile.delete()){
-                    thumbNailRepository.deleteByUuid(entity.getUuid());
-//                    logComponent.sendLog("Cloud-Check", "[deleteThumbNail(public)] files is deleted (uuid) : "+entity.getUuid(), true, TOPIC_CLOUD_CHECK_LOG);
-                }
-                else{
-                    logComponent.sendLog("Cloud-Check", "[deleteThumbNail(public)] files is doesn't delete (uuid) : "+entity.getUuid(), false, TOPIC_CLOUD_CHECK_LOG);
-                }
-            }
+        File[] thumbnailList = new File(thumbnailPath).listFiles();
+        for(File file : thumbnailList){
+            file.delete();
         }
+        thumbNailRepository.deleteAll();
+//        List<FileServerThumbNailEntity> thumbNailEntityList = thumbNailRepository.findAllNotInPublic();
+//        for(FileServerThumbNailEntity entity : thumbNailEntityList){
+//            String path = commonService.changeUnderBarToSeparator(entity.getPath());
+//            File thumbnailFile = new File(path);
+//            if(thumbnailFile.exists()){
+//                if(thumbnailFile.delete()){
+//                    thumbNailRepository.deleteByUuid(entity.getUuid());
+////                    logComponent.sendLog("Cloud-Check", "[deleteThumbNail(public)] files is deleted (uuid) : "+entity.getUuid(), true, TOPIC_CLOUD_CHECK_LOG);
+//                }
+//                else{
+//                    logComponent.sendLog("Cloud-Check", "[deleteThumbNail(public)] files is doesn't delete (uuid) : "+entity.getUuid(), false, TOPIC_CLOUD_CHECK_LOG);
+//                }
+//            }
+//        }
     }
 }
