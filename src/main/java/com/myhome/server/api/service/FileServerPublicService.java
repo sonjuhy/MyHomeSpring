@@ -24,7 +24,7 @@ public interface FileServerPublicService {
     HttpHeaders getHttpHeaderForVideo(Path path, String fileName, long fileSize) throws IOException;
     ResponseEntity<Resource> downloadFile(String uuid);
     ResponseEntity<Resource> downloadPublicMedia(String uuid);
-    ResponseEntity<ResourceRegion> streamingPublicVideo(String uuid);
+    ResponseEntity<ResourceRegion> streamingPublicVideo(HttpHeaders httpHeaders, String uuid);
     List<String> uploadFiles(MultipartFile[] files, String path, Model model);
     boolean mkdir(String path);
     boolean existsByPath(String path);

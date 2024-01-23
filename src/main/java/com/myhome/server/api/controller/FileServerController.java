@@ -262,9 +262,9 @@ public class FileServerController {
     })
     @CrossOrigin(origins = "*")
     @GetMapping("/streamingPublicVideo/{uuid}/{accessToken}")
-    public ResponseEntity<ResourceRegion> streamingPublicVideo(@PathVariable String uuid, @PathVariable String accessToken){
+    public ResponseEntity<ResourceRegion> streamingPublicVideo(@RequestHeader HttpHeaders httpHeaders, @PathVariable String uuid, @PathVariable String accessToken){
         System.out.println("streamingPublicVideo");
-        if(authService.validateAccessToken(accessToken)) return service.streamingPublicVideo(uuid);
+        if(authService.validateAccessToken(accessToken)) return service.streamingPublicVideo(httpHeaders, uuid);
         else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
     }
 
