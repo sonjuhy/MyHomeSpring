@@ -116,7 +116,25 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         httpHeaders.setContentDisposition(ContentDisposition
                 .builder("attachment") //builder type
                 .filename(fileName)
-                .build());
+                .build()
+        );
+        httpHeaders.add(HttpHeaders.CONTENT_TYPE, contentType);
+        return httpHeaders;
+    }
+
+    @Override
+    public HttpHeaders getHttpHeaderForVideo(Path path, String fileName, long fileSize) throws IOException {
+        String contentType = Files.probeContentType(path); // content type setting
+        String encodingFileName = new String(fileName.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8);
+        System.out.println("encodingFileName : "+encodingFileName);
+        HttpHeaders httpHeaders = new HttpHeaders();
+        httpHeaders.setContentDisposition(ContentDisposition
+                .builder("attachment") //builder type
+                .filename(encodingFileName)
+                .build()
+        );
+        httpHeaders.setContentLength(fileSize);
+        httpHeaders.setContentType(MediaType.parseMediaType("video/mp4"));
         httpHeaders.add(HttpHeaders.CONTENT_TYPE, contentType);
         return httpHeaders;
     }
@@ -172,7 +190,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                 long contentLength = resource.contentLength();
                 ResourceRegion resourceRegion;
                 try{
-                    HttpHeaders httpHeaders = getHttpHeader(path, entity.getName());
+                    HttpHeaders httpHeaders = getHttpHeaderForVideo(path, entity.getName(), resource.contentLength());
 
                     HttpRange httpRange = httpHeaders.getRange().stream().findFirst().get();
 
@@ -187,7 +205,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                     resourceRegion = new ResourceRegion(resource, 0, rangeLength);
                 }
                return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
-                       .cacheControl(CacheControl.maxAge(10, TimeUnit.MINUTES))
+                       .cacheControl(CacheControl.maxAge(10, TimeUnit.MINUTES)) // 10초
                        .contentType(MediaTypeFactory.getMediaType(resource).orElse(MediaType.APPLICATION_OCTET_STREAM))
                        .header("Accept-Ranges", "bytes")
                        .eTag(pathStr)
