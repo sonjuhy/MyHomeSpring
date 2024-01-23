@@ -73,7 +73,7 @@ public class FileServerCommonServiceImpl implements FileServerCommonService{
         String thumbNailPath = defaultPathEntity.getPublicDefaultPath();
         FileServerThumbNailEntity thumbNailEntity = thumbNailService.findByUUID(uuid);
         if(thumbNailEntity != null){
-            Path path = Paths.get(thumbNailEntity.getPath());
+            Path path = Paths.get(changeUnderBarToSeparator(thumbNailEntity.getPath()));
             String fileName = thumbNailEntity.getPath().replace(thumbNailPath, "");
             try{
                 HttpHeaders httpHeaders = new HttpHeaders();
@@ -90,6 +90,6 @@ public class FileServerCommonServiceImpl implements FileServerCommonService{
                 return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
             }
         }
-        return null;
+        return new ResponseEntity<>(null, HttpStatus.OK);
     }
 }

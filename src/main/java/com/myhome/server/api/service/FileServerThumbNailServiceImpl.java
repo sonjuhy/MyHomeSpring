@@ -69,7 +69,7 @@ public class FileServerThumbNailServiceImpl implements FileServerThumbNailServic
             repository.save(new FileServerThumbNailEntity(thumbNailDto));
 
         } catch (JCodecException | IOException e) {
-//            logComponent.sendErrorLog("Cloud", "makeThumbNail Error : ", e, TOPIC_CLOUD_LOG);
+            logComponent.sendErrorLog("Cloud", "makeThumbNail Error : ", e, TOPIC_CLOUD_LOG);
         }
     }
 
