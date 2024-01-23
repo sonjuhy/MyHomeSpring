@@ -21,7 +21,6 @@ public interface FileServerPublicService {
     List<FileServerPublicEntity> findByLocation(String location, int mode);
     List<FileServerPublicEntity> findByLocationPage(String location, int mode, int size, int page);
     HttpHeaders getHttpHeader(Path path, String fileName) throws IOException;
-    HttpHeaders getHttpHeaderForVideo(Path path, String fileName, long fileSize) throws IOException;
     ResponseEntity<Resource> downloadFile(String uuid);
     ResponseEntity<Resource> downloadPublicMedia(String uuid);
     ResponseEntity<ResourceRegion> streamingPublicVideo(HttpHeaders httpHeaders, String uuid);

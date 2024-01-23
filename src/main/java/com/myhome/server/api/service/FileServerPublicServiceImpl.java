@@ -123,22 +123,6 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     }
 
     @Override
-    public HttpHeaders getHttpHeaderForVideo(Path path, String fileName, long fileSize) throws IOException {
-        String contentType = Files.probeContentType(path); // content type setting
-        String encodingFileName = new String(fileName.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8);
-        HttpHeaders httpHeaders = new HttpHeaders();
-        httpHeaders.setContentDisposition(ContentDisposition
-                .builder("attachment") //builder type
-                .filename(encodingFileName)
-                .build()
-        );
-        httpHeaders.setContentLength(fileSize);
-        httpHeaders.setContentType(MediaType.parseMediaType("video/mp4"));
-        httpHeaders.add(HttpHeaders.CONTENT_TYPE, contentType);
-        return httpHeaders;
-    }
-
-    @Override
     public ResponseEntity<Resource> downloadFile(String uuid) {
         FileServerPublicEntity entity = fileServerRepository.findByUuid(uuid);
         if(entity != null){
@@ -188,13 +172,12 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                 long contentLength = resource.contentLength();
                 ResourceRegion resourceRegion;
                 try{
-//                    HttpHeaders httpHeaders = getHttpHeaderForVideo(path, entity.getName(), resource.contentLength());
-
                     HttpRange httpRange = httpHeaders.getRange().stream().findFirst().get();
 
                     long start = httpRange.getRangeStart(contentLength);
                     long end = httpRange.getRangeEnd(contentLength);
                     long rangeLength = Long.min(chunkSize, end-start+1);
+                    System.out.println("contentLength : "+contentLength+", start : "+start+", end : "+end+", rangeLength : "+rangeLength);
 
                     resourceRegion = new ResourceRegion(resource, start, rangeLength);
                 }
