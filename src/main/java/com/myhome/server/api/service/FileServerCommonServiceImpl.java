@@ -22,9 +22,10 @@ import java.util.regex.Matcher;
 @Service
 public class FileServerCommonServiceImpl implements FileServerCommonService{
 
+    private final static String defaultVideoIconPath = "__home__disk1__home__setting__video.png";
+
     @Autowired
     private FileDefaultPathRepository defaultPathRepository;
-
     @Autowired
     private FileServerThumbNailService thumbNailService;
 
@@ -72,24 +73,28 @@ public class FileServerCommonServiceImpl implements FileServerCommonService{
         FileDefaultPathEntity defaultPathEntity = defaultPathRepository.findByPathName("thumbnail");
         String thumbNailPath = defaultPathEntity.getPublicDefaultPath();
         FileServerThumbNailEntity thumbNailEntity = thumbNailService.findByUUID(uuid);
+        Path path;
         if(thumbNailEntity != null){
-            Path path = Paths.get(changeUnderBarToSeparator(thumbNailEntity.getPath()));
-            String fileName = thumbNailEntity.getPath().replace(thumbNailPath, "");
-            try{
-                HttpHeaders httpHeaders = new HttpHeaders();
-                httpHeaders.setContentDisposition(ContentDisposition
-                        .builder("attachment") //builder type
-                        .filename(fileName)
-                        .build()
-                );
-                httpHeaders.add(HttpHeaders.CONTENT_TYPE, Files.probeContentType(path));
-                Resource resource = new InputStreamResource(Files.newInputStream(path)); // save file resource
-                return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
-            }
-            catch(IOException e){
-                return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
-            }
+            path = Paths.get(changeUnderBarToSeparator(thumbNailEntity.getPath()));
         }
-        return new ResponseEntity<>(null, HttpStatus.OK);
+        else{
+            path = Paths.get(changeUnderBarToSeparator(defaultVideoIconPath));
+        }
+
+        String fileName = thumbNailEntity.getPath().replace(thumbNailPath, "");
+        try{
+            HttpHeaders httpHeaders = new HttpHeaders();
+            httpHeaders.setContentDisposition(ContentDisposition
+                    .builder("attachment") //builder type
+                    .filename(fileName)
+                    .build()
+            );
+            httpHeaders.add(HttpHeaders.CONTENT_TYPE, Files.probeContentType(path));
+            Resource resource = new InputStreamResource(Files.newInputStream(path)); // save file resource
+            return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
+        }
+        catch(IOException e){
+            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }
