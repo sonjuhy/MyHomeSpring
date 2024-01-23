@@ -183,11 +183,13 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                     System.out.println("resourceRegion size : " + resourceRegion.getResource().contentLength());
                 }
                 catch(Exception e){
+                    System.out.println("StreamPublicVideo Exception e : "+e.getMessage());
+                    e.printStackTrace();
                     long rangeLength = Long.min(chunkSize, resource.contentLength());
                     resourceRegion = new ResourceRegion(resource, 0, rangeLength);
                 }
                return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
-                       .cacheControl(CacheControl.maxAge(10, TimeUnit.MINUTES)) // 10초
+                       .cacheControl(CacheControl.maxAge(10, TimeUnit.MINUTES)) // 10분
                        .contentType(MediaTypeFactory.getMediaType(resource).orElse(MediaType.APPLICATION_OCTET_STREAM))
                        .header(HttpHeaders.ACCEPT_RANGES, "bytes")
                        .body(resourceRegion);
