@@ -74,14 +74,16 @@ public class FileServerCommonServiceImpl implements FileServerCommonService{
         String thumbNailPath = defaultPathEntity.getPublicDefaultPath();
         FileServerThumbNailEntity thumbNailEntity = thumbNailService.findByUUID(uuid);
         Path path;
+        String fileName;
         if(thumbNailEntity != null){
             path = Paths.get(changeUnderBarToSeparator(thumbNailEntity.getPath()));
+            fileName = thumbNailEntity.getPath().replace(thumbNailPath, "");
         }
         else{
             path = Paths.get(changeUnderBarToSeparator(defaultVideoIconPath));
+            fileName = "defaultVideoIcon";
         }
 
-        String fileName = thumbNailEntity.getPath().replace(thumbNailPath, "");
         try{
             HttpHeaders httpHeaders = new HttpHeaders();
             httpHeaders.setContentDisposition(ContentDisposition
