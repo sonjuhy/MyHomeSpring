@@ -8,14 +8,13 @@ import com.myhome.server.component.LogComponent;
 import com.myhome.server.db.entity.*;
 import com.myhome.server.db.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.ResourceRegion;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.ContentDisposition;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
@@ -29,6 +28,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -150,6 +150,48 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                 HttpHeaders httpHeaders = getHttpHeader(path, entity.getName());
                 Resource resource = new InputStreamResource(Files.newInputStream(path)); // save file resource
                 return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
+            } catch (IOException e) {
+                logComponent.sendErrorLog("Cloud","downloadPublicMedia error : ", e, TOPIC_CLOUD_LOG);
+                return new ResponseEntity<>(null, HttpStatus.OK);
+            }
+        }
+        logComponent.sendLog("Cloud","downloadPublicMedia error : file doesn't exist", false, TOPIC_CLOUD_LOG);
+        return new ResponseEntity<>(null, HttpStatus.OK);
+    }
+
+    @Override
+    public ResponseEntity<ResourceRegion> streamingPublicVideo(String uuid) {
+        FileServerPublicEntity entity = fileServerRepository.findByUuid(uuid);
+        if(entity != null){
+            String pathStr = commonService.changeUnderBarToSeparator(entity.getPath());
+            Path path = Paths.get(pathStr);
+
+            try{
+                Resource resource = new FileSystemResource(path);
+                long chunkSize = 1024*1024;
+                long contentLength = resource.contentLength();
+                ResourceRegion resourceRegion;
+                try{
+                    HttpHeaders httpHeaders = getHttpHeader(path, entity.getName());
+
+                    HttpRange httpRange = httpHeaders.getRange().stream().findFirst().get();
+
+                    long start = httpRange.getRangeStart(contentLength);
+                    long end = httpRange.getRangeEnd(contentLength);
+                    long rangeLength = Long.min(chunkSize, end-start+1);
+
+                    resourceRegion = new ResourceRegion(resource, start, rangeLength);
+                }
+                catch(Exception e){
+                    long rangeLength = Long.min(chunkSize, resource.contentLength());
+                    resourceRegion = new ResourceRegion(resource, 0, rangeLength);
+                }
+               return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
+                       .cacheControl(CacheControl.maxAge(10, TimeUnit.MINUTES))
+                       .contentType(MediaTypeFactory.getMediaType(resource).orElse(MediaType.APPLICATION_OCTET_STREAM))
+                       .header("Accept-Ranges", "bytes")
+                       .eTag(pathStr)
+                       .body(resourceRegion);
             } catch (IOException e) {
                 logComponent.sendErrorLog("Cloud","downloadPublicMedia error : ", e, TOPIC_CLOUD_LOG);
                 return new ResponseEntity<>(null, HttpStatus.OK);

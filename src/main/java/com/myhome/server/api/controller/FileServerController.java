@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.ResourceRegion;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -242,14 +243,27 @@ public class FileServerController {
         return service.downloadFile(dto.getUuidName());
     }
 
-    @Operation(description = "Public 파일 중 미디어(영상 등) 파일 스트리밍 및 다운로드 하는 API")
+    @Operation(description = "Public 파일 중 미디어(영상 등) 파일 다운로드 하는 API")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "정상 처리")
+            @ApiResponse(responseCode = "200", description = "정상 처리"),
+            @ApiResponse(responseCode = "401", description = "권한 에러")
     })
     @CrossOrigin(origins = "*")
     @GetMapping("/downloadPublicMedia/{uuid}/{accessToken}")
     public ResponseEntity<Resource> downloadPublicMedia(@PathVariable String uuid, @PathVariable String accessToken){
         if(authService.validateAccessToken(accessToken)) return service.downloadPublicMedia(uuid);
+        else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+    }
+
+    @Operation(description = "Public 파일 중 미디어(영상) 파일 스트리밍 하는 API")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "정상 처리"),
+            @ApiResponse(responseCode = "401", description = "권한 에러")
+    })
+    @CrossOrigin(origins = "*")
+    @GetMapping("/streamingPublicVideo/{uuid}/{accessToken}")
+    public ResponseEntity<ResourceRegion> streamingPublicVideo(@PathVariable String uuid, @PathVariable String accessToken){
+        if(authService.validateAccessToken(accessToken)) return service.streamingPublicVideo(uuid);
         else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
     }
 
