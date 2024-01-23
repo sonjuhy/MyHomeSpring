@@ -133,19 +133,7 @@ public class FileServerController {
     @GetMapping("/downloadThumbNail/{uuid}/{accessToken}")
     public ResponseEntity<Resource> downloadThumbNail(@PathVariable String uuid, @PathVariable String accessToken){
         if(authService.validateAccessToken(accessToken)) {
-            FileServerThumbNailEntity entity = thumbNailService.findByUUID(uuid);
-            if (entity != null) {
-                Path path = Paths.get(entity.getPath());
-                try {
-                    HttpHeaders httpHeaders = service.getHttpHeader(path, entity.getOriginName());
-                    Resource resource = new InputStreamResource(Files.newInputStream(path)); // save file resource
-                    return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
-                } catch (IOException e) {
-                    logComponent.sendErrorLog("Cloud", "downloadThumbnail error : ", e, TOPIC_CLOUD_LOG);
-                    return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
-                }
-            }
-            return new ResponseEntity<>(null, HttpStatus.OK);
+            return commonService.downloadThumbNail(uuid);
         }
         else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
     }
