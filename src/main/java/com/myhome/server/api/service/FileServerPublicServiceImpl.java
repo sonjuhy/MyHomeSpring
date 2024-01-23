@@ -172,7 +172,14 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                 long contentLength = resource.contentLength();
                 ResourceRegion resourceRegion;
                 try{
-                    HttpRange httpRange = httpHeaders.getRange().stream().findFirst().get();
+                    HttpRange httpRange;
+                    if(httpHeaders.getRange().stream().findFirst().isPresent()){
+                        httpRange = httpHeaders.getRange().stream().findFirst().get();
+                    }
+                    else{
+                        httpRange = getHttpHeader(path, entity.getName()).getRange().stream().findFirst().get();
+                    }
+                    System.out.println(httpHeaders.getRange());
 
                     long start = httpRange.getRangeStart(contentLength);
                     long end = httpRange.getRangeEnd(contentLength);
