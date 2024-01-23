@@ -10,5 +10,5 @@ import lombok.*;
 @AllArgsConstructor
 public class OpenWeatherForecastItemRainDto {
     @JsonProperty(value = "3h")
-    private double hour;
+    private double threeHour;
 }

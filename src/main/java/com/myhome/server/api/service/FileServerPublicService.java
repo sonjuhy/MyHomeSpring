@@ -5,6 +5,7 @@ import com.myhome.server.db.entity.FileServerPublicEntity;
 import com.myhome.server.db.entity.FileServerThumbNailEntity;
 import jakarta.transaction.Transactional;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.ResourceRegion;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.ui.Model;
@@ -22,6 +23,7 @@ public interface FileServerPublicService {
     HttpHeaders getHttpHeader(Path path, String fileName) throws IOException;
     ResponseEntity<Resource> downloadFile(String uuid);
     ResponseEntity<Resource> downloadPublicMedia(String uuid);
+    ResponseEntity<ResourceRegion> streamingPublicVideo(HttpHeaders httpHeaders, String uuid);
     List<String> uploadFiles(MultipartFile[] files, String path, Model model);
     boolean mkdir(String path);
     boolean existsByPath(String path);

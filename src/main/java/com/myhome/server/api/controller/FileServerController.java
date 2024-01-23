@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.ResourceRegion;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -46,6 +47,9 @@ public class FileServerController {
 
     @Autowired
     FileServerCommonService commonService;
+
+    @Autowired
+    AuthService authService;
 
     @Autowired
     FileDefaultPathRepository defaultPathRepository;
@@ -126,21 +130,12 @@ public class FileServerController {
             @ApiResponse(responseCode = "200", description = "정상 다운로드 혹은 파일이 없음"),
             @ApiResponse(responseCode = "500", description = "백엔드 에러")
     })
-    @GetMapping("/downloadThumbNail/{uuid}")
-    public ResponseEntity<Resource> downloadThumbNail(@PathVariable String uuid){
-        FileServerThumbNailEntity entity = thumbNailService.findByUUID(uuid);
-        if(entity != null){
-            Path path = Paths.get(entity.getPath());
-            try{
-                HttpHeaders httpHeaders = service.getHttpHeader(path, entity.getOriginName());
-                Resource resource = new InputStreamResource(Files.newInputStream(path)); // save file resource
-                return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
-            } catch (IOException e) {
-                logComponent.sendErrorLog("Cloud","downloadThumbnail error : ", e, TOPIC_CLOUD_LOG);
-                return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
-            }
+    @GetMapping("/downloadThumbNail/{uuid}/{accessToken}")
+    public ResponseEntity<Resource> downloadThumbNail(@PathVariable String uuid, @PathVariable String accessToken){
+        if(authService.validateAccessToken(accessToken)) {
+            return commonService.downloadThumbNail(uuid);
         }
-        return new ResponseEntity<>(null, HttpStatus.OK);
+        else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
     }
 
     @Operation(description = "썸네일 파일 존재하는지 확인하는 API")
@@ -236,14 +231,28 @@ public class FileServerController {
         return service.downloadFile(dto.getUuidName());
     }
 
-    @Operation(description = "Public 파일 중 미디어(영상 등) 파일 스트리밍하는 API")
+    @Operation(description = "Public 파일 중 미디어(영상 등) 파일 다운로드 하는 API")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "정상 처리")
+            @ApiResponse(responseCode = "200", description = "정상 처리"),
+            @ApiResponse(responseCode = "401", description = "권한 에러")
     })
     @CrossOrigin(origins = "*")
-    @GetMapping("/downloadPublicMedia/{uuid}")
-    public ResponseEntity<Resource> downloadPublicMedia(@PathVariable String uuid){
-        return service.downloadPublicMedia(uuid);
+    @GetMapping("/downloadPublicMedia/{uuid}/{accessToken}")
+    public ResponseEntity<Resource> downloadPublicMedia(@PathVariable String uuid, @PathVariable String accessToken){
+        if(authService.validateAccessToken(accessToken)) return service.downloadPublicMedia(uuid);
+        else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+    }
+
+    @Operation(description = "Public 파일 중 미디어(영상) 파일 스트리밍 하는 API")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "정상 처리"),
+            @ApiResponse(responseCode = "401", description = "권한 에러")
+    })
+    @CrossOrigin(origins = "*")
+    @GetMapping("/streamingPublicVideo/{uuid}/{accessToken}")
+    public ResponseEntity<ResourceRegion> streamingPublicVideo(@RequestHeader HttpHeaders httpHeaders, @PathVariable String uuid, @PathVariable String accessToken){
+        if(authService.validateAccessToken(accessToken)) return service.streamingPublicVideo(httpHeaders, uuid);
+        else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
     }
 
     @Operation(description = "Public 휴지통 파일 목록 중 원하는 폴더 기준으로 다 받아 오는 API")
@@ -398,9 +407,22 @@ public class FileServerController {
             @ApiResponse(responseCode = "200", description = "정상 처리")
     })
     @CrossOrigin(origins = "*")
-    @GetMapping("/downloadPrivateMedia/{uuid}")
-    public ResponseEntity<Resource> downloadPrivateMedia(@PathVariable String uuid){
-        return privateService.downloadPrivateMedia(uuid);
+    @GetMapping("/downloadPrivateMedia/{uuid}/{accessToken}")
+    public ResponseEntity<Resource> downloadPrivateMedia(@PathVariable String uuid, @PathVariable String accessToken){
+        if(authService.validateAccessToken(accessToken)) return privateService.downloadPrivateMedia(uuid);
+        else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+    }
+
+    @Operation(description = "Public 파일 중 미디어(영상) 파일 스트리밍 하는 API")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "정상 처리"),
+            @ApiResponse(responseCode = "401", description = "권한 에러")
+    })
+    @CrossOrigin(origins = "*")
+    @GetMapping("/streamingPrivateVideo/{uuid}/{accessToken}")
+    public ResponseEntity<ResourceRegion> streamingPrivateVideo(@RequestHeader HttpHeaders httpHeaders, @PathVariable String uuid, @PathVariable String accessToken){
+        if(authService.validateAccessToken(accessToken)) return privateService.streamingPrivateVideo(httpHeaders, uuid);
+        else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
     }
 
     @Operation(description = "Private 의 휴지통(개인)에서 원하는 폴더 내 파일 리스트 불러오는 API")
