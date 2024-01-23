@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.ResourceRegion;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -132,19 +133,7 @@ public class FileServerController {
     @GetMapping("/downloadThumbNail/{uuid}/{accessToken}")
     public ResponseEntity<Resource> downloadThumbNail(@PathVariable String uuid, @PathVariable String accessToken){
         if(authService.validateAccessToken(accessToken)) {
-            FileServerThumbNailEntity entity = thumbNailService.findByUUID(uuid);
-            if (entity != null) {
-                Path path = Paths.get(entity.getPath());
-                try {
-                    HttpHeaders httpHeaders = service.getHttpHeader(path, entity.getOriginName());
-                    Resource resource = new InputStreamResource(Files.newInputStream(path)); // save file resource
-                    return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
-                } catch (IOException e) {
-                    logComponent.sendErrorLog("Cloud", "downloadThumbnail error : ", e, TOPIC_CLOUD_LOG);
-                    return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
-                }
-            }
-            return new ResponseEntity<>(null, HttpStatus.OK);
+            return commonService.downloadThumbNail(uuid);
         }
         else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
     }
@@ -242,14 +231,27 @@ public class FileServerController {
         return service.downloadFile(dto.getUuidName());
     }
 
-    @Operation(description = "Public 파일 중 미디어(영상 등) 파일 스트리밍 및 다운로드 하는 API")
+    @Operation(description = "Public 파일 중 미디어(영상 등) 파일 다운로드 하는 API")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "정상 처리")
+            @ApiResponse(responseCode = "200", description = "정상 처리"),
+            @ApiResponse(responseCode = "401", description = "권한 에러")
     })
     @CrossOrigin(origins = "*")
     @GetMapping("/downloadPublicMedia/{uuid}/{accessToken}")
     public ResponseEntity<Resource> downloadPublicMedia(@PathVariable String uuid, @PathVariable String accessToken){
         if(authService.validateAccessToken(accessToken)) return service.downloadPublicMedia(uuid);
+        else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+    }
+
+    @Operation(description = "Public 파일 중 미디어(영상) 파일 스트리밍 하는 API")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "정상 처리"),
+            @ApiResponse(responseCode = "401", description = "권한 에러")
+    })
+    @CrossOrigin(origins = "*")
+    @GetMapping("/streamingPublicVideo/{uuid}/{accessToken}")
+    public ResponseEntity<ResourceRegion> streamingPublicVideo(@RequestHeader HttpHeaders httpHeaders, @PathVariable String uuid, @PathVariable String accessToken){
+        if(authService.validateAccessToken(accessToken)) return service.streamingPublicVideo(httpHeaders, uuid);
         else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
     }
 
@@ -408,6 +410,18 @@ public class FileServerController {
     @GetMapping("/downloadPrivateMedia/{uuid}/{accessToken}")
     public ResponseEntity<Resource> downloadPrivateMedia(@PathVariable String uuid, @PathVariable String accessToken){
         if(authService.validateAccessToken(accessToken)) return privateService.downloadPrivateMedia(uuid);
+        else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+    }
+
+    @Operation(description = "Public 파일 중 미디어(영상) 파일 스트리밍 하는 API")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "정상 처리"),
+            @ApiResponse(responseCode = "401", description = "권한 에러")
+    })
+    @CrossOrigin(origins = "*")
+    @GetMapping("/streamingPrivateVideo/{uuid}/{accessToken}")
+    public ResponseEntity<ResourceRegion> streamingPrivateVideo(@RequestHeader HttpHeaders httpHeaders, @PathVariable String uuid, @PathVariable String accessToken){
+        if(authService.validateAccessToken(accessToken)) return privateService.streamingPrivateVideo(httpHeaders, uuid);
         else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
     }
 

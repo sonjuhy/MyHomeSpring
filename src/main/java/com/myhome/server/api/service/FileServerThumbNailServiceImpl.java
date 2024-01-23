@@ -13,6 +13,7 @@ import org.jcodec.common.model.Picture;
 import org.jcodec.scale.AWTUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -49,6 +50,7 @@ public class FileServerThumbNailServiceImpl implements FileServerThumbNailServic
         return repository.findByUuid(uuid);
     }
 
+    @Transactional
     @Override
     public void makeThumbNail(File file, String uuid, String type) {
         File thumbnail = new File(uploadPath, uuid+".png");
@@ -64,13 +66,17 @@ public class FileServerThumbNailServiceImpl implements FileServerThumbNailServic
             BufferedImage bi = AWTUtil.toBufferedImage(picture);
             ImageIO.write(bi, "png", thumbnail);
 
-            String fileLocation = uploadPath+File.separator+uuid+".png";
+            String fileLocation = changeSeparatorToUnderBar(uploadPath+File.separator+uuid+".png");
             FileServerThumbNailDto thumbNailDto = new FileServerThumbNailDto(0, uuid, fileLocation, file.getName(), type);
             repository.save(new FileServerThumbNailEntity(thumbNailDto));
 
         } catch (JCodecException | IOException e) {
-//            logComponent.sendErrorLog("Cloud", "makeThumbNail Error : ", e, TOPIC_CLOUD_LOG);
+            if(thumbnail.exists()) {
+                thumbnail.delete();
+            }
+//            logComponent.sendErrorLog("Cloud-Check", "makeThumbNail Error : ", e, TOPIC_CLOUD_LOG);
         }
+
     }
 
     @Override

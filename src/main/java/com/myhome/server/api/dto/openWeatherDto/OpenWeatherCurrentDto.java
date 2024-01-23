@@ -18,6 +18,7 @@ public class OpenWeatherCurrentDto {
     private int visibility;
     private OpenWeatherCurrentItemWindDto wind;
     private OpenWeatherCurrentItemRainDto rain;
+    private OpenWeatherCurrentItemSnowDto snow;
     private OpenWeatherCurrentItemCloudDto clouds;
     private int dt;
     private OpenWeatherCurrentItemSysDto sys;
