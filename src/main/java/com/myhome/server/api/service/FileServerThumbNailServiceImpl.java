@@ -67,7 +67,8 @@ public class FileServerThumbNailServiceImpl implements FileServerThumbNailServic
             ImageIO.write(bi, "png", thumbnail);
 
         } catch (JCodecException | IOException e) {
-            logComponent.sendErrorLog("Cloud-Check", "makeThumbNail Error : ", e, TOPIC_CLOUD_LOG);
+            System.out.println("makeThumbnail error file name : " + file.getName()+", file exist : "+thumbnail.exists());
+//            logComponent.sendErrorLog("Cloud-Check", "makeThumbNail Error : ", e, TOPIC_CLOUD_LOG);
         }
         if(thumbnail.exists()) {
             String fileLocation = changeSeparatorToUnderBar(uploadPath+File.separator+uuid+".png");
