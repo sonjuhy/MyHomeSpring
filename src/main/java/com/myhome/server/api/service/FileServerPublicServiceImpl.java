@@ -73,10 +73,10 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         producer = kafkaProducer;
         logComponent = component;
 
-        logComponent.sendLog("Cloud",
-                "[FileServerPublicServiceImpl] diskPath : "+diskPath+", trashPath : "+trashPath+", thumbnailPath : " + thumbnailPath,
-                true,
-                TOPIC_CLOUD_LOG);
+//        logComponent.sendLog("Cloud",
+//                "[FileServerPublicServiceImpl] diskPath : "+diskPath+", trashPath : "+trashPath+", thumbnailPath : " + thumbnailPath,
+//                true,
+//                TOPIC_CLOUD_LOG);
     }
 
     @Override
@@ -183,7 +183,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         if(entity != null){
             String pathStr = commonService.changeUnderBarToSeparator(entity.getPath());
             Path path = Paths.get(pathStr);
-
+            System.out.println("path : "+path.toFile().getPath());
             try{
                 Resource resource = new FileSystemResource(path);
                 long chunkSize = 1024*1024;
@@ -211,11 +211,11 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                        .eTag(pathStr)
                        .body(resourceRegion);
             } catch (IOException e) {
-                logComponent.sendErrorLog("Cloud","downloadPublicMedia error : ", e, TOPIC_CLOUD_LOG);
+                logComponent.sendErrorLog("Cloud","streamingPublicVideo error : ", e, TOPIC_CLOUD_LOG);
                 return new ResponseEntity<>(null, HttpStatus.OK);
             }
         }
-        logComponent.sendLog("Cloud","downloadPublicMedia error : file doesn't exist", false, TOPIC_CLOUD_LOG);
+        logComponent.sendLog("Cloud","streamingPublicVideo error : file doesn't exist", false, TOPIC_CLOUD_LOG);
         return new ResponseEntity<>(null, HttpStatus.OK);
     }
 

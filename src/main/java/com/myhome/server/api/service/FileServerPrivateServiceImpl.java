@@ -83,10 +83,10 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
 
         producer = kafkaProducer;
         logComponent = component;
-        logComponent.sendLog("Cloud",
-                "[FileServerPrivateServiceImpl] diskPath : "+diskPath+", trashPath : "+trashPath+", thumbnailPath : " + thumbnailPath,
-                true,
-                TOPIC_CLOUD_LOG);
+//        logComponent.sendLog("Cloud",
+//                "[FileServerPrivateServiceImpl] diskPath : "+diskPath+", trashPath : "+trashPath+", thumbnailPath : " + thumbnailPath,
+//                true,
+//                TOPIC_CLOUD_LOG);
 
     }
 
