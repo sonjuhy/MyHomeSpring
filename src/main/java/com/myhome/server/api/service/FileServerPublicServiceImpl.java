@@ -422,7 +422,6 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                     for(int i=0;i<tmpPathArr.length-1;i++){
                         sb.append(tmpPathArr[i]).append("__");
                     }
-//                    String tmpLocation = commonService.changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
                     String tmpLocation = sb.toString();
 
                     String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();

@@ -496,7 +496,14 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
                     extension = file.getName().substring(file.getName().lastIndexOf(".") + 1); // file type (need to check ex: txt file -> text/plan)
                 }
                 try {
-                    String tmpPath = commonService.changeSeparatorToUnderBar(file.getPath()), tmpLocation = commonService.changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
+                    String tmpPath = commonService.changeSeparatorToUnderBar(file.getPath());
+                    StringBuilder sb = new StringBuilder();
+                    String[] tmpPathArr = tmpPath.split("__");
+                    for(int i=0;i<tmpPathArr.length-1;i++){
+                        sb.append(tmpPathArr[i]).append("__");
+                    }
+                    String tmpLocation = sb.toString();
+
                     String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
                     fileList.add(new FileServerPrivateDto(
                             tmpPath,
