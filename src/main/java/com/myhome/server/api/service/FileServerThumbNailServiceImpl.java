@@ -80,7 +80,7 @@ public class FileServerThumbNailServiceImpl implements FileServerThumbNailServic
             FrameGrab frameGrab = FrameGrab.createFrameGrab(NIOUtils.readableChannel(file));
 
             // 첫 프레임의 데이터
-            frameGrab.seekToSecondPrecise(0);
+            frameGrab.seekToSecondPrecise(1);
 
             Picture picture = frameGrab.getNativeFrame();
 
