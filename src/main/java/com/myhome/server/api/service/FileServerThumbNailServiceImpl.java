@@ -56,6 +56,7 @@ public class FileServerThumbNailServiceImpl implements FileServerThumbNailServic
 
     @Override
     public void setThumbNail(List<File> files, String type) {
+        System.out.println("setThumbNail files size : "+files.size());
         List<FileServerThumbNailEntity> entityList = new ArrayList<>();
         for(File file : files){
             String uuid = UUID.nameUUIDFromBytes(changeSeparatorToUnderBar(file.getPath()).getBytes(StandardCharsets.UTF_8)).toString();
@@ -63,9 +64,11 @@ public class FileServerThumbNailServiceImpl implements FileServerThumbNailServic
             FileServerThumbNailDto thumbNailDto = new FileServerThumbNailDto(0, uuid, fileLocation, file.getName(), type);
 
             if(makeThumbNail(file, uuid, type)){
+                System.out.println("setThumbNail success uuid : "+uuid);
                 entityList.add(new FileServerThumbNailEntity(thumbNailDto));
             }
         }
+        System.out.println("setThumbNail entity List size : "+entityList.size());
         repository.saveAll(entityList);
     }
 
@@ -84,14 +87,12 @@ public class FileServerThumbNailServiceImpl implements FileServerThumbNailServic
             // 썸네일 파일에 복사
             BufferedImage bi = AWTUtil.toBufferedImage(picture);
             ImageIO.write(bi, "png", thumbnail);
-//            String fileLocation = changeSeparatorToUnderBar(uploadPath+File.separator+uuid+".png");
-//            FileServerThumbNailDto thumbNailDto = new FileServerThumbNailDto(0, uuid, fileLocation, file.getName(), type);
-//            repository.save(new FileServerThumbNailEntity(thumbNailDto));
 
         } catch (JCodecException | IOException e) {
             if(thumbnail.exists()) {
                 thumbnail.delete();
             }
+            System.out.println("makeThumbNail error : "+e.getMessage());
 //            logComponent.sendErrorLog("Cloud-Check", "makeThumbNail Error : ", e, TOPIC_CLOUD_LOG);
             return false;
         }
