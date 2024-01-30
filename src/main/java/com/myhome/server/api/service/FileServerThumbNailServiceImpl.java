@@ -88,7 +88,7 @@ public class FileServerThumbNailServiceImpl implements FileServerThumbNailServic
             BufferedImage bi = AWTUtil.toBufferedImage(picture);
             ImageIO.write(bi, "png", thumbnail);
 
-        } catch (JCodecException | IOException e) {
+        } catch (Exception e) {
             if(thumbnail.exists()) {
                 thumbnail.delete();
             }
