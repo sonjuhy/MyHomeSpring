@@ -19,6 +19,10 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 import java.util.regex.Matcher;
 
 @Service
@@ -50,9 +54,24 @@ public class FileServerThumbNailServiceImpl implements FileServerThumbNailServic
         return repository.findByUuid(uuid);
     }
 
+    @Override
+    public void setThumbNail(List<File> files, String type) {
+        List<FileServerThumbNailEntity> entityList = new ArrayList<>();
+        for(File file : files){
+            String uuid = UUID.nameUUIDFromBytes(changeSeparatorToUnderBar(file.getPath()).getBytes(StandardCharsets.UTF_8)).toString();
+            String fileLocation = changeSeparatorToUnderBar(uploadPath+File.separator+uuid+".png");
+            FileServerThumbNailDto thumbNailDto = new FileServerThumbNailDto(0, uuid, fileLocation, file.getName(), type);
+
+            if(makeThumbNail(file, uuid, type)){
+                entityList.add(new FileServerThumbNailEntity(thumbNailDto));
+            }
+        }
+        repository.saveAll(entityList);
+    }
+
     @Transactional
     @Override
-    public void makeThumbNail(File file, String uuid, String type) {
+    public boolean makeThumbNail(File file, String uuid, String type) {
         File thumbnail = new File(uploadPath, uuid+".png");
         try{
             FrameGrab frameGrab = FrameGrab.createFrameGrab(NIOUtils.readableChannel(file));
@@ -65,18 +84,18 @@ public class FileServerThumbNailServiceImpl implements FileServerThumbNailServic
             // 썸네일 파일에 복사
             BufferedImage bi = AWTUtil.toBufferedImage(picture);
             ImageIO.write(bi, "png", thumbnail);
-
-            String fileLocation = changeSeparatorToUnderBar(uploadPath+File.separator+uuid+".png");
-            FileServerThumbNailDto thumbNailDto = new FileServerThumbNailDto(0, uuid, fileLocation, file.getName(), type);
-            repository.save(new FileServerThumbNailEntity(thumbNailDto));
+//            String fileLocation = changeSeparatorToUnderBar(uploadPath+File.separator+uuid+".png");
+//            FileServerThumbNailDto thumbNailDto = new FileServerThumbNailDto(0, uuid, fileLocation, file.getName(), type);
+//            repository.save(new FileServerThumbNailEntity(thumbNailDto));
 
         } catch (JCodecException | IOException e) {
             if(thumbnail.exists()) {
                 thumbnail.delete();
             }
 //            logComponent.sendErrorLog("Cloud-Check", "makeThumbNail Error : ", e, TOPIC_CLOUD_LOG);
+            return false;
         }
-
+        return true;
     }
 
     @Override

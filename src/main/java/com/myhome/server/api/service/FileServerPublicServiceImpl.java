@@ -3,6 +3,7 @@ package com.myhome.server.api.service;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.myhome.server.api.dto.FileServerPublicDto;
+import com.myhome.server.api.dto.FileServerThumbNailDto;
 import com.myhome.server.component.KafkaProducer;
 import com.myhome.server.component.LogComponent;
 import com.myhome.server.db.entity.*;
@@ -457,12 +458,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                 }
             }
             fileServerCustomRepository.saveBatchPublic(fileList);
-            for(File file : mediaFileList){
-                thumbNailService.makeThumbNail(file,
-                        UUID.nameUUIDFromBytes(commonService.changeSeparatorToUnderBar(file.getPath()).getBytes(StandardCharsets.UTF_8)).toString(),
-                        "public"
-                );
-            }
+            thumbNailService.setThumbNail(mediaFileList, "public");
         }
         catch (Exception e){
             logComponent.sendErrorLog("Cloud-Check", "[filesWalk(public)] file check error : ", e, TOPIC_CLOUD_CHECK_LOG);
