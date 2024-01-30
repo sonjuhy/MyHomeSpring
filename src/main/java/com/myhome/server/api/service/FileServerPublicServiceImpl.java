@@ -109,6 +109,19 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     }
 
     @Override
+    public List<FileServerPublicTrashEntity> findByLocationTrash(String location) {
+        List<FileServerPublicTrashEntity> list = fileServerPublicTrashRepository.findByLocation(location);
+        return list;
+    }
+
+    @Override
+    public List<FileServerPublicTrashEntity> findByLocationPageTrash(String location, int size, int page) {
+        Pageable pageable = PageRequest.of(page, size);
+        List<FileServerPublicTrashEntity> list = fileServerPublicTrashRepository.findByLocation(location, pageable);
+        return list;
+    }
+
+    @Override
     public HttpHeaders getHttpHeader(Path path, String fileName) throws IOException {
         String contentType = Files.probeContentType(path); // content type setting
 

@@ -1,6 +1,7 @@
 package com.myhome.server.api.service;
 
 import com.myhome.server.db.entity.FileServerPrivateEntity;
+import com.myhome.server.db.entity.FileServerPrivateTrashEntity;
 import jakarta.transaction.Transactional;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.ResourceRegion;
@@ -19,6 +20,8 @@ public interface FileServerPrivateService {
     FileServerPrivateEntity findByUuid(String uuid);
     List<FileServerPrivateEntity> findByLocation(String location, int mode);
     List<FileServerPrivateEntity> findByLocationPage(String location, int mode, int size, int page);
+    List<FileServerPrivateTrashEntity> findByLocationTrash(String location);
+    List<FileServerPrivateTrashEntity> findByLocationPageTrash(String location, int size, int page);
     List<FileServerPrivateEntity> findByOwner(String owner);
     HttpHeaders getHttpHeaders(Path path, String fileName) throws IOException;
     ResponseEntity<Resource> downloadFile(String uuid);

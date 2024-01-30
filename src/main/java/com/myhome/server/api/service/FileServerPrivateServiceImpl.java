@@ -123,6 +123,19 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
     }
 
     @Override
+    public List<FileServerPrivateTrashEntity> findByLocationTrash(String location) {
+        List<FileServerPrivateTrashEntity> list = trashRepository.findByLocation(location);
+        return list;
+    }
+
+    @Override
+    public List<FileServerPrivateTrashEntity> findByLocationPageTrash(String location, int size, int page) {
+        Pageable pageable = PageRequest.of(page, size);
+        List<FileServerPrivateTrashEntity> list = trashRepository.findByLocation(location, pageable);
+        return list;
+    }
+
+    @Override
     public List<FileServerPrivateEntity> findByOwner(String owner) {
         List<FileServerPrivateEntity> list = repository.findByOwner(owner);
         return list;

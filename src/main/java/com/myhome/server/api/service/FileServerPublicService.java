@@ -2,6 +2,7 @@ package com.myhome.server.api.service;
 
 import com.myhome.server.db.entity.FileServerPrivateEntity;
 import com.myhome.server.db.entity.FileServerPublicEntity;
+import com.myhome.server.db.entity.FileServerPublicTrashEntity;
 import com.myhome.server.db.entity.FileServerThumbNailEntity;
 import jakarta.transaction.Transactional;
 import org.springframework.core.io.Resource;
@@ -20,6 +21,8 @@ public interface FileServerPublicService {
     FileServerPublicEntity findByUuidName(String uuid);
     List<FileServerPublicEntity> findByLocation(String location, int mode);
     List<FileServerPublicEntity> findByLocationPage(String location, int mode, int size, int page);
+    List<FileServerPublicTrashEntity> findByLocationTrash(String location);
+    List<FileServerPublicTrashEntity> findByLocationPageTrash(String location, int size, int page);
     HttpHeaders getHttpHeader(Path path, String fileName) throws IOException;
     ResponseEntity<Resource> downloadFile(String uuid);
     ResponseEntity<Resource> downloadPublicMedia(String uuid);
@@ -40,3 +43,4 @@ public interface FileServerPublicService {
     void filesWalkTrashPath(String pathUrl);
     void deleteThumbNail();
 }
+
