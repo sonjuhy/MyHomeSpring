@@ -466,10 +466,12 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                     .mapToObj(i -> mediaFileList.subList(i * partitionSize, Math.min((i + 1) * partitionSize, mediaFileList.size())))
                     .toList();
             for(int i=0;i<10;i++){
+                System.out.println("FileServerPublicServiceImpl make Thumbnail i : "+i);
                 List<File> list = groups.get(i);
                 CompletableFuture<List<FileServerThumbNailEntity>> futureResult =  thumbNailService.setThumbNail(list, "public");
                 futureResult.thenAccept(result -> {
                     thumbNailRepository.saveAll(result);
+                    System.out.println("FileServerPublicServiceImpl make Thumbnail end");
                 });
             }
 
