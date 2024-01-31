@@ -29,8 +29,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 @Service
@@ -458,7 +460,19 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                 }
             }
             fileServerCustomRepository.saveBatchPublic(fileList);
-            thumbNailService.setThumbNail(mediaFileList, "public");
+
+            int partitionSize = (int) Math.ceil((double) mediaFileList.size() / 10);
+            List<List<File>> groups = IntStream.range(0, 10)
+                    .mapToObj(i -> mediaFileList.subList(i * partitionSize, Math.min((i + 1) * partitionSize, mediaFileList.size())))
+                    .toList();
+            for(int i=0;i<10;i++){
+                List<File> list = groups.get(i);
+                CompletableFuture<List<FileServerThumbNailEntity>> futureResult =  thumbNailService.setThumbNail(list, "public");
+                futureResult.thenAccept(result -> {
+                    thumbNailRepository.saveAll(result);
+                });
+            }
+
         }
         catch (Exception e){
             logComponent.sendErrorLog("Cloud-Check", "[filesWalk(public)] file check error : ", e, TOPIC_CLOUD_CHECK_LOG);

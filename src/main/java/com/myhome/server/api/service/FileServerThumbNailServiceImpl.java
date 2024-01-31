@@ -12,6 +12,7 @@ import org.jcodec.common.io.NIOUtils;
 import org.jcodec.common.model.Picture;
 import org.jcodec.scale.AWTUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 
 @Service
@@ -54,9 +56,10 @@ public class FileServerThumbNailServiceImpl implements FileServerThumbNailServic
         return repository.findByUuid(uuid);
     }
 
+    @Async
     @Override
-    public void setThumbNail(List<File> files, String type) {
-        System.out.println("setThumbNail files size : "+files.size());
+    public CompletableFuture<List<FileServerThumbNailEntity>> setThumbNail(List<File> files, String type) {
+//        System.out.println("setThumbNail files size : "+files.size());
         List<FileServerThumbNailEntity> entityList = new ArrayList<>();
         for(File file : files){
             String uuid = UUID.nameUUIDFromBytes(changeSeparatorToUnderBar(file.getPath()).getBytes(StandardCharsets.UTF_8)).toString();
@@ -64,12 +67,12 @@ public class FileServerThumbNailServiceImpl implements FileServerThumbNailServic
             FileServerThumbNailDto thumbNailDto = new FileServerThumbNailDto(0, uuid, fileLocation, file.getName(), type);
 
             if(makeThumbNail(file, uuid, type)){
-                System.out.println("setThumbNail success uuid : "+uuid);
+//                System.out.println("setThumbNail success uuid : "+uuid);
                 entityList.add(new FileServerThumbNailEntity(thumbNailDto));
             }
         }
-        System.out.println("setThumbNail entity List size : "+entityList.size());
-        repository.saveAll(entityList);
+//        System.out.println("setThumbNail entity List size : "+entityList.size());
+        return CompletableFuture.completedFuture(entityList);
     }
 
     @Transactional
