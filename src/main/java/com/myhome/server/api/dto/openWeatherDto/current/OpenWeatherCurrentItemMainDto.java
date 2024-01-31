@@ -12,7 +12,7 @@ import lombok.*;
 @JsonNaming(value = PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class OpenWeatherCurrentItemMainDto {
     private float temp;
-    private float fellsLike;
+    private float feelsLike;
     private float tempMin;
     private float tempMax;
     private int pressure;
