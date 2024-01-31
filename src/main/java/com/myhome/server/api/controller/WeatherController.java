@@ -2,6 +2,7 @@ package com.myhome.server.api.controller;
 
 import com.myhome.server.api.dto.LocationDto;
 import com.myhome.server.api.dto.SGISDto.SGISAddressDto;
+import com.myhome.server.api.dto.openWeatherDto.ForecastDayDto;
 import com.myhome.server.api.dto.openWeatherDto.OpenWeatherCurrentDto;
 import com.myhome.server.api.dto.openWeatherDto.OpenWeatherForecastDto;
 import com.myhome.server.api.dto.WeatherDto;
@@ -47,6 +48,16 @@ public class WeatherController {
         return new ResponseEntity<>(dto, HttpStatus.OK);
     }
 
+    @Operation(description = "5일간 각각 날의 평균 날씨 데이터 API. lat : 위도, lon : 경도")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "null 일 경우 백엔드 에러. 그 외 정상 처리 자세한 정보는 https://openweathermap.org/current 참조")
+    })
+    @GetMapping("/getForecastAverageInfo")
+    public ResponseEntity<List<ForecastDayDto>> get5DayAverageWeatherInfo(@RequestParam double lat, @RequestParam double lon){
+        List<ForecastDayDto> list = weatherService.get5DayAverageWeatherInfo(lat, lon);
+        return new ResponseEntity<>(list, HttpStatus.OK);
+    }
+
     @Operation(description = "도시의 x, y 좌표를 경도, 위도로 변경하는 API")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "null 일 경우 백엔드 에러. 그 외 정상 처리")
@@ -75,6 +86,16 @@ public class WeatherController {
     public ResponseEntity<OpenWeatherForecastDto> getForecastInfoByCoordinate(@PathVariable int x, @PathVariable int y){
         OpenWeatherForecastDto dto = weatherService.getForecastWeatherInfoByCoordinate(x, y);
         return new ResponseEntity<>(dto, HttpStatus.OK);
+    }
+
+    @Operation(description = "도시의 x, y 좌표를 이용하여 5일의 각각 날의 평균 데이터 얻는 API")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "null 일 경우 백엔드 에러. 그 외 정상 처리 자세한 정보는 https://openweathermap.org/current 참조")
+    })
+    @GetMapping("/getForecastAverageInfoByCoordinate/{x}/{y}")
+    public ResponseEntity<List<ForecastDayDto>> get5DayAverageWeatherInfoByCoordinate(@PathVariable int x, @PathVariable int y){
+        List<ForecastDayDto> list = weatherService.get5DayAverageWeatherInfoByCoordinate(x, y);
+        return new ResponseEntity<>(list, HttpStatus.OK);
     }
 
     /*

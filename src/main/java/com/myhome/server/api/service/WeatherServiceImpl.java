@@ -6,9 +6,13 @@ import com.myhome.server.api.dto.SGISDto.SGISAddressDto;
 import com.myhome.server.api.dto.SGISDto.geoCodeDto.GeoCodeDto;
 import com.myhome.server.api.dto.SGISDto.tokenDto.SGISTokenDto;
 import com.myhome.server.api.dto.SGISDto.tokenDto.SGISTokenResultDto;
+import com.myhome.server.api.dto.openWeatherDto.ForecastDayDto;
 import com.myhome.server.api.dto.openWeatherDto.OpenWeatherCurrentDto;
 import com.myhome.server.api.dto.openWeatherDto.OpenWeatherForecastDto;
 import com.myhome.server.api.dto.WeatherDto;
+import com.myhome.server.api.dto.openWeatherDto.forecast.OpenWeatherForecastItemDto;
+import com.myhome.server.api.dto.openWeatherDto.forecast.OpenWeatherForecastItemMainDto;
+import com.myhome.server.api.dto.openWeatherDto.forecast.OpenWeatherForecastItemWeatherDto;
 import com.myhome.server.component.KafkaProducer;
 import com.myhome.server.component.LogComponent;
 import com.myhome.server.db.entity.WeatherAPIKeyEntity;
@@ -41,6 +45,7 @@ public class WeatherServiceImpl implements WeatherService{
     private String SGIS_SECURITY_KEY;
     private String SGIS_SERVICE_KEY;
     private String OPENWEATHERAPI_KEY;
+    private HashMap<Integer, String> openWeatherAPIWeatherHash;
 
     private final String TOPIC_WEATHER_LOG = "weather-log-topic";
 
@@ -64,6 +69,17 @@ public class WeatherServiceImpl implements WeatherService{
         OPENWEATHERAPI_KEY = weatherAPIKeyRepository.findByServiceName("OpenWeatherAPI").getKey();
         SGIS_SERVICE_KEY = weatherAPIKeyRepository.findByServiceName("SGISServiceKey").getKey();
         SGIS_SECURITY_KEY = weatherAPIKeyRepository.findByServiceName("SGISSecurityKey").getKey();
+
+        // Thunderstorm, Drizzle, Rain, Snow, Atmosphere, Clear, Clouds
+        openWeatherAPIWeatherHash = new HashMap<>();
+        openWeatherAPIWeatherHash.put(0, "Clear");
+        openWeatherAPIWeatherHash.put(1, "Clouds");
+        openWeatherAPIWeatherHash.put(2, "Atmosphere");
+        openWeatherAPIWeatherHash.put(3, "Rain");
+        openWeatherAPIWeatherHash.put(4, "Snow");
+        openWeatherAPIWeatherHash.put(5, "Drizzle");
+        openWeatherAPIWeatherHash.put(6, "Thunderstorm");
+
         System.out.println("open api : "+OPENWEATHERAPI_KEY);
         System.out.println("service key : "+SGIS_SERVICE_KEY);
         System.out.println("security key : "+SGIS_SECURITY_KEY);
@@ -894,6 +910,21 @@ public class WeatherServiceImpl implements WeatherService{
                 )
                 .retrieve()
                 .bodyToMono(OpenWeatherCurrentDto.class)
+                .map(response -> {
+                    response.getMain().setTempMin(
+                            (float) ((float) Math.round((response.getMain().getTempMin() - 273.15)*100)/100.0)
+                    );
+                    response.getMain().setTempMax(
+                            (float) ((float) Math.round((response.getMain().getTempMax() - 273.15)*100)/100.0)
+                    );
+                    response.getMain().setTemp(
+                            (float) ((float) Math.round((response.getMain().getTemp() - 273.15)*100)/100.0)
+                    );
+                    response.getMain().setFeelsLike(
+                            (float) ((float) Math.round((response.getMain().getFeelsLike() - 273.15)*100)/100.0)
+                    );
+                    return response;
+                })
                 .block();
     }
 
@@ -911,6 +942,23 @@ public class WeatherServiceImpl implements WeatherService{
                 )
                 .retrieve()
                 .bodyToMono(OpenWeatherForecastDto.class)
+                .map(response -> {
+                    for(OpenWeatherForecastItemDto dto : response.getList()){
+                        dto.getMain().setTempMin(
+                                (float) ((float) Math.round((dto.getMain().getTempMin() - 273.15)*100)/100.0)
+                        );
+                        dto.getMain().setTempMax(
+                                (float) ((float) Math.round((dto.getMain().getTempMax() - 273.15)*100)/100.0)
+                        );
+                        dto.getMain().setTemp(
+                                (float) ((float) Math.round((dto.getMain().getTemp() - 273.15)*100)/100.0)
+                        );
+                        dto.getMain().setFeelsLike(
+                                (float) ((float) Math.round((dto.getMain().getFeelsLike() - 273.15)*100)/100.0)
+                        );
+                    }
+                    return response;
+                })
                 .block();
     }
 
@@ -926,6 +974,122 @@ public class WeatherServiceImpl implements WeatherService{
         double[] lonLat = convertCoordinate(x, y);
         if(lonLat == null) return null;
         return getForecastWeatherInfo(lonLat[1], lonLat[0]);
+    }
+
+    @Override
+    public List<ForecastDayDto> get5DayAverageWeatherInfo(double lat, double lon) {
+        List<ForecastDayDto> list = new ArrayList<>();
+        List<OpenWeatherForecastItemDto> itemList = getForecastWeatherInfo(lat, lon).getList();
+        float min = 1000, max = 0;
+        int weatherMax = 0, point = 0;
+
+        int[] weatherCount = new int[7];
+        for(int i=0;i<40;i++){
+            OpenWeatherForecastItemWeatherDto weatherDto = itemList.get(i).getWeather().get(0);
+            OpenWeatherForecastItemMainDto weatherMainDto = itemList.get(i).getMain();
+            switch(weatherDto.getMain()){
+                case "Clear":
+                    weatherCount[0]++;
+                    break;
+                case "Clouds":
+                    weatherCount[1]++;
+                    break;
+                case "Atmosphere":
+                    weatherCount[2]++;
+                    break;
+                case "Rain":
+                    weatherCount[3]++;
+                    break;
+                case "Snow":
+                    weatherCount[4]++;
+                    break;
+                case "Drizzle":
+                    weatherCount[5]++;
+                    break;
+                case "ThunderStorm":
+                    weatherCount[6]++;
+                    break;
+            }
+            min = Math.min(min, weatherMainDto.getTempMin());
+            max = Math.max(max, weatherMainDto.getTempMax());
+            if((i + 1) % 8 == 0){
+                for(int c=0;c<7;c++){
+                    int count = weatherCount[c];
+                    if(count > weatherMax){
+                        weatherMax = count;
+                        point = c;
+                    }
+                }
+                ForecastDayDto dayDto = new ForecastDayDto(
+                        openWeatherAPIWeatherHash.get(point),
+                        Math.round(min*100)/100.0,
+                        Math.round(max*100)/100.0
+                );
+                list.add(dayDto);
+                min = 1000;
+                max = 0;
+                Arrays.fill(weatherCount, 0);
+            }
+        }
+        return list;
+    }
+
+    @Override
+    public List<ForecastDayDto> get5DayAverageWeatherInfoByCoordinate(int x, int y) {
+        List<ForecastDayDto> list = new ArrayList<>();
+        List<OpenWeatherForecastItemDto> itemList = getForecastWeatherInfoByCoordinate(x, y).getList();
+        float min = 1000, max = 0;
+        int weatherMax = 0, point = 0;
+
+        int[] weatherCount = new int[7];
+        for(int i=0;i<40;i++){
+            OpenWeatherForecastItemWeatherDto weatherDto = itemList.get(i).getWeather().get(0);
+            OpenWeatherForecastItemMainDto weatherMainDto = itemList.get(i).getMain();
+            switch(weatherDto.getMain()){
+                case "Clear":
+                    weatherCount[0]++;
+                    break;
+                case "Clouds":
+                    weatherCount[1]++;
+                    break;
+                case "Atmosphere":
+                    weatherCount[2]++;
+                    break;
+                case "Rain":
+                    weatherCount[3]++;
+                    break;
+                case "Snow":
+                    weatherCount[4]++;
+                    break;
+                case "Drizzle":
+                    weatherCount[5]++;
+                    break;
+                case "ThunderStorm":
+                    weatherCount[6]++;
+                    break;
+            }
+            min = Math.min(min, weatherMainDto.getTempMin());
+            max = Math.max(max, weatherMainDto.getTempMax());
+            if((i + 1) % 8 == 0){
+                for(int c=0;c<7;c++){
+                    int count = weatherCount[c];
+                    if(count > weatherMax){
+                        weatherMax = count;
+                        point = c;
+                    }
+                }
+                ForecastDayDto dayDto = new ForecastDayDto(
+                        openWeatherAPIWeatherHash.get(point),
+                        Math.round(min*100)/100.0,
+                        Math.round(max*100)/100.0
+                );
+                list.add(dayDto);
+                min = 1000;
+                max = 0;
+                Arrays.fill(weatherCount, 0);
+            }
+        }
+        return list;
     }
 }
 

@@ -3,11 +3,13 @@ package com.myhome.server.api.service;
 import com.google.gson.JsonArray;
 import com.myhome.server.api.dto.LocationDto;
 import com.myhome.server.api.dto.SGISDto.SGISAddressDto;
+import com.myhome.server.api.dto.openWeatherDto.ForecastDayDto;
 import com.myhome.server.api.dto.openWeatherDto.OpenWeatherCurrentDto;
 import com.myhome.server.api.dto.openWeatherDto.OpenWeatherForecastDto;
 import com.myhome.server.api.dto.WeatherDto;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public interface WeatherService {
     String getKey();
@@ -33,4 +35,6 @@ public interface WeatherService {
     OpenWeatherForecastDto getForecastWeatherInfo(double lat, double lon);
     OpenWeatherCurrentDto getCurrentWeatherInfoByCoordinate(int x, int y);
     OpenWeatherForecastDto getForecastWeatherInfoByCoordinate(int x, int y);
+    List<ForecastDayDto> get5DayAverageWeatherInfo(double lat, double lon);
+    List<ForecastDayDto> get5DayAverageWeatherInfoByCoordinate(int x, int y);
 }
