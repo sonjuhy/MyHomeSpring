@@ -120,9 +120,18 @@ public class BatchConfiguration {
 
     @Bean
     public Step publicCloudParallelStep1(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
-        cloudPublicParallelTasklet.setName(name);
         return new StepBuilder(name, jobRepository)
-                .tasklet(cloudPublicParallelTasklet, platformTransactionManager)
+                .tasklet(((contribution, chunkContext) -> {
+                    List<FileInfoDto> fileList = (List<FileInfoDto>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
+                    if(fileList != null && !fileList.isEmpty()){
+                        String uploadPath = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getString("uploadPath");
+                        thumbNailSequence(fileList, uploadPath);
+                    }
+                    else{
+                        contribution.setExitStatus(ExitStatus.FAILED);
+                    }
+                    return RepeatStatus.FINISHED;            
+                }), platformTransactionManager)
                 .build();
     }
 
@@ -135,9 +144,18 @@ public class BatchConfiguration {
 
     @Bean
     public Step publicCloudParallelStep2(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
-        cloudPublicParallelTasklet.setName(name);
         return new StepBuilder(name, jobRepository)
-                .tasklet(cloudPublicParallelTasklet, platformTransactionManager)
+                .tasklet(((contribution, chunkContext) -> {
+                    List<FileInfoDto> fileList = (List<FileInfoDto>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
+                    if(fileList != null && !fileList.isEmpty()){
+                        String uploadPath = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getString("uploadPath");
+                        thumbNailSequence(fileList, uploadPath);
+                    }
+                    else{
+                        contribution.setExitStatus(ExitStatus.FAILED);
+                    }
+                    return RepeatStatus.FINISHED;            
+                }), platformTransactionManager)
                 .build();
     }
 
@@ -150,9 +168,18 @@ public class BatchConfiguration {
 
     @Bean
     public Step publicCloudParallelStep3(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
-        cloudPublicParallelTasklet.setName(name);
         return new StepBuilder(name, jobRepository)
-                .tasklet(cloudPublicParallelTasklet, platformTransactionManager)
+                .tasklet(((contribution, chunkContext) -> {
+                    List<FileInfoDto> fileList = (List<FileInfoDto>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
+                    if(fileList != null && !fileList.isEmpty()){
+                        String uploadPath = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getString("uploadPath");
+                        thumbNailSequence(fileList, uploadPath);
+                    }
+                    else{
+                        contribution.setExitStatus(ExitStatus.FAILED);
+                    }
+                    return RepeatStatus.FINISHED;            
+                }), platformTransactionManager)
                 .build();
     }
 
@@ -165,9 +192,18 @@ public class BatchConfiguration {
 
     @Bean
     public Step publicCloudParallelStep4(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
-        cloudPublicParallelTasklet.setName(name);
         return new StepBuilder(name, jobRepository)
-                .tasklet(cloudPublicParallelTasklet, platformTransactionManager)
+                .tasklet(((contribution, chunkContext) -> {
+                    List<FileInfoDto> fileList = (List<FileInfoDto>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
+                    if(fileList != null && !fileList.isEmpty()){
+                        String uploadPath = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getString("uploadPath");
+                        thumbNailSequence(fileList, uploadPath);
+                    }
+                    else{
+                        contribution.setExitStatus(ExitStatus.FAILED);
+                    }
+                    return RepeatStatus.FINISHED;            
+                }), platformTransactionManager)
                 .build();
     }
 
@@ -180,9 +216,18 @@ public class BatchConfiguration {
 
     @Bean
     public Step publicCloudParallelStep5(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
-        cloudPublicParallelTasklet.setName(name);
         return new StepBuilder(name, jobRepository)
-                .tasklet(cloudPublicParallelTasklet, platformTransactionManager)
+                .tasklet(((contribution, chunkContext) -> {
+                    List<FileInfoDto> fileList = (List<FileInfoDto>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
+                    if(fileList != null && !fileList.isEmpty()){
+                        String uploadPath = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getString("uploadPath");
+                        thumbNailSequence(fileList, uploadPath);
+                    }
+                    else{
+                        contribution.setExitStatus(ExitStatus.FAILED);
+                    }
+                    return RepeatStatus.FINISHED;            
+                }), platformTransactionManager)
                 .build();
     }
 
@@ -195,9 +240,18 @@ public class BatchConfiguration {
 
     @Bean
     public Step publicCloudParallelStep6(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
-        cloudPublicParallelTasklet.setName(name);
         return new StepBuilder(name, jobRepository)
-                .tasklet(cloudPublicParallelTasklet, platformTransactionManager)
+                .tasklet(((contribution, chunkContext) -> {
+                    List<FileInfoDto> fileList = (List<FileInfoDto>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
+                    if(fileList != null && !fileList.isEmpty()){
+                        String uploadPath = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getString("uploadPath");
+                        thumbNailSequence(fileList, uploadPath);
+                    }
+                    else{
+                        contribution.setExitStatus(ExitStatus.FAILED);
+                    }
+                    return RepeatStatus.FINISHED;            
+                }), platformTransactionManager)
                 .build();
     }
 
@@ -210,9 +264,18 @@ public class BatchConfiguration {
 
     @Bean
     public Step publicCloudParallelStep7(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
-        cloudPublicParallelTasklet.setName(name);
         return new StepBuilder(name, jobRepository)
-                .tasklet(cloudPublicParallelTasklet, platformTransactionManager)
+                .tasklet(((contribution, chunkContext) -> {
+                    List<FileInfoDto> fileList = (List<FileInfoDto>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
+                    if(fileList != null && !fileList.isEmpty()){
+                        String uploadPath = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getString("uploadPath");
+                        thumbNailSequence(fileList, uploadPath);
+                    }
+                    else{
+                        contribution.setExitStatus(ExitStatus.FAILED);
+                    }
+                    return RepeatStatus.FINISHED;            
+                }), platformTransactionManager)
                 .build();
     }
 
@@ -225,9 +288,18 @@ public class BatchConfiguration {
 
     @Bean
     public Step publicCloudParallelStep8(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
-        cloudPublicParallelTasklet.setName(name);
         return new StepBuilder(name, jobRepository)
-                .tasklet(cloudPublicParallelTasklet, platformTransactionManager)
+                .tasklet(((contribution, chunkContext) -> {
+                    List<FileInfoDto> fileList = (List<FileInfoDto>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
+                    if(fileList != null && !fileList.isEmpty()){
+                        String uploadPath = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getString("uploadPath");
+                        thumbNailSequence(fileList, uploadPath);
+                    }
+                    else{
+                        contribution.setExitStatus(ExitStatus.FAILED);
+                    }
+                    return RepeatStatus.FINISHED;            
+                }), platformTransactionManager)
                 .build();
     }
 
@@ -240,9 +312,18 @@ public class BatchConfiguration {
 
     @Bean
     public Step publicCloudParallelStep9(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
-        cloudPublicParallelTasklet.setName(name);
         return new StepBuilder(name, jobRepository)
-                .tasklet(cloudPublicParallelTasklet, platformTransactionManager)
+                .tasklet(((contribution, chunkContext) -> {
+                    List<FileInfoDto> fileList = (List<FileInfoDto>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
+                    if(fileList != null && !fileList.isEmpty()){
+                        String uploadPath = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getString("uploadPath");
+                        thumbNailSequence(fileList, uploadPath);
+                    }
+                    else{
+                        contribution.setExitStatus(ExitStatus.FAILED);
+                    }
+                    return RepeatStatus.FINISHED;            
+                }), platformTransactionManager)
                 .build();
     }
 
@@ -255,9 +336,33 @@ public class BatchConfiguration {
 
     @Bean
     public Step publicCloudParallelStep10(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
-        cloudPublicParallelTasklet.setName(name);
         return new StepBuilder(name, jobRepository)
-                .tasklet(cloudPublicParallelTasklet, platformTransactionManager)
+                .tasklet(((contribution, chunkContext) -> {
+                    List<FileInfoDto> fileList = (List<FileInfoDto>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
+                    if(fileList != null && !fileList.isEmpty()){
+                        String uploadPath = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getString("uploadPath");
+                        thumbNailSequence(fileList, uploadPath);
+                    }
+                    else{
+                        contribution.setExitStatus(ExitStatus.FAILED);
+                    }
+                    return RepeatStatus.FINISHED;            
+                }), platformTransactionManager)
                 .build();
+    }
+
+    private void thumbNailSequence(List<FileInfoDto> fileList, String uploadPath){
+        String type = "public";
+        List<FileServerThumbNailEntity> entityList = new ArrayList<>();
+        for(FileInfoDto file : fileList){
+            String uuid = UUID.nameUUIDFromBytes(commonService.changeSeparatorToUnderBar(file.getPath()).getBytes(StandardCharsets.UTF_8)).toString();
+            String fileLocation = commonService.changeSeparatorToUnderBar(uploadPath+ File.separator+uuid+".png");
+            FileServerThumbNailDto thumbNailDto = new FileServerThumbNailDto(0, file.getUuid(), fileLocation, file.getName(), type);
+            File tmpFile = new File(file.getPath());
+            if(thumbNailService.makeThumbNail(tmpFile, uuid, type)){
+                entityList.add(new FileServerThumbNailEntity(thumbNailDto));
+            }
+        }
+        thumbNailRepository.saveAll(entityList);
     }
 }
