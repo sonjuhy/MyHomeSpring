@@ -44,9 +44,13 @@ public class BatchConfiguration {
 
     private final long dateTime = new Date().getTime();
 
+    @Autowired
     private FileServerPublicService publicService;
+    @Autowired
     private FileServerThumbNailService thumbNailService;
+    @Autowired
     private FileServerCommonService commonService;
+    @Autowired
     private FileServerThumbNailRepository thumbNailRepository;
 
     private final CloudPublicTasklet cloudPublicTasklet;
