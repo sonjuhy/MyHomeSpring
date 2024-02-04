@@ -6,7 +6,6 @@ import com.myhome.server.api.service.FileServerCommonService;
 import com.myhome.server.api.service.FileServerPublicService;
 import com.myhome.server.api.service.FileServerThumbNailService;
 import com.myhome.server.component.batch.cloudPublic.CloudPublicFailedTasklet;
-import com.myhome.server.component.batch.cloudPublic.CloudPublicParallelTasklet;
 import com.myhome.server.component.batch.cloudPublic.CloudPublicTasklet;
 import com.myhome.server.db.entity.FileServerThumbNailEntity;
 import com.myhome.server.db.repository.FileServerThumbNailRepository;
@@ -56,7 +55,6 @@ public class BatchConfiguration {
 
     private final CloudPublicTasklet cloudPublicTasklet;
     private final CloudPublicFailedTasklet cloudPublicFailedTasklet;
-    private final CloudPublicParallelTasklet cloudPublicParallelTasklet;
 
 
     @Bean
