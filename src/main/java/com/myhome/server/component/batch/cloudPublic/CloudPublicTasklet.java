@@ -37,13 +37,12 @@ public class CloudPublicTasklet implements Tasklet {
         List<File> fileList = publicService.filesWalkWithReturnMediaFileList();
         List<FileInfoDto> dtoList = new ArrayList<>();
 
-        fileList = new ArrayList<>(fileList);
-
         for(File file : fileList){
             FileInfoDto dto = new FileInfoDto();
             String uuid = UUID.nameUUIDFromBytes(commonService.changeSeparatorToUnderBar(file.getPath()).getBytes(StandardCharsets.UTF_8)).toString();
             dto.setPath(file.getPath());
             dto.setUuid(uuid);
+            dto.setName(file.getName());
             dtoList.add(dto);
         }
 
@@ -67,9 +66,8 @@ public class CloudPublicTasklet implements Tasklet {
         divNum = groups.size();
         for(int i=0;i<divNum;i++){
             List<FileInfoDto> group = groups.get(i);
-            chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().put(names[i], group);
+            chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().put(names[i], new ArrayList<>(group));
         }
-//        chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().put("fileList", fileList);
 
         FileDefaultPathEntity entity = defaultPathRepository.findByPathName("thumbnail");
         String uploadPath = entity.getPublicDefaultPath().replaceAll("__", File.separator);
