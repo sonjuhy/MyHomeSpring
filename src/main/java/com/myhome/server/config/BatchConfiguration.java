@@ -99,12 +99,12 @@ public class BatchConfiguration {
                         publicCloudFlow2("PublicCloudFlow-2", jobRepository, platformTransactionManager),
                         publicCloudFlow3("PublicCloudFlow-3", jobRepository, platformTransactionManager),
                         publicCloudFlow4("PublicCloudFlow-4", jobRepository, platformTransactionManager),
-                        publicCloudFlow5("PublicCloudFlow-5", jobRepository, platformTransactionManager),
-                        publicCloudFlow6("PublicCloudFlow-6", jobRepository, platformTransactionManager),
-                        publicCloudFlow7("PublicCloudFlow-7", jobRepository, platformTransactionManager),
-                        publicCloudFlow8("PublicCloudFlow-8", jobRepository, platformTransactionManager),
-                        publicCloudFlow9("PublicCloudFlow-9", jobRepository, platformTransactionManager),
-                        publicCloudFlow10("PublicCloudFlow-10", jobRepository, platformTransactionManager)
+                        publicCloudFlow5("PublicCloudFlow-5", jobRepository, platformTransactionManager)
+//                        publicCloudFlow6("PublicCloudFlow-6", jobRepository, platformTransactionManager),
+//                        publicCloudFlow7("PublicCloudFlow-7", jobRepository, platformTransactionManager),
+//                        publicCloudFlow8("PublicCloudFlow-8", jobRepository, platformTransactionManager),
+//                        publicCloudFlow9("PublicCloudFlow-9", jobRepository, platformTransactionManager),
+//                        publicCloudFlow10("PublicCloudFlow-10", jobRepository, platformTransactionManager)
                 )
                 .build();
     }

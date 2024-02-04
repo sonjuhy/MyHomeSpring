@@ -46,7 +46,7 @@ public class CloudPublicTasklet implements Tasklet {
             dtoList.add(dto);
         }
 
-        int divNum = 10;
+        int divNum = 5;
         int partitionSize = (int) Math.ceil((double) dtoList.size() / divNum);
         List<List<FileInfoDto>> groups = IntStream.range(0, divNum)
                 .mapToObj(i -> dtoList.subList(i * partitionSize, Math.min((i + 1) * partitionSize, dtoList.size())))
