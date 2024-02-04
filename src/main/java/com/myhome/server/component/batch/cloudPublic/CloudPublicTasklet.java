@@ -18,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -28,9 +29,6 @@ public class CloudPublicTasklet implements Tasklet {
     private FileServerPublicService publicService;
 
     @Autowired
-    private FileServerCommonService commonService;
-
-    @Autowired
     FileDefaultPathRepository defaultPathRepository;
     @Override
     public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
@@ -39,7 +37,7 @@ public class CloudPublicTasklet implements Tasklet {
 
         for(File file : fileList){
             FileInfoDto dto = new FileInfoDto();
-            String uuid = UUID.nameUUIDFromBytes(commonService.changeSeparatorToUnderBar(file.getPath()).getBytes(StandardCharsets.UTF_8)).toString();
+            String uuid = UUID.nameUUIDFromBytes(changeSeparatorToUnderBar(file.getPath()).getBytes(StandardCharsets.UTF_8)).toString();
             dto.setPath(file.getPath());
             dto.setUuid(uuid);
             dto.setName(file.getName());
@@ -70,9 +68,17 @@ public class CloudPublicTasklet implements Tasklet {
         }
 
         FileDefaultPathEntity entity = defaultPathRepository.findByPathName("thumbnail");
-        String uploadPath = entity.getPublicDefaultPath().replaceAll("__", File.separator);
+        String uploadPath = changeUnderBarToSeparator(entity.getPublicDefaultPath());
         chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().putString("uploadPath", uploadPath);
         return RepeatStatus.FINISHED;
+    }
+
+    public String changeUnderBarToSeparator(String path){
+        return path.replaceAll("__", Matcher.quoteReplacement(File.separator));
+    }
+
+    public String changeSeparatorToUnderBar(String path){
+        return path.replaceAll(Matcher.quoteReplacement(File.separator), "__");
     }
 
 }
