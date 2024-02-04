@@ -1,5 +1,6 @@
 package com.myhome.server.config;
 
+import com.myhome.server.api.dto.FileInfoDto;
 import com.myhome.server.api.dto.FileServerThumbNailDto;
 import com.myhome.server.api.service.FileServerCommonService;
 import com.myhome.server.api.service.FileServerPublicService;
@@ -120,16 +121,17 @@ public class BatchConfiguration {
     public Step publicCloudParallelStep(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
         return new StepBuilder(name, jobRepository)
                 .tasklet((contribution, chunkContext) -> {
-                    List<File> fileList = (List<File>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
+                    List<FileInfoDto> fileList = (List<FileInfoDto>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
                     if(fileList != null && !fileList.isEmpty()){
                         String uploadPath = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getString("uploadPath");
                         String type = "public";
                         List<FileServerThumbNailEntity> entityList = new ArrayList<>();
-                        for(File file : fileList){
+                        for(FileInfoDto file : fileList){
                             String uuid = UUID.nameUUIDFromBytes(commonService.changeSeparatorToUnderBar(file.getPath()).getBytes(StandardCharsets.UTF_8)).toString();
                             String fileLocation = commonService.changeSeparatorToUnderBar(uploadPath+File.separator+uuid+".png");
-                            FileServerThumbNailDto thumbNailDto = new FileServerThumbNailDto(0, uuid, fileLocation, file.getName(), type);
-                            if(thumbNailService.makeThumbNail(file, uploadPath, type)){
+                            FileServerThumbNailDto thumbNailDto = new FileServerThumbNailDto(0, file.getUuid(), fileLocation, file.getName(), type);
+                            File tmpFile = new File(file.getPath());
+                            if(thumbNailService.makeThumbNail(tmpFile, uploadPath, type)){
                                 entityList.add(new FileServerThumbNailEntity(thumbNailDto));
                             }
                         }
