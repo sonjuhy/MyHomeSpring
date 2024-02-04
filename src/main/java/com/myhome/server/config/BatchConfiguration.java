@@ -135,7 +135,7 @@ public class BatchConfiguration {
                             String fileLocation = commonService.changeSeparatorToUnderBar(uploadPath+File.separator+uuid+".png");
                             FileServerThumbNailDto thumbNailDto = new FileServerThumbNailDto(0, file.getUuid(), fileLocation, file.getName(), type);
                             File tmpFile = new File(file.getPath());
-                            if(thumbNailService.makeThumbNail(tmpFile, uploadPath, type)){
+                            if(thumbNailService.makeThumbNail(tmpFile, uuid, type)){
                                 entityList.add(new FileServerThumbNailEntity(thumbNailDto));
                             }
                         }
