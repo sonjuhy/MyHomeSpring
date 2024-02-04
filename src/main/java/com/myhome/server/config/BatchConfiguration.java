@@ -6,6 +6,7 @@ import com.myhome.server.api.service.FileServerCommonService;
 import com.myhome.server.api.service.FileServerPublicService;
 import com.myhome.server.api.service.FileServerThumbNailService;
 import com.myhome.server.component.batch.cloudPublic.CloudPublicFailedTasklet;
+import com.myhome.server.component.batch.cloudPublic.CloudPublicParallelTasklet;
 import com.myhome.server.component.batch.cloudPublic.CloudPublicTasklet;
 import com.myhome.server.db.entity.FileServerThumbNailEntity;
 import com.myhome.server.db.repository.FileServerThumbNailRepository;
@@ -55,6 +56,7 @@ public class BatchConfiguration {
 
     private final CloudPublicTasklet cloudPublicTasklet;
     private final CloudPublicFailedTasklet cloudPublicFailedTasklet;
+    private final CloudPublicParallelTasklet cloudPublicParallelTasklet;
 
 
     @Bean
@@ -92,55 +94,170 @@ public class BatchConfiguration {
 
     @Bean
     public Flow publicCloudSplitFlow(JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
-        List<Flow> publicCloudFlowList = new ArrayList<>();
-        for(int i=1;i<11;i++){
-            publicCloudFlowList.add(publicCloudFlow("PublicCloudFlow-"+i, jobRepository, platformTransactionManager));
-        }
-
-        return new FlowBuilder<SimpleFlow>("PublicCloudSplitFlow-"+dateTime)
-                .split(publicCloudParallelTaskExecutor())
-                .add(publicCloudFlowList.toArray(new Flow[0]))
+        return new FlowBuilder<SimpleFlow>("PublicCloudSplitFlow-" + dateTime)
+                .split(new SimpleAsyncTaskExecutor())
+                .add(
+                        publicCloudFlow1("PublicCloudFlow-1", jobRepository, platformTransactionManager),
+                        publicCloudFlow2("PublicCloudFlow-2", jobRepository, platformTransactionManager),
+                        publicCloudFlow3("PublicCloudFlow-3", jobRepository, platformTransactionManager),
+                        publicCloudFlow4("PublicCloudFlow-4", jobRepository, platformTransactionManager),
+                        publicCloudFlow5("PublicCloudFlow-5", jobRepository, platformTransactionManager),
+                        publicCloudFlow6("PublicCloudFlow-6", jobRepository, platformTransactionManager),
+                        publicCloudFlow7("PublicCloudFlow-7", jobRepository, platformTransactionManager),
+                        publicCloudFlow8("PublicCloudFlow-8", jobRepository, platformTransactionManager),
+                        publicCloudFlow9("PublicCloudFlow-9", jobRepository, platformTransactionManager),
+                        publicCloudFlow10("PublicCloudFlow-10", jobRepository, platformTransactionManager)
+                )
                 .build();
     }
 
     @Bean
-    public TaskExecutor publicCloudParallelTaskExecutor(){
-        return new SimpleAsyncTaskExecutor("CloudPublicParallelTask-"+dateTime);
-    }
-
-    @Bean
-    public Flow publicCloudFlow(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
-
+    public Flow publicCloudFlow1(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
         return new FlowBuilder<SimpleFlow>(name)
-                .start(publicCloudParallelStep(name, jobRepository, platformTransactionManager))
+                .start(publicCloudParallelStep1(name, jobRepository, platformTransactionManager))
                 .build();
     }
 
     @Bean
-    public Step publicCloudParallelStep(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+    public Step publicCloudParallelStep1(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+        cloudPublicParallelTasklet.setName(name);
         return new StepBuilder(name, jobRepository)
-                .tasklet((contribution, chunkContext) -> {
-                    List<FileInfoDto> fileList = (List<FileInfoDto>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
-                    if(fileList != null && !fileList.isEmpty()){
-                        String uploadPath = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getString("uploadPath");
-                        String type = "public";
-                        List<FileServerThumbNailEntity> entityList = new ArrayList<>();
-                        for(FileInfoDto file : fileList){
-                            String uuid = UUID.nameUUIDFromBytes(commonService.changeSeparatorToUnderBar(file.getPath()).getBytes(StandardCharsets.UTF_8)).toString();
-                            String fileLocation = commonService.changeSeparatorToUnderBar(uploadPath+File.separator+uuid+".png");
-                            FileServerThumbNailDto thumbNailDto = new FileServerThumbNailDto(0, file.getUuid(), fileLocation, file.getName(), type);
-                            File tmpFile = new File(file.getPath());
-                            if(thumbNailService.makeThumbNail(tmpFile, uuid, type)){
-                                entityList.add(new FileServerThumbNailEntity(thumbNailDto));
-                            }
-                        }
-                        thumbNailRepository.saveAll(entityList);
-                    }
-                    else{
-                        contribution.setExitStatus(ExitStatus.FAILED);
-                    }
-                    return RepeatStatus.FINISHED;
-                }, platformTransactionManager)
+                .tasklet(cloudPublicParallelTasklet, platformTransactionManager)
+                .build();
+    }
+
+    @Bean
+    public Flow publicCloudFlow2(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+        return new FlowBuilder<SimpleFlow>(name)
+                .start(publicCloudParallelStep2(name, jobRepository, platformTransactionManager))
+                .build();
+    }
+
+    @Bean
+    public Step publicCloudParallelStep2(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+        cloudPublicParallelTasklet.setName(name);
+        return new StepBuilder(name, jobRepository)
+                .tasklet(cloudPublicParallelTasklet, platformTransactionManager)
+                .build();
+    }
+
+    @Bean
+    public Flow publicCloudFlow3(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+        return new FlowBuilder<SimpleFlow>(name)
+                .start(publicCloudParallelStep3(name, jobRepository, platformTransactionManager))
+                .build();
+    }
+
+    @Bean
+    public Step publicCloudParallelStep3(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+        cloudPublicParallelTasklet.setName(name);
+        return new StepBuilder(name, jobRepository)
+                .tasklet(cloudPublicParallelTasklet, platformTransactionManager)
+                .build();
+    }
+
+    @Bean
+    public Flow publicCloudFlow4(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+        return new FlowBuilder<SimpleFlow>(name)
+                .start(publicCloudParallelStep4(name, jobRepository, platformTransactionManager))
+                .build();
+    }
+
+    @Bean
+    public Step publicCloudParallelStep4(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+        cloudPublicParallelTasklet.setName(name);
+        return new StepBuilder(name, jobRepository)
+                .tasklet(cloudPublicParallelTasklet, platformTransactionManager)
+                .build();
+    }
+
+    @Bean
+    public Flow publicCloudFlow5(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+        return new FlowBuilder<SimpleFlow>(name)
+                .start(publicCloudParallelStep5(name, jobRepository, platformTransactionManager))
+                .build();
+    }
+
+    @Bean
+    public Step publicCloudParallelStep5(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+        cloudPublicParallelTasklet.setName(name);
+        return new StepBuilder(name, jobRepository)
+                .tasklet(cloudPublicParallelTasklet, platformTransactionManager)
+                .build();
+    }
+
+    @Bean
+    public Flow publicCloudFlow6(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+        return new FlowBuilder<SimpleFlow>(name)
+                .start(publicCloudParallelStep6(name, jobRepository, platformTransactionManager))
+                .build();
+    }
+
+    @Bean
+    public Step publicCloudParallelStep6(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+        cloudPublicParallelTasklet.setName(name);
+        return new StepBuilder(name, jobRepository)
+                .tasklet(cloudPublicParallelTasklet, platformTransactionManager)
+                .build();
+    }
+
+    @Bean
+    public Flow publicCloudFlow7(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+        return new FlowBuilder<SimpleFlow>(name)
+                .start(publicCloudParallelStep7(name, jobRepository, platformTransactionManager))
+                .build();
+    }
+
+    @Bean
+    public Step publicCloudParallelStep7(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+        cloudPublicParallelTasklet.setName(name);
+        return new StepBuilder(name, jobRepository)
+                .tasklet(cloudPublicParallelTasklet, platformTransactionManager)
+                .build();
+    }
+
+    @Bean
+    public Flow publicCloudFlow8(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+        return new FlowBuilder<SimpleFlow>(name)
+                .start(publicCloudParallelStep8(name, jobRepository, platformTransactionManager))
+                .build();
+    }
+
+    @Bean
+    public Step publicCloudParallelStep8(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+        cloudPublicParallelTasklet.setName(name);
+        return new StepBuilder(name, jobRepository)
+                .tasklet(cloudPublicParallelTasklet, platformTransactionManager)
+                .build();
+    }
+
+    @Bean
+    public Flow publicCloudFlow9(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+        return new FlowBuilder<SimpleFlow>(name)
+                .start(publicCloudParallelStep9(name, jobRepository, platformTransactionManager))
+                .build();
+    }
+
+    @Bean
+    public Step publicCloudParallelStep9(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+        cloudPublicParallelTasklet.setName(name);
+        return new StepBuilder(name, jobRepository)
+                .tasklet(cloudPublicParallelTasklet, platformTransactionManager)
+                .build();
+    }
+
+    @Bean
+    public Flow publicCloudFlow10(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+        return new FlowBuilder<SimpleFlow>(name)
+                .start(publicCloudParallelStep10(name, jobRepository, platformTransactionManager))
+                .build();
+    }
+
+    @Bean
+    public Step publicCloudParallelStep10(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+        cloudPublicParallelTasklet.setName(name);
+        return new StepBuilder(name, jobRepository)
+                .tasklet(cloudPublicParallelTasklet, platformTransactionManager)
                 .build();
     }
 }
