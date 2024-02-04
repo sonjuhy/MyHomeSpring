@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.ui.Model;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
@@ -38,6 +39,7 @@ public interface FileServerPublicService {
     String encodingJSON(String purpose, String action, String uuid, String file, String path);
     int updateByFileServerPublicEntity(FileServerPublicEntity entity);
     boolean save(FileServerPublicEntity entity);
+    List<File> filesWalkWithReturnMediaFileList();
     void publicFileStateCheck();
     void filesWalk(String pathUrl);
     void filesWalkTrashPath(String pathUrl);

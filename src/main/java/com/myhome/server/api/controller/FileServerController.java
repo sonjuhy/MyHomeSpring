@@ -9,6 +9,11 @@ import com.myhome.server.db.repository.FileDefaultPathRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import org.springframework.batch.core.Job;
+import org.springframework.batch.core.JobParameter;
+import org.springframework.batch.core.JobParameters;
+import org.springframework.batch.core.JobParametersBuilder;
+import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.InputStreamResource;
@@ -27,6 +32,7 @@ import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Date;
 import java.util.List;
 
 
@@ -56,6 +62,11 @@ public class FileServerController {
 
     @Autowired
     LogComponent logComponent;
+
+    @Autowired
+    private Job publicCloudCheckJob;
+    @Autowired
+    private JobLauncher jobLauncher;
 
     /*
      * COMMON PART
@@ -99,6 +110,23 @@ public class FileServerController {
         StringWriter sw = new StringWriter();
         try {
             service.publicFileStateCheck();
+        }
+        catch (Exception e){
+            e.printStackTrace(new PrintWriter(sw));
+            return new ResponseEntity<>("publicFileCheck error : "+sw.toString(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        return new ResponseEntity<>("Public file check Success", HttpStatus.OK);
+    }
+
+    @GetMapping("/checkPublicFileStatusBatch")
+    public ResponseEntity<String> checkPublicFileStatusBatch(){
+        StringWriter sw = new StringWriter();
+        try {
+            Date date = new Date();
+            JobParameters jobParameters = new JobParametersBuilder()
+                    .addString("publicCheck-"+date.getTime(), String.valueOf(System.currentTimeMillis()))
+                    .toJobParameters();
+            jobLauncher.run(publicCloudCheckJob, jobParameters);
         }
         catch (Exception e){
             e.printStackTrace(new PrintWriter(sw));
