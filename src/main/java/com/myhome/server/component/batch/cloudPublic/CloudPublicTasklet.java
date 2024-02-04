@@ -34,6 +34,7 @@ public class CloudPublicTasklet implements Tasklet {
     FileDefaultPathRepository defaultPathRepository;
     @Override
     public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
+        publicService.deleteThumbNail();
         List<File> fileList = publicService.filesWalkWithReturnMediaFileList();
         List<FileInfoDto> dtoList = new ArrayList<>();
 
@@ -46,7 +47,7 @@ public class CloudPublicTasklet implements Tasklet {
             dtoList.add(dto);
         }
 
-        int divNum = 5;
+        int divNum = 4;
         int partitionSize = (int) Math.ceil((double) dtoList.size() / divNum);
         List<List<FileInfoDto>> groups = IntStream.range(0, divNum)
                 .mapToObj(i -> dtoList.subList(i * partitionSize, Math.min((i + 1) * partitionSize, dtoList.size())))
