@@ -34,16 +34,18 @@ public class CloudPublicTasklet implements Tasklet {
     FileDefaultPathRepository defaultPathRepository;
     @Override
     public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
-        List<FileInfoDto> dtoList = publicService.filesWalkWithReturnMediaFileList().stream()
-                .map(file -> {
-                    FileInfoDto dto = new FileInfoDto();
-                    String uuid = UUID.nameUUIDFromBytes(commonService.changeSeparatorToUnderBar(file.getPath()).getBytes(StandardCharsets.UTF_8)).toString();
-                    dto.setPath(file.getPath());
-                    dto.setUuid(uuid);
-                    dto.setName(file.getName());
-                    return dto;
-                })
-                .collect(Collectors.toList());
+        List<File> fileList = publicService.filesWalkWithReturnMediaFileList();
+        List<FileInfoDto> dtoList = new ArrayList<>();
+
+        fileList = new ArrayList<>(fileList);
+
+        for(File file : fileList){
+            FileInfoDto dto = new FileInfoDto();
+            String uuid = UUID.nameUUIDFromBytes(commonService.changeSeparatorToUnderBar(file.getPath()).getBytes(StandardCharsets.UTF_8)).toString();
+            dto.setPath(file.getPath());
+            dto.setUuid(uuid);
+            dtoList.add(dto);
+        }
 
         int divNum = 10;
         int partitionSize = (int) Math.ceil((double) dtoList.size() / divNum);
