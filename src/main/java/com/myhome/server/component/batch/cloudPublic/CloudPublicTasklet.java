@@ -51,22 +51,11 @@ public class CloudPublicTasklet implements Tasklet {
         List<List<FileInfoDto>> groups = IntStream.range(0, divNum)
                 .mapToObj(i -> dtoList.subList(i * partitionSize, Math.min((i + 1) * partitionSize, dtoList.size())))
                 .toList();
-        String[] names = new String[divNum];
-        names[0] = "PublicCloudFlow-One";
-        names[1] = "PublicCloudFlow-Two";
-        names[2] = "PublicCloudFlow-Three";
-        names[3] = "PublicCloudFlow-Four";
-        names[4] = "PublicCloudFlow-Five";
-        names[5] = "PublicCloudFlow-Six";
-        names[6] = "PublicCloudFlow-Seven";
-        names[7] = "PublicCloudFlow-Eight";
-        names[8] = "PublicCloudFlow-Nine";
-        names[9] = "PublicCloudFlow-Ten";
 
         divNum = groups.size();
         for(int i=0;i<divNum;i++){
             List<FileInfoDto> group = groups.get(i);
-            chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().put(names[i], new ArrayList<>(group));
+            chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().put("PublicCloudFlow-"+(i+1), new ArrayList<>(group));
         }
 
         FileDefaultPathEntity entity = defaultPathRepository.findByPathName("thumbnail");

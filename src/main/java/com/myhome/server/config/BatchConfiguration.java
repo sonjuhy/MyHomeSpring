@@ -92,20 +92,14 @@ public class BatchConfiguration {
 
     @Bean
     public Flow publicCloudSplitFlow(JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+        List<Flow> publicCloudFlowList = new ArrayList<>();
+        for(int i=1;i<11;i++){
+            publicCloudFlowList.add(publicCloudFlow("PublicCloudFlow-"+i, jobRepository, platformTransactionManager));
+        }
+
         return new FlowBuilder<SimpleFlow>("PublicCloudSplitFlow-"+dateTime)
                 .split(publicCloudParallelTaskExecutor())
-                .add(
-                        publicCloudFlow("PublicCloudFlow-One", jobRepository, platformTransactionManager),
-                        publicCloudFlow("PublicCloudFlow-Two", jobRepository, platformTransactionManager),
-                        publicCloudFlow("PublicCloudFlow-Three", jobRepository, platformTransactionManager),
-                        publicCloudFlow("PublicCloudFlow-Four", jobRepository, platformTransactionManager),
-                        publicCloudFlow("PublicCloudFlow-Five", jobRepository, platformTransactionManager),
-                        publicCloudFlow("PublicCloudFlow-Six", jobRepository, platformTransactionManager),
-                        publicCloudFlow("PublicCloudFlow-Seven", jobRepository, platformTransactionManager),
-                        publicCloudFlow("PublicCloudFlow-Eight", jobRepository, platformTransactionManager),
-                        publicCloudFlow("PublicCloudFlow-Nine", jobRepository, platformTransactionManager),
-                        publicCloudFlow("PublicCloudFlow-Ten", jobRepository, platformTransactionManager)
-                )
+                .add(publicCloudFlowList.toArray(new Flow[0]))
                 .build();
     }
 
@@ -116,6 +110,7 @@ public class BatchConfiguration {
 
     @Bean
     public Flow publicCloudFlow(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+
         return new FlowBuilder<SimpleFlow>(name)
                 .start(publicCloudParallelStep(name, jobRepository, platformTransactionManager))
                 .build();
