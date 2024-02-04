@@ -229,125 +229,125 @@ public class BatchConfiguration {
                 .build();
     }
 
-    @Bean
-    public Flow publicCloudFlow6(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
-        return new FlowBuilder<SimpleFlow>(name)
-                .start(publicCloudParallelStep6(name, jobRepository, platformTransactionManager))
-                .build();
-    }
-
-    @Bean
-    public Step publicCloudParallelStep6(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
-        return new StepBuilder(name, jobRepository)
-                .tasklet(((contribution, chunkContext) -> {
-                    List<FileInfoDto> fileList = (List<FileInfoDto>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
-                    if(fileList != null && !fileList.isEmpty()){
-                        String uploadPath = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getString("uploadPath");
-                        thumbNailSequence(fileList, uploadPath);
-                    }
-                    else{
-                        contribution.setExitStatus(ExitStatus.FAILED);
-                    }
-                    return RepeatStatus.FINISHED;            
-                }), platformTransactionManager)
-                .build();
-    }
-
-    @Bean
-    public Flow publicCloudFlow7(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
-        return new FlowBuilder<SimpleFlow>(name)
-                .start(publicCloudParallelStep7(name, jobRepository, platformTransactionManager))
-                .build();
-    }
-
-    @Bean
-    public Step publicCloudParallelStep7(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
-        return new StepBuilder(name, jobRepository)
-                .tasklet(((contribution, chunkContext) -> {
-                    List<FileInfoDto> fileList = (List<FileInfoDto>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
-                    if(fileList != null && !fileList.isEmpty()){
-                        String uploadPath = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getString("uploadPath");
-                        thumbNailSequence(fileList, uploadPath);
-                    }
-                    else{
-                        contribution.setExitStatus(ExitStatus.FAILED);
-                    }
-                    return RepeatStatus.FINISHED;            
-                }), platformTransactionManager)
-                .build();
-    }
-
-    @Bean
-    public Flow publicCloudFlow8(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
-        return new FlowBuilder<SimpleFlow>(name)
-                .start(publicCloudParallelStep8(name, jobRepository, platformTransactionManager))
-                .build();
-    }
-
-    @Bean
-    public Step publicCloudParallelStep8(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
-        return new StepBuilder(name, jobRepository)
-                .tasklet(((contribution, chunkContext) -> {
-                    List<FileInfoDto> fileList = (List<FileInfoDto>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
-                    if(fileList != null && !fileList.isEmpty()){
-                        String uploadPath = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getString("uploadPath");
-                        thumbNailSequence(fileList, uploadPath);
-                    }
-                    else{
-                        contribution.setExitStatus(ExitStatus.FAILED);
-                    }
-                    return RepeatStatus.FINISHED;            
-                }), platformTransactionManager)
-                .build();
-    }
-
-    @Bean
-    public Flow publicCloudFlow9(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
-        return new FlowBuilder<SimpleFlow>(name)
-                .start(publicCloudParallelStep9(name, jobRepository, platformTransactionManager))
-                .build();
-    }
-
-    @Bean
-    public Step publicCloudParallelStep9(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
-        return new StepBuilder(name, jobRepository)
-                .tasklet(((contribution, chunkContext) -> {
-                    List<FileInfoDto> fileList = (List<FileInfoDto>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
-                    if(fileList != null && !fileList.isEmpty()){
-                        String uploadPath = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getString("uploadPath");
-                        thumbNailSequence(fileList, uploadPath);
-                    }
-                    else{
-                        contribution.setExitStatus(ExitStatus.FAILED);
-                    }
-                    return RepeatStatus.FINISHED;            
-                }), platformTransactionManager)
-                .build();
-    }
-
-    @Bean
-    public Flow publicCloudFlow10(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
-        return new FlowBuilder<SimpleFlow>(name)
-                .start(publicCloudParallelStep10(name, jobRepository, platformTransactionManager))
-                .build();
-    }
-
-    @Bean
-    public Step publicCloudParallelStep10(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
-        return new StepBuilder(name, jobRepository)
-                .tasklet(((contribution, chunkContext) -> {
-                    List<FileInfoDto> fileList = (List<FileInfoDto>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
-                    if(fileList != null && !fileList.isEmpty()){
-                        String uploadPath = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getString("uploadPath");
-                        thumbNailSequence(fileList, uploadPath);
-                    }
-                    else{
-                        contribution.setExitStatus(ExitStatus.FAILED);
-                    }
-                    return RepeatStatus.FINISHED;            
-                }), platformTransactionManager)
-                .build();
-    }
+//    @Bean
+//    public Flow publicCloudFlow6(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+//        return new FlowBuilder<SimpleFlow>(name)
+//                .start(publicCloudParallelStep6(name, jobRepository, platformTransactionManager))
+//                .build();
+//    }
+//
+//    @Bean
+//    public Step publicCloudParallelStep6(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+//        return new StepBuilder(name, jobRepository)
+//                .tasklet(((contribution, chunkContext) -> {
+//                    List<FileInfoDto> fileList = (List<FileInfoDto>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
+//                    if(fileList != null && !fileList.isEmpty()){
+//                        String uploadPath = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getString("uploadPath");
+//                        thumbNailSequence(fileList, uploadPath);
+//                    }
+//                    else{
+//                        contribution.setExitStatus(ExitStatus.FAILED);
+//                    }
+//                    return RepeatStatus.FINISHED;
+//                }), platformTransactionManager)
+//                .build();
+//    }
+//
+//    @Bean
+//    public Flow publicCloudFlow7(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+//        return new FlowBuilder<SimpleFlow>(name)
+//                .start(publicCloudParallelStep7(name, jobRepository, platformTransactionManager))
+//                .build();
+//    }
+//
+//    @Bean
+//    public Step publicCloudParallelStep7(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+//        return new StepBuilder(name, jobRepository)
+//                .tasklet(((contribution, chunkContext) -> {
+//                    List<FileInfoDto> fileList = (List<FileInfoDto>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
+//                    if(fileList != null && !fileList.isEmpty()){
+//                        String uploadPath = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getString("uploadPath");
+//                        thumbNailSequence(fileList, uploadPath);
+//                    }
+//                    else{
+//                        contribution.setExitStatus(ExitStatus.FAILED);
+//                    }
+//                    return RepeatStatus.FINISHED;
+//                }), platformTransactionManager)
+//                .build();
+//    }
+//
+//    @Bean
+//    public Flow publicCloudFlow8(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+//        return new FlowBuilder<SimpleFlow>(name)
+//                .start(publicCloudParallelStep8(name, jobRepository, platformTransactionManager))
+//                .build();
+//    }
+//
+//    @Bean
+//    public Step publicCloudParallelStep8(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+//        return new StepBuilder(name, jobRepository)
+//                .tasklet(((contribution, chunkContext) -> {
+//                    List<FileInfoDto> fileList = (List<FileInfoDto>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
+//                    if(fileList != null && !fileList.isEmpty()){
+//                        String uploadPath = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getString("uploadPath");
+//                        thumbNailSequence(fileList, uploadPath);
+//                    }
+//                    else{
+//                        contribution.setExitStatus(ExitStatus.FAILED);
+//                    }
+//                    return RepeatStatus.FINISHED;
+//                }), platformTransactionManager)
+//                .build();
+//    }
+//
+//    @Bean
+//    public Flow publicCloudFlow9(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+//        return new FlowBuilder<SimpleFlow>(name)
+//                .start(publicCloudParallelStep9(name, jobRepository, platformTransactionManager))
+//                .build();
+//    }
+//
+//    @Bean
+//    public Step publicCloudParallelStep9(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+//        return new StepBuilder(name, jobRepository)
+//                .tasklet(((contribution, chunkContext) -> {
+//                    List<FileInfoDto> fileList = (List<FileInfoDto>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
+//                    if(fileList != null && !fileList.isEmpty()){
+//                        String uploadPath = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getString("uploadPath");
+//                        thumbNailSequence(fileList, uploadPath);
+//                    }
+//                    else{
+//                        contribution.setExitStatus(ExitStatus.FAILED);
+//                    }
+//                    return RepeatStatus.FINISHED;
+//                }), platformTransactionManager)
+//                .build();
+//    }
+//
+//    @Bean
+//    public Flow publicCloudFlow10(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+//        return new FlowBuilder<SimpleFlow>(name)
+//                .start(publicCloudParallelStep10(name, jobRepository, platformTransactionManager))
+//                .build();
+//    }
+//
+//    @Bean
+//    public Step publicCloudParallelStep10(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+//        return new StepBuilder(name, jobRepository)
+//                .tasklet(((contribution, chunkContext) -> {
+//                    List<FileInfoDto> fileList = (List<FileInfoDto>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
+//                    if(fileList != null && !fileList.isEmpty()){
+//                        String uploadPath = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getString("uploadPath");
+//                        thumbNailSequence(fileList, uploadPath);
+//                    }
+//                    else{
+//                        contribution.setExitStatus(ExitStatus.FAILED);
+//                    }
+//                    return RepeatStatus.FINISHED;
+//                }), platformTransactionManager)
+//                .build();
+//    }
 
     private void thumbNailSequence(List<FileInfoDto> fileList, String uploadPath){
         String type = "public";
