@@ -91,9 +91,9 @@ public class BatchPrivateCloudConfiguration {
         return new FlowBuilder<SimpleFlow>("privateCloudSplitFlow-" + dateTime)
                 .split(new SimpleAsyncTaskExecutor())
                 .add(
-                        privateCloudFlow1("privateCloudFlow-1", jobRepository, platformTransactionManager),
-                        privateCloudFlow2("privateCloudFlow-2", jobRepository, platformTransactionManager),
-                        privateCloudFlow3("privateCloudFlow-3", jobRepository, platformTransactionManager)
+                        privateCloudFlow1("PrivateCloudFlow-1", jobRepository, platformTransactionManager),
+                        privateCloudFlow2("PrivateCloudFlow-2", jobRepository, platformTransactionManager),
+                        privateCloudFlow3("PrivateCloudFlow-3", jobRepository, platformTransactionManager)
                 )
                 .build();
     }
