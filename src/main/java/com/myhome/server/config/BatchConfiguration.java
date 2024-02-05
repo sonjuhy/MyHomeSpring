@@ -97,8 +97,7 @@ public class BatchConfiguration {
                 .add(
                         publicCloudFlow1("PublicCloudFlow-1", jobRepository, platformTransactionManager),
                         publicCloudFlow2("PublicCloudFlow-2", jobRepository, platformTransactionManager),
-                        publicCloudFlow3("PublicCloudFlow-3", jobRepository, platformTransactionManager),
-                        publicCloudFlow4("PublicCloudFlow-4", jobRepository, platformTransactionManager)
+                        publicCloudFlow3("PublicCloudFlow-3", jobRepository, platformTransactionManager)
                 )
                 .build();
     }
@@ -160,30 +159,6 @@ public class BatchConfiguration {
 
     @Bean
     public Step publicCloudParallelStep3(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
-        return new StepBuilder(name, jobRepository)
-                .tasklet(((contribution, chunkContext) -> {
-                    List<FileInfoDto> fileList = (List<FileInfoDto>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
-                    if(fileList != null && !fileList.isEmpty()){
-                        String uploadPath = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getString("uploadPath");
-                        thumbNailSequence(fileList, uploadPath);
-                    }
-                    else{
-                        contribution.setExitStatus(ExitStatus.FAILED);
-                    }
-                    return RepeatStatus.FINISHED;            
-                }), platformTransactionManager)
-                .build();
-    }
-
-    @Bean
-    public Flow publicCloudFlow4(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
-        return new FlowBuilder<SimpleFlow>(name)
-                .start(publicCloudParallelStep4(name, jobRepository, platformTransactionManager))
-                .build();
-    }
-
-    @Bean
-    public Step publicCloudParallelStep4(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
         return new StepBuilder(name, jobRepository)
                 .tasklet(((contribution, chunkContext) -> {
                     List<FileInfoDto> fileList = (List<FileInfoDto>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
