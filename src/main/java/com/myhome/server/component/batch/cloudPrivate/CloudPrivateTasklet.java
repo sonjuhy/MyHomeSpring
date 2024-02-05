@@ -38,8 +38,8 @@ public class CloudPrivateTasklet implements Tasklet {
 
     @Override
     public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
-        String diskPath = defaultPathRepository.findByPathName("store").getPrivateDefaultPath();
-        File defaultPath = new File(commonService.changeUnderBarToSeparator(diskPath));
+        String diskPath = commonService.changeUnderBarToSeparator(defaultPathRepository.findByPathName("store").getPrivateDefaultPath());
+        File defaultPath = new File(diskPath);
         File[] files = defaultPath.listFiles();
         log.info("CloudPrivateTasklet execute diskPath : "+diskPath);
 
@@ -55,9 +55,6 @@ public class CloudPrivateTasklet implements Tasklet {
                     if(entity.getId().equals(fileName)){
                         String owner = entity.getId();
                         List<File> tmpFileList = privateService.filesWalkWithReturnMediaFileList(diskPath+File.separator+owner, owner);
-                        for(File tmpFile : tmpFileList){
-                            System.out.println(tmpFile.getPath());
-                        }
                         if(!tmpFileList.isEmpty() && tmpFileList.get(0) != null) fileList.addAll(tmpFileList);
                         break;
                     }
