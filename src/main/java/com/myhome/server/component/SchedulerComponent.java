@@ -53,7 +53,7 @@ public class SchedulerComponent {
             JobParameters privateJobParameters = new JobParametersBuilder()
                     .addString("privateCheck-" + date.getTime(), String.valueOf(System.currentTimeMillis()))
                     .toJobParameters();
-            jobLauncher.run(publicCloudCheckJob, privateJobParameters);
+            jobLauncher.run(privateCloudCheckJob, privateJobParameters);
             fileServerPrivateService.privateFileTrashCheck();
         }
         catch (Exception e){
