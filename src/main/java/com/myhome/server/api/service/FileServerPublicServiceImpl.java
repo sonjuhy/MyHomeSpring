@@ -468,6 +468,12 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         filesWalk(diskPath);
         filesWalkTrashPath(trashPath);
     }
+
+    @Override
+    public void publicFileTrashStateCheck() {
+        filesWalkTrashPath(trashPath);
+    }
+
     @Override
     public void filesWalk(String pathUrl){
         Path originPath = Paths.get(pathUrl);

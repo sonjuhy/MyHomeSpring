@@ -41,6 +41,7 @@ public interface FileServerPublicService {
     boolean save(FileServerPublicEntity entity);
     List<File> filesWalkWithReturnMediaFileList();
     void publicFileStateCheck();
+    void publicFileTrashStateCheck();
     void filesWalk(String pathUrl);
     void filesWalkTrashPath(String pathUrl);
     void deleteThumbNail();

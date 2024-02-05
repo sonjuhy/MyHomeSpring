@@ -41,6 +41,7 @@ public interface FileServerPrivateService {
     boolean save(FileServerPrivateEntity entity);
     List<File> filesWalkWithReturnMediaFileList(String pathUrl, String owner);
     void privateFileCheck();
+    void privateFileTrashCheck();
     void filesWalk(String pathUrl, String owner);
     void filesWalkTrash(String pathUrl, String owner);
     void deleteThumbNail();

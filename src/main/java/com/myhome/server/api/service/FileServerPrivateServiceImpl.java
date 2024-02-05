@@ -546,6 +546,26 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
         }
         deleteThumbNail();
     }
+
+    @Override
+    public void privateFileTrashCheck() {
+        List<UserEntity> userList = userService.findAll();
+        File trashDefaultPath = new File(trashPath);
+        File[] trashFiles = trashDefaultPath.listFiles();
+        if(trashFiles != null){
+            for(File file : trashFiles){
+                String fileName = file.getName();
+                for(UserEntity entity : userList){
+                    if(entity.getId().equals(fileName)){
+                        String owner = entity.getId();
+                        filesWalkTrash(trashPath+File.separator+owner, owner);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
     @Override
     public void filesWalk(String pathUrl, String owner){
         Path originPath = Paths.get(pathUrl);
