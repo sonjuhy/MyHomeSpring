@@ -85,6 +85,7 @@ public class CloudPrivateTasklet implements Tasklet {
             divNum = groups.size();
             for(int i=0;i<divNum;i++){
                 List<FileInfoDto> group = groups.get(i);
+                log.info("CloudPrivateTasklet execute group list : "+group);
                 chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().put("PrivateCloudFlow-"+(i+1), new ArrayList<>(group));
             }
             FileDefaultPathEntity entity = defaultPathRepository.findByPathName("thumbnail");
