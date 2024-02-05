@@ -332,7 +332,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
             logComponent.sendLog("Cloud", "[moveFile(public)] file entity is null (path) : "+path+", location : " + location, false, TOPIC_CLOUD_LOG);
             return -1; // file info doesn't exist
         }
-        String movePath = location + entity.getPath();
+        String movePath = location + entity.getName();
         // json type { file : origin file path, path : destination to move file }
         String jsonResult = encodingJSON("move", "move", entity.getUuid(), path, movePath);
         // kafka send
