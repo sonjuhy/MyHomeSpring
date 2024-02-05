@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.ui.Model;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
@@ -38,6 +39,7 @@ public interface FileServerPrivateService {
     String encodingJSON(String purpose, String action, String uuid, String file, String path);
     int updateByFileServerPrivateEntity(FileServerPrivateEntity entity);
     boolean save(FileServerPrivateEntity entity);
+    List<File> filesWalkWithReturnMediaFileList(String pathUrl, String owner);
     void privateFileCheck();
     void filesWalk(String pathUrl, String owner);
     void filesWalkTrash(String pathUrl, String owner);

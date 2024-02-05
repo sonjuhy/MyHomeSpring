@@ -66,6 +66,8 @@ public class FileServerController {
     @Autowired
     private Job publicCloudCheckJob;
     @Autowired
+    private Job privateCloudCheckJob;
+    @Autowired
     private JobLauncher jobLauncher;
 
     /*
@@ -118,6 +120,11 @@ public class FileServerController {
         return new ResponseEntity<>("Public file check Success", HttpStatus.OK);
     }
 
+    @Operation(description = "Cloud 파일 중 Public 에 해당하는 파일만 Batch 탐색 시작하는 API")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "정상 완료"),
+            @ApiResponse(responseCode = "500", description = "에러")
+    })
     @GetMapping("/checkPublicFileStatusBatch")
     public ResponseEntity<String> checkPublicFileStatusBatch(){
         StringWriter sw = new StringWriter();
@@ -145,6 +152,28 @@ public class FileServerController {
         StringWriter sw = new StringWriter();
         try {
             privateService.privateFileCheck();
+        }
+        catch (Exception e){
+            e.printStackTrace(new PrintWriter(sw));
+            return new ResponseEntity<>("Private FileCheck error : "+sw.toString(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        return new ResponseEntity<>("Private file check Success", HttpStatus.OK);
+    }
+
+    @Operation(description = "Cloud 파일 중 Private 에 해당하는 파일만 Batch 탐색 시작하는 API")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "정상 완료"),
+            @ApiResponse(responseCode = "500", description = "에러")
+    })
+    @GetMapping("/checkPrivateFileStatusBatch")
+    public ResponseEntity<String> checkPrivateFileStatusBatch(){
+        StringWriter sw = new StringWriter();
+        try {
+            Date date = new Date();
+            JobParameters jobParameters = new JobParametersBuilder()
+                    .addString("privateCheck-"+date.getTime(), String.valueOf(System.currentTimeMillis()))
+                    .toJobParameters();
+            jobLauncher.run(privateCloudCheckJob, jobParameters);
         }
         catch (Exception e){
             e.printStackTrace(new PrintWriter(sw));

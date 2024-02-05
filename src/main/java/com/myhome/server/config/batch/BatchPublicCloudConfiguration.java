@@ -1,4 +1,4 @@
-package com.myhome.server.config;
+package com.myhome.server.config.batch;
 
 import com.myhome.server.api.dto.FileInfoDto;
 import com.myhome.server.api.dto.FileServerThumbNailDto;
@@ -40,7 +40,7 @@ import java.util.UUID;
 
 @RequiredArgsConstructor
 @Configuration
-public class BatchConfiguration {
+public class BatchPublicCloudConfiguration {
 
     private final long dateTime = new Date().getTime();
 
@@ -60,7 +60,7 @@ public class BatchConfiguration {
     @Bean
     public Job publicCloudCheckJob(JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
 
-        return new JobBuilder("CloudCheckJob-"+dateTime, jobRepository)
+        return new JobBuilder("PublicCloudCheckJob-"+dateTime, jobRepository)
                 .start(publicCloudStep(jobRepository, platformTransactionManager))
                     .on(ExitStatus.FAILED.getExitCode())
                     .to(publicCloudFailedStep(jobRepository, platformTransactionManager))
@@ -97,9 +97,7 @@ public class BatchConfiguration {
                 .add(
                         publicCloudFlow1("PublicCloudFlow-1", jobRepository, platformTransactionManager),
                         publicCloudFlow2("PublicCloudFlow-2", jobRepository, platformTransactionManager),
-                        publicCloudFlow3("PublicCloudFlow-3", jobRepository, platformTransactionManager),
-                        publicCloudFlow4("PublicCloudFlow-4", jobRepository, platformTransactionManager),
-                        publicCloudFlow5("PublicCloudFlow-5", jobRepository, platformTransactionManager)
+                        publicCloudFlow3("PublicCloudFlow-3", jobRepository, platformTransactionManager)
                 )
                 .build();
     }
@@ -172,54 +170,6 @@ public class BatchConfiguration {
                         contribution.setExitStatus(ExitStatus.FAILED);
                     }
                     return RepeatStatus.FINISHED;            
-                }), platformTransactionManager)
-                .build();
-    }
-
-    @Bean
-    public Flow publicCloudFlow4(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
-        return new FlowBuilder<SimpleFlow>(name)
-                .start(publicCloudParallelStep4(name, jobRepository, platformTransactionManager))
-                .build();
-    }
-
-    @Bean
-    public Step publicCloudParallelStep4(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
-        return new StepBuilder(name, jobRepository)
-                .tasklet(((contribution, chunkContext) -> {
-                    List<FileInfoDto> fileList = (List<FileInfoDto>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
-                    if(fileList != null && !fileList.isEmpty()){
-                        String uploadPath = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getString("uploadPath");
-                        thumbNailSequence(fileList, uploadPath);
-                    }
-                    else{
-                        contribution.setExitStatus(ExitStatus.FAILED);
-                    }
-                    return RepeatStatus.FINISHED;
-                }), platformTransactionManager)
-                .build();
-    }
-
-    @Bean
-    public Flow publicCloudFlow5(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
-        return new FlowBuilder<SimpleFlow>(name)
-                .start(publicCloudParallelStep5(name, jobRepository, platformTransactionManager))
-                .build();
-    }
-
-    @Bean
-    public Step publicCloudParallelStep5(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
-        return new StepBuilder(name, jobRepository)
-                .tasklet(((contribution, chunkContext) -> {
-                    List<FileInfoDto> fileList = (List<FileInfoDto>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
-                    if(fileList != null && !fileList.isEmpty()){
-                        String uploadPath = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getString("uploadPath");
-                        thumbNailSequence(fileList, uploadPath);
-                    }
-                    else{
-                        contribution.setExitStatus(ExitStatus.FAILED);
-                    }
-                    return RepeatStatus.FINISHED;
                 }), platformTransactionManager)
                 .build();
     }
