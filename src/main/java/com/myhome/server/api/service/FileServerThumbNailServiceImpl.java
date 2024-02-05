@@ -95,7 +95,7 @@ public class FileServerThumbNailServiceImpl implements FileServerThumbNailServic
             if(thumbnail.exists()) {
                 thumbnail.delete();
             }
-//            System.out.println("makeThumbNail error : "+e.getMessage());
+            System.out.println("makeThumbNail error : "+e.getMessage());
 //            logComponent.sendErrorLog("Cloud-Check", "makeThumbNail Error : ", e, TOPIC_CLOUD_LOG);
             return false;
         }
