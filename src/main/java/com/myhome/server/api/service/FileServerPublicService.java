@@ -2,6 +2,7 @@ package com.myhome.server.api.service;
 
 import com.myhome.server.db.entity.FileServerPrivateEntity;
 import com.myhome.server.db.entity.FileServerPublicEntity;
+import com.myhome.server.db.entity.FileServerPublicTrashEntity;
 import com.myhome.server.db.entity.FileServerThumbNailEntity;
 import jakarta.transaction.Transactional;
 import org.springframework.core.io.Resource;
@@ -11,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.ui.Model;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
@@ -20,6 +22,8 @@ public interface FileServerPublicService {
     FileServerPublicEntity findByUuidName(String uuid);
     List<FileServerPublicEntity> findByLocation(String location, int mode);
     List<FileServerPublicEntity> findByLocationPage(String location, int mode, int size, int page);
+    List<FileServerPublicTrashEntity> findByLocationTrash(String location);
+    List<FileServerPublicTrashEntity> findByLocationPageTrash(String location, int size, int page);
     HttpHeaders getHttpHeader(Path path, String fileName) throws IOException;
     ResponseEntity<Resource> downloadFile(String uuid);
     ResponseEntity<Resource> downloadPublicMedia(String uuid);
@@ -35,8 +39,11 @@ public interface FileServerPublicService {
     String encodingJSON(String purpose, String action, String uuid, String file, String path);
     int updateByFileServerPublicEntity(FileServerPublicEntity entity);
     boolean save(FileServerPublicEntity entity);
+    List<File> filesWalkWithReturnMediaFileList();
     void publicFileStateCheck();
+    void publicFileTrashStateCheck();
     void filesWalk(String pathUrl);
     void filesWalkTrashPath(String pathUrl);
     void deleteThumbNail();
 }
+

@@ -123,6 +123,19 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
     }
 
     @Override
+    public List<FileServerPrivateTrashEntity> findByLocationTrash(String location) {
+        List<FileServerPrivateTrashEntity> list = trashRepository.findByLocation(location);
+        return list;
+    }
+
+    @Override
+    public List<FileServerPrivateTrashEntity> findByLocationPageTrash(String location, int size, int page) {
+        Pageable pageable = PageRequest.of(page, size);
+        List<FileServerPrivateTrashEntity> list = trashRepository.findByLocation(location, pageable);
+        return list;
+    }
+
+    @Override
     public List<FileServerPrivateEntity> findByOwner(String owner) {
         List<FileServerPrivateEntity> list = repository.findByOwner(owner);
         return list;
@@ -443,6 +456,59 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
         return !ObjectUtils.isEmpty(repository.save(entity));
     }
 
+    @Override
+    public List<File> filesWalkWithReturnMediaFileList(String pathUrl, String owner) {
+        Path originPath = Paths.get(pathUrl);
+        List<Path> pathList;
+        try{
+            Stream<Path> pathStream = Files.walk(originPath);
+            pathList = pathStream.collect(Collectors.toList());
+            List<FileServerPrivateDto> fileList = new ArrayList<>();
+            List<File> mediaFileList = new ArrayList<>();
+            for(Path path : pathList){
+                File file = new File(path.toString());
+                String extension = "dir";
+                if(!file.isDirectory()) {
+                    extension = file.getName().substring(file.getName().lastIndexOf(".") + 1); // file type (need to check ex: txt file -> text/plan)
+                }
+                try {
+                    String tmpPath = commonService.changeSeparatorToUnderBar(file.getPath());
+                    StringBuilder sb = new StringBuilder();
+                    String[] tmpPathArr = tmpPath.split("__");
+                    for(int i=0;i<tmpPathArr.length-1;i++){
+                        sb.append(tmpPathArr[i]).append("__");
+                    }
+                    String tmpLocation = sb.toString();
+
+                    String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
+                    fileList.add(new FileServerPrivateDto(
+                            tmpPath,
+                            file.getName(),
+                            uuid,
+                            extension,
+                            (float) (file.length() / 1024),
+                            owner,
+                            tmpLocation,
+                            1,
+                            0
+                    ));
+                    if (Arrays.asList(videoExtensionList).contains(extension) && !thumbNailRepository.existsByUuid(uuid)) {
+                        mediaFileList.add(file);
+                    }
+                }
+                catch (Exception e){
+                    System.out.println(e.getMessage());
+                }
+            }
+            fileServerCustomRepository.saveBatchPrivate(fileList);
+            return mediaFileList;
+        }
+        catch (Exception e){
+            logComponent.sendErrorLog("Cloud-Check", "[filesWalk(private)] file check error : ", e, TOPIC_CLOUD_CHECK_LOG);
+        }
+        return null;
+    }
+
     @Transactional
     @Override
     public void privateFileCheck() {
@@ -480,6 +546,26 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
         }
         deleteThumbNail();
     }
+
+    @Override
+    public void privateFileTrashCheck() {
+        List<UserEntity> userList = userService.findAll();
+        File trashDefaultPath = new File(trashPath);
+        File[] trashFiles = trashDefaultPath.listFiles();
+        if(trashFiles != null){
+            for(File file : trashFiles){
+                String fileName = file.getName();
+                for(UserEntity entity : userList){
+                    if(entity.getId().equals(fileName)){
+                        String owner = entity.getId();
+                        filesWalkTrash(trashPath+File.separator+owner, owner);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
     @Override
     public void filesWalk(String pathUrl, String owner){
         Path originPath = Paths.get(pathUrl);

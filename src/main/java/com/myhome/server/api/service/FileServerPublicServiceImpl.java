@@ -3,6 +3,7 @@ package com.myhome.server.api.service;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.myhome.server.api.dto.FileServerPublicDto;
+import com.myhome.server.api.dto.FileServerThumbNailDto;
 import com.myhome.server.component.KafkaProducer;
 import com.myhome.server.component.LogComponent;
 import com.myhome.server.db.entity.*;
@@ -28,8 +29,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 @Service
@@ -105,6 +108,19 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         Pageable pageable = PageRequest.of(page, size);
         if("default".equals(location)) location = diskPath;
         List<FileServerPublicEntity> list = fileServerRepository.findByLocationAndDelete(location, mode, pageable);
+        return list;
+    }
+
+    @Override
+    public List<FileServerPublicTrashEntity> findByLocationTrash(String location) {
+        List<FileServerPublicTrashEntity> list = fileServerPublicTrashRepository.findByLocation(location);
+        return list;
+    }
+
+    @Override
+    public List<FileServerPublicTrashEntity> findByLocationPageTrash(String location, int size, int page) {
+        Pageable pageable = PageRequest.of(page, size);
+        List<FileServerPublicTrashEntity> list = fileServerPublicTrashRepository.findByLocation(location, pageable);
         return list;
     }
 
@@ -395,11 +411,69 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     }
 
     @Override
+    public List<File> filesWalkWithReturnMediaFileList() {
+        Path originPath = Paths.get(diskPath);
+        List<Path> pathList;
+        try{
+            Stream<Path> pathStream = Files.walk(originPath);
+            pathList = pathStream.collect(Collectors.toList());
+            List<FileServerPublicDto> fileList = new ArrayList<>();
+            List<File> mediaFileList = new ArrayList<>();
+            for(Path path : pathList){
+                File file = new File(path.toString());
+                String extension = "dir";
+                if(!file.isDirectory()) {
+                    extension = file.getName().substring(file.getName().lastIndexOf(".") + 1); // file type (need to check ex: txt file -> text/plan)
+                }
+                try {
+                    String tmpPath = commonService.changeSeparatorToUnderBar(file.getPath());
+                    StringBuilder sb = new StringBuilder();
+                    String[] tmpPathArr = tmpPath.split("__");
+                    for(int i=0;i<tmpPathArr.length-1;i++){
+                        sb.append(tmpPathArr[i]).append("__");
+                    }
+                    String tmpLocation = sb.toString();
+
+                    String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
+                    fileList.add(new FileServerPublicDto(
+                            tmpPath,
+                            file.getName(),
+                            uuid,
+                            extension,
+                            (float) (file.length() / 1024),
+                            tmpLocation,
+                            1,
+                            0
+                    ));
+                    if (Arrays.asList(videoExtensionList).contains(extension) && !thumbNailRepository.existsByUuid(uuid)) {
+                        mediaFileList.add(file);
+                    }
+                }
+                catch(Exception e){
+                    System.out.println(e.getMessage());
+                }
+            }
+            fileServerCustomRepository.saveBatchPublic(fileList);
+            return mediaFileList;
+        }
+        catch (Exception e){
+            logComponent.sendErrorLog("Cloud-Check", "[filesWalk(public)] file check error : ", e, TOPIC_CLOUD_CHECK_LOG);
+        }
+        return null;
+    }
+
+    @Override
     public void publicFileStateCheck() {
         deleteThumbNail();
         filesWalk(diskPath);
         filesWalkTrashPath(trashPath);
     }
+
+    @Override
+    public void publicFileTrashStateCheck() {
+        filesWalkTrashPath(trashPath);
+    }
+
     @Override
     public void filesWalk(String pathUrl){
         Path originPath = Paths.get(pathUrl);
@@ -444,12 +518,24 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                 }
             }
             fileServerCustomRepository.saveBatchPublic(fileList);
-            for(File file : mediaFileList){
-                thumbNailService.makeThumbNail(file,
-                        UUID.nameUUIDFromBytes(commonService.changeSeparatorToUnderBar(file.getPath()).getBytes(StandardCharsets.UTF_8)).toString(),
-                        "public"
-                );
+
+            int divNum = 10;
+            int partitionSize = (int) Math.ceil((double) mediaFileList.size() / divNum);
+            List<List<File>> groups = IntStream.range(0, divNum)
+                    .mapToObj(i -> mediaFileList.subList(i * partitionSize, Math.min((i + 1) * partitionSize, mediaFileList.size())))
+                    .toList();
+            System.out.println("List<List>> size : " + groups.size());
+            for(int i=0;i<10;i++){
+                System.out.println("FileServerPublicServiceImpl make Thumbnail i : "+i);
+                List<File> list = groups.get(i);
+                System.out.println("list size : "+list.size());
+                CompletableFuture<List<FileServerThumbNailEntity>> futureResult = thumbNailService.setThumbNail(list, "public");
+                futureResult.thenAccept(result -> {
+                    thumbNailRepository.saveAll(result);
+                    System.out.println("FileServerPublicServiceImpl make Thumbnail end");
+                });
             }
+
         }
         catch (Exception e){
             logComponent.sendErrorLog("Cloud-Check", "[filesWalk(public)] file check error : ", e, TOPIC_CLOUD_CHECK_LOG);
