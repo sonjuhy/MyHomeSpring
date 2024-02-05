@@ -10,6 +10,7 @@ import com.myhome.server.component.batch.cloudPrivate.CloudPrivateTasklet;
 import com.myhome.server.db.entity.FileServerThumbNailEntity;
 import com.myhome.server.db.repository.FileServerThumbNailRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -33,6 +34,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @RequiredArgsConstructor
 @Configuration
 public class BatchPrivateCloudConfiguration {
@@ -174,6 +176,7 @@ public class BatchPrivateCloudConfiguration {
         String type = "private";
         List<FileServerThumbNailEntity> entityList = new ArrayList<>();
         for(FileInfoDto file : fileList){
+            log.info("thumbNailSequence file str : " + file.toString());
             String uuid = UUID.nameUUIDFromBytes(commonService.changeSeparatorToUnderBar(file.getPath()).getBytes(StandardCharsets.UTF_8)).toString();
             String fileLocation = commonService.changeSeparatorToUnderBar(uploadPath+ File.separator+uuid+".png");
             FileServerThumbNailDto thumbNailDto = new FileServerThumbNailDto(0, file.getUuid(), fileLocation, file.getName(), type);

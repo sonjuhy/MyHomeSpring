@@ -99,6 +99,7 @@ public class FileServerThumbNailServiceImpl implements FileServerThumbNailServic
 //            logComponent.sendErrorLog("Cloud-Check", "makeThumbNail Error : ", e, TOPIC_CLOUD_LOG);
             return false;
         }
+        System.out.println("makeThumbNail here! : "+file.getName());
         return true;
     }
 
