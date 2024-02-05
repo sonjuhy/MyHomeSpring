@@ -55,6 +55,7 @@ public class CloudPrivateTasklet implements Tasklet {
                     if(entity.getId().equals(fileName)){
                         String owner = entity.getId();
                         List<File> tmpFileList = privateService.filesWalkWithReturnMediaFileList(diskPath+File.separator+owner, owner);
+                        log.info("CloudPrivateTasklet execute tmpFileList size : " + tmpFileList.size());
                         if(!tmpFileList.isEmpty() && tmpFileList.get(0) != null) fileList.addAll(tmpFileList);
                         break;
                     }
@@ -64,6 +65,7 @@ public class CloudPrivateTasklet implements Tasklet {
                 contribution.setExitStatus(ExitStatus.STOPPED);
                 return RepeatStatus.FINISHED;
             }
+            log.info("CloudPrivateTasklet execute fileList size : " + fileList.size());
             List<FileInfoDto> dtoList = new ArrayList<>();
             for(File file : fileList){
                 FileInfoDto dto = new FileInfoDto();
