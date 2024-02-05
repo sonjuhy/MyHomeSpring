@@ -51,6 +51,9 @@ public class CloudPrivateTasklet implements Tasklet {
                     if(entity.getId().equals(fileName)){
                         String owner = entity.getId();
                         List<File> tmpFileList = privateService.filesWalkWithReturnMediaFileList(diskPath+File.separator+owner, owner);
+                        for(File tmpFile : tmpFileList){
+                            System.out.println(tmpFile.getPath());
+                        }
                         if(!tmpFileList.isEmpty() && tmpFileList.get(0) != null) fileList.addAll(tmpFileList);
                         break;
                     }
