@@ -38,7 +38,9 @@ public class CloudPublicTasklet implements Tasklet {
         List<File> fileList = publicService.filesWalkWithReturnMediaFileList();
         List<FileInfoDto> dtoList = new ArrayList<>();
 
-        for(File file : fileList){
+//        for(File file : fileList){
+        for(int i=0;i<fileList.size()/2;i++){
+            File file = fileList.get(i);
             FileInfoDto dto = new FileInfoDto();
             String uuid = UUID.nameUUIDFromBytes(commonService.changeSeparatorToUnderBar(file.getPath()).getBytes(StandardCharsets.UTF_8)).toString();
             dto.setPath(file.getPath());
