@@ -110,6 +110,7 @@ public class BatchPrivateCloudConfiguration {
         return new StepBuilder(name, jobRepository)
                 .tasklet(((contribution, chunkContext) -> {
                     List<FileInfoDto> fileList = (List<FileInfoDto>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
+                    log.info("parallel step1 list : "+fileList);
                     if(fileList != null && !fileList.isEmpty()){
                         String uploadPath = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getString("uploadPath");
                         thumbNailSequence(fileList, uploadPath);
@@ -134,6 +135,7 @@ public class BatchPrivateCloudConfiguration {
         return new StepBuilder(name, jobRepository)
                 .tasklet(((contribution, chunkContext) -> {
                     List<FileInfoDto> fileList = (List<FileInfoDto>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
+                    log.info("parallel step2 list : "+fileList);
                     if(fileList != null && !fileList.isEmpty()){
                         String uploadPath = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getString("uploadPath");
                         thumbNailSequence(fileList, uploadPath);
@@ -158,6 +160,7 @@ public class BatchPrivateCloudConfiguration {
         return new StepBuilder(name, jobRepository)
                 .tasklet(((contribution, chunkContext) -> {
                     List<FileInfoDto> fileList = (List<FileInfoDto>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
+                    log.info("parallel step3 list : "+fileList);
                     if(fileList != null && !fileList.isEmpty()){
                         String uploadPath = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getString("uploadPath");
                         thumbNailSequence(fileList, uploadPath);
