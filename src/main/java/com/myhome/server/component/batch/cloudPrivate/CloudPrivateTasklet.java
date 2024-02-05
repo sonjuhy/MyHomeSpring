@@ -7,6 +7,7 @@ import com.myhome.server.api.service.UserService;
 import com.myhome.server.db.entity.FileDefaultPathEntity;
 import com.myhome.server.db.entity.UserEntity;
 import com.myhome.server.db.repository.FileDefaultPathRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
@@ -22,6 +23,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.IntStream;
 
+@Slf4j
 @Component
 public class CloudPrivateTasklet implements Tasklet {
 
@@ -37,10 +39,12 @@ public class CloudPrivateTasklet implements Tasklet {
     @Override
     public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
         String diskPath = defaultPathRepository.findByPathName("store").getPrivateDefaultPath();
-        File defaultPath = new File(diskPath);
+        File defaultPath = new File(commonService.changeUnderBarToSeparator(diskPath));
         File[] files = defaultPath.listFiles();
+        log.info("CloudPrivateTasklet execute diskPath : "+diskPath);
 
         if(files != null) {
+            log.info("CloudPrivateTasklet execute files length : " + files.length);
             List<File> fileList = new ArrayList<>();
             List<UserEntity> userList = userService.findAll();
             StringBuilder sb = new StringBuilder();
