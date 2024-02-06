@@ -300,6 +300,18 @@ public class FileServerController {
         else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
     }
 
+    @Operation(description = "Public 파일 중 이미지 파일을 낮은 퀄리티로 다운로드 하는 API")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "정상 처리"),
+            @ApiResponse(responseCode = "401", description = "권한 에러")
+    })
+    @CrossOrigin(origins = "*")
+    @GetMapping("/downloadPublicImageLowQuality/{uuid}/{accessToken}")
+    public ResponseEntity<Resource> downloadPublicImageLowQuality(@PathVariable String uuid, @PathVariable String accessToken){
+        if(authService.validateAccessToken(accessToken)) return service.downloadPublicImageLowQuality(uuid);
+        else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+    }
+
     @Operation(description = "Public 파일 중 미디어(영상) 파일 스트리밍 하는 API")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "정상 처리"),
