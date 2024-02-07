@@ -25,8 +25,16 @@ import org.springframework.util.ObjectUtils;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriUtils;
 
+import javax.imageio.IIOImage;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageOutputStream;
+import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -189,6 +197,55 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
             }
         }
         logComponent.sendLog("Cloud","downloadPrivateMedia error : file doesn't exist", false, TOPIC_CLOUD_LOG);
+        return new ResponseEntity<>(null, HttpStatus.OK);
+    }
+
+    @Override
+    public ResponseEntity<Resource> downloadPrivateImageLowQuality(String uuid) {
+        FileServerPrivateEntity entity = repository.findByUuid(uuid);
+        if(entity!= null){
+            String pathStr = commonService.changeUnderBarToSeparator(entity.getPath());
+            Path path = Paths.get(pathStr);
+            try{
+                File imageFile = new File(pathStr);
+
+                String tmpFileName = "tmpImageName"+System.currentTimeMillis();
+                File outPutFile = new File(commonService.changeUnderBarToSeparator(thumbnailPath)+File.separator+tmpFileName);
+                OutputStream os = new FileOutputStream(outPutFile);
+
+                float quality = 0.2f;
+
+                BufferedImage bufferedImage = ImageIO.read(imageFile);
+                Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName("jpg");
+                if(!writers.hasNext()){
+                    logComponent.sendLog("Cloud","downloadPrivateImageLowQuality error : doesn't support format", false, TOPIC_CLOUD_LOG);
+                    return new ResponseEntity<>(commonService.getDefaultImageIconFile(), HttpStatus.OK);
+                }
+                else{
+                    ImageWriter imageWriter = writers.next();
+                    ImageOutputStream imageOutputStream = ImageIO.createImageOutputStream(os);
+                    imageWriter.setOutput(imageOutputStream);
+
+                    ImageWriteParam param = imageWriter.getDefaultWriteParam();
+                    param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+                    param.setCompressionQuality(quality);
+                    imageWriter.write(null, new IIOImage(bufferedImage, null, null), param);
+                    os.close();
+                    imageOutputStream.close();
+                    imageWriter.dispose();
+
+                    Path outPutPath = outPutFile.toPath();
+                    HttpHeaders httpHeaders = getHttpHeaders(outPutPath, entity.getName());
+                    Resource resource = new InputStreamResource(Files.newInputStream(outPutPath)); // save file resource
+                    outPutFile.delete();
+                    return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
+                }
+            } catch (IOException e) {
+                logComponent.sendErrorLog("Cloud","downloadPrivateImageLowQuality error : ", e, TOPIC_CLOUD_LOG);
+                return new ResponseEntity<>(commonService.getDefaultImageIconFile(), HttpStatus.OK);
+            }
+        }
+        logComponent.sendLog("Cloud","downloadPrivateImageLowQuality error : file doesn't exist", false, TOPIC_CLOUD_LOG);
         return new ResponseEntity<>(null, HttpStatus.OK);
     }
 

@@ -482,6 +482,17 @@ public class FileServerController {
         else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
     }
 
+    @Operation(description = "Private 파일 중 미디어 파일 받는(영상 스트리밍) API")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "정상 처리")
+    })
+    @CrossOrigin(origins = "*")
+    @GetMapping("/downloadPrivateImageLowQuality/{uuid}/{accessToken}")
+    public ResponseEntity<Resource> downloadPrivateImageLowQuality(@PathVariable String uuid, @PathVariable String accessToken){
+        if(authService.validateAccessToken(accessToken)) return privateService.downloadPrivateImageLowQuality(uuid);
+        else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+    }
+
     @Operation(description = "Public 파일 중 미디어(영상) 파일 스트리밍 하는 API")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "정상 처리"),

@@ -221,6 +221,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                     Path outPutPath = outPutFile.toPath();
                     HttpHeaders httpHeaders = getHttpHeader(outPutPath, entity.getName());
                     Resource resource = new InputStreamResource(Files.newInputStream(outPutPath)); // save file resource
+                    outPutFile.delete();
                     return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
                 }
             } catch (IOException e) {
