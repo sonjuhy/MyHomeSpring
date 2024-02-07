@@ -32,6 +32,11 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
+import java.time.DayOfWeek;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Service
@@ -1020,8 +1025,28 @@ public class WeatherServiceImpl implements WeatherService{
                         point = c;
                     }
                 }
+                int dt = itemList.get(i).getDt();
+                Instant instant = Instant.ofEpochSecond(dt);
+                LocalDateTime localDateTime = LocalDateTime.ofInstant(instant, ZoneId.of("UTC"));
+
+                DayOfWeek dayOfWeek = localDateTime.getDayOfWeek();
+                String dayOfWeekString = switch (dayOfWeek.name()) {
+                    case "MONDAY" -> "월";
+                    case "TUESDAY" -> "화";
+                    case "WEDNESDAY" -> "수";
+                    case "THURSDAY" -> "목";
+                    case "FRIDAY" -> "금";
+                    case "SATURDAY" -> "토";
+                    case "SUNDAY" -> "일";
+                    default -> "";
+                };
+                String monthStr = localDateTime.getMonthValue() < 10 ? "0"+localDateTime.getMonthValue() : String.valueOf(localDateTime.getMonthValue());
+                String dayStr = localDateTime.getDayOfMonth() < 10 ? "0"+localDateTime.getDayOfMonth() : String.valueOf(localDateTime.getDayOfMonth());
+
                 ForecastDayDto dayDto = new ForecastDayDto(
                         openWeatherAPIWeatherHash.get(point),
+                        dayOfWeekString,
+                        monthStr + dayStr,
                         Math.round(min*100)/100.0,
                         Math.round(max*100)/100.0
                 );
@@ -1036,59 +1061,83 @@ public class WeatherServiceImpl implements WeatherService{
 
     @Override
     public List<ForecastDayDto> get5DayAverageWeatherInfoByCoordinate(int x, int y) {
-        List<ForecastDayDto> list = new ArrayList<>();
-        List<OpenWeatherForecastItemDto> itemList = getForecastWeatherInfoByCoordinate(x, y).getList();
-        float min = 1000, max = 0;
-        int weatherMax = 0, point = 0;
-
-        int[] weatherCount = new int[7];
-        for(int i=0;i<40;i++){
-            OpenWeatherForecastItemWeatherDto weatherDto = itemList.get(i).getWeather().get(0);
-            OpenWeatherForecastItemMainDto weatherMainDto = itemList.get(i).getMain();
-            switch(weatherDto.getMain()){
-                case "Clear":
-                    weatherCount[0]++;
-                    break;
-                case "Clouds":
-                    weatherCount[1]++;
-                    break;
-                case "Atmosphere":
-                    weatherCount[2]++;
-                    break;
-                case "Rain":
-                    weatherCount[3]++;
-                    break;
-                case "Snow":
-                    weatherCount[4]++;
-                    break;
-                case "Drizzle":
-                    weatherCount[5]++;
-                    break;
-                case "ThunderStorm":
-                    weatherCount[6]++;
-                    break;
-            }
-            min = Math.min(min, weatherMainDto.getTempMin());
-            max = Math.max(max, weatherMainDto.getTempMax());
-            if((i + 1) % 8 == 0){
-                for(int c=0;c<7;c++){
-                    int count = weatherCount[c];
-                    if(count > weatherMax){
-                        weatherMax = count;
-                        point = c;
-                    }
-                }
-                ForecastDayDto dayDto = new ForecastDayDto(
-                        openWeatherAPIWeatherHash.get(point),
-                        Math.round(min*100)/100.0,
-                        Math.round(max*100)/100.0
-                );
-                list.add(dayDto);
-                min = 1000;
-                max = 0;
-                Arrays.fill(weatherCount, 0);
-            }
-        }
+        List<ForecastDayDto> list;
+        double[] lonLat = convertCoordinate(x, y);
+        if(lonLat == null) return null;
+        list = get5DayAverageWeatherInfo(lonLat[1], lonLat[1]);
+//        List<OpenWeatherForecastItemDto> itemList = getForecastWeatherInfoByCoordinate(x, y).getList();
+//        float min = 1000, max = 0;
+//        int weatherMax = 0, point = 0;
+//
+//        int[] weatherCount = new int[7];
+//        for(int i=0;i<40;i++){
+//            OpenWeatherForecastItemWeatherDto weatherDto = itemList.get(i).getWeather().get(0);
+//            OpenWeatherForecastItemMainDto weatherMainDto = itemList.get(i).getMain();
+//            switch(weatherDto.getMain()){
+//                case "Clear":
+//                    weatherCount[0]++;
+//                    break;
+//                case "Clouds":
+//                    weatherCount[1]++;
+//                    break;
+//                case "Atmosphere":
+//                    weatherCount[2]++;
+//                    break;
+//                case "Rain":
+//                    weatherCount[3]++;
+//                    break;
+//                case "Snow":
+//                    weatherCount[4]++;
+//                    break;
+//                case "Drizzle":
+//                    weatherCount[5]++;
+//                    break;
+//                case "ThunderStorm":
+//                    weatherCount[6]++;
+//                    break;
+//            }
+//            min = Math.min(min, weatherMainDto.getTempMin());
+//            max = Math.max(max, weatherMainDto.getTempMax());
+//            if((i + 1) % 8 == 0){
+//                for(int c=0;c<7;c++){
+//                    int count = weatherCount[c];
+//                    if(count > weatherMax){
+//                        weatherMax = count;
+//                        point = c;
+//                    }
+//                }
+//                int dt = itemList.get(i).getDt();
+//                Instant instant = Instant.ofEpochSecond(dt);
+//                LocalDateTime localDateTime = LocalDateTime.ofInstant(instant, ZoneId.of("UTC"));
+//
+//                DayOfWeek dayOfWeek = localDateTime.getDayOfWeek();
+//                String dayOfWeekString = switch (dayOfWeek.name()) {
+//                    case "MONDAY" -> "월";
+//                    case "TUESDAY" -> "화";
+//                    case "WEDNESDAY" -> "수";
+//                    case "THURSDAY" -> "목";
+//                    case "FRIDAY" -> "금";
+//                    case "SATURDAY" -> "토";
+//                    case "SUNDAY" -> "일";
+//                    default -> "";
+//                };
+//                String monthStr = localDateTime.getMonthValue() < 10 ? "0"+localDateTime.getMonthValue() : String.valueOf(localDateTime.getMonthValue());
+//                String dayStr = localDateTime.getDayOfMonth() < 10 ? "0"+localDateTime.getDayOfMonth() : String.valueOf(localDateTime.getDayOfMonth());
+//
+//                int time = Integer.parseInt(monthStr + dayStr);
+//                ForecastDayDto dayDto = new ForecastDayDto(
+//                        openWeatherAPIWeatherHash.get(point),
+//                        dayOfWeekString,
+//                        time,
+//                        Math.round(min*100)/100.0,
+//                        Math.round(max*100)/100.0
+//                );
+//                list.add(dayDto);
+//                min = 1000;
+//                max = 0;
+//                Arrays.fill(weatherCount, 0);
+//            }
+//        }
         return list;
     }
 }

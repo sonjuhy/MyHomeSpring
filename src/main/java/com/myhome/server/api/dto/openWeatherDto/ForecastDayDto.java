@@ -9,6 +9,8 @@ import lombok.*;
 @AllArgsConstructor
 public class ForecastDayDto {
     private String weather;
+    private String day;
+    private String time;
     private double min;
     private double max;
 }
