@@ -27,6 +27,7 @@ public interface FileServerPrivateService {
     HttpHeaders getHttpHeaders(Path path, String fileName) throws IOException;
     ResponseEntity<Resource> downloadFile(String uuid);
     ResponseEntity<Resource> downloadPrivateMedia(String uuid);
+    ResponseEntity<Resource> downloadPrivateImageLowQuality(String uuid);
     ResponseEntity<ResourceRegion> streamingPrivateVideo(HttpHeaders httpHeaders, String uuid);
     List<String> uploadFiles(MultipartFile[] files, String path, String token, Model model);
     boolean mkdir(String path, String token);

@@ -16,12 +16,19 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageOutputStream;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -59,7 +66,6 @@ public class FileServerThumbNailServiceImpl implements FileServerThumbNailServic
     @Async
     @Override
     public CompletableFuture<List<FileServerThumbNailEntity>> setThumbNail(List<File> files, String type) {
-//        System.out.println("setThumbNail files size : "+files.size());
         List<FileServerThumbNailEntity> entityList = new ArrayList<>();
         for(File file : files){
             String uuid = UUID.nameUUIDFromBytes(changeSeparatorToUnderBar(file.getPath()).getBytes(StandardCharsets.UTF_8)).toString();
@@ -67,18 +73,16 @@ public class FileServerThumbNailServiceImpl implements FileServerThumbNailServic
             FileServerThumbNailDto thumbNailDto = new FileServerThumbNailDto(0, uuid, fileLocation, file.getName(), type);
 
             if(makeThumbNail(file, uuid, type)){
-//                System.out.println("setThumbNail success uuid : "+uuid);
                 entityList.add(new FileServerThumbNailEntity(thumbNailDto));
             }
         }
-//        System.out.println("setThumbNail entity List size : "+entityList.size());
         return CompletableFuture.completedFuture(entityList);
     }
 
     @Transactional
     @Override
     public boolean makeThumbNail(File file, String uuid, String type) {
-        File thumbnail = new File(uploadPath, uuid+".png");
+        File thumbnail = new File(uploadPath, uuid+".jpg");
         try{
             FrameGrab frameGrab = FrameGrab.createFrameGrab(NIOUtils.readableChannel(file));
 
@@ -89,7 +93,27 @@ public class FileServerThumbNailServiceImpl implements FileServerThumbNailServic
 
             // 썸네일 파일에 복사
             BufferedImage bi = AWTUtil.toBufferedImage(picture);
-            ImageIO.write(bi, "png", thumbnail);
+            Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName("jpg");
+            if(!writers.hasNext()) {
+                ImageIO.write(bi, "jpg", thumbnail);
+            }
+            else{
+                OutputStream os = new FileOutputStream(thumbnail);
+
+                float quality = 0.2f;
+
+                ImageWriter imageWriter = writers.next();
+                ImageOutputStream imageOutputStream = ImageIO.createImageOutputStream(os);
+                imageWriter.setOutput(imageOutputStream);
+
+                ImageWriteParam param = imageWriter.getDefaultWriteParam();
+                param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+                param.setCompressionQuality(quality);
+                imageWriter.write(null, new IIOImage(bi, null, null), param);
+                os.close();
+                imageOutputStream.close();
+                imageWriter.dispose();
+            }
 
         } catch (Exception e) {
             if(thumbnail.exists()) {
@@ -99,7 +123,6 @@ public class FileServerThumbNailServiceImpl implements FileServerThumbNailServic
 //            logComponent.sendErrorLog("Cloud-Check", "makeThumbNail Error : ", e, TOPIC_CLOUD_LOG);
             return false;
         }
-        System.out.println("makeThumbNail here! : "+file.getName());
         return true;
     }
 

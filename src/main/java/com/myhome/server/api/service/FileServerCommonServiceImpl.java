@@ -23,6 +23,7 @@ import java.util.regex.Matcher;
 public class FileServerCommonServiceImpl implements FileServerCommonService{
 
     private final static String defaultVideoIconPath = "__home__disk1__home__setting__video.png";
+    private final static String defaultImageIconPath = "__home__disk1__home__setting__image.png";
 
     @Autowired
     private FileDefaultPathRepository defaultPathRepository;
@@ -53,6 +54,45 @@ public class FileServerCommonServiceImpl implements FileServerCommonService{
         }
         return usage;
     }
+
+    @Override
+    public Resource getDefaultVideoIconFile() {
+        try {
+            Path path = Paths.get(changeUnderBarToSeparator(defaultVideoIconPath));
+            String fileName = "defaultVideoIcon";
+            HttpHeaders httpHeaders = new HttpHeaders();
+            httpHeaders.setContentDisposition(ContentDisposition
+                    .builder("attachment") //builder type
+                    .filename(fileName)
+                    .build()
+            );
+            httpHeaders.add(HttpHeaders.CONTENT_TYPE, Files.probeContentType(path));
+            return new InputStreamResource(Files.newInputStream(path));
+        }
+        catch (Exception e){
+            return null;
+        }
+    }
+
+    @Override
+    public Resource getDefaultImageIconFile() {
+        try {
+            Path path = Paths.get(changeUnderBarToSeparator(defaultImageIconPath));
+            String fileName = "defaultImageIcon";
+            HttpHeaders httpHeaders = new HttpHeaders();
+            httpHeaders.setContentDisposition(ContentDisposition
+                    .builder("attachment") //builder type
+                    .filename(fileName)
+                    .build()
+            );
+            httpHeaders.add(HttpHeaders.CONTENT_TYPE, Files.probeContentType(path));
+            return new InputStreamResource(Files.newInputStream(path));
+        }
+        catch (Exception e){
+            return null;
+        }
+    }
+
     public int toMB(long size){
         return (int)(size/(1024*1024));
     }
