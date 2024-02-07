@@ -181,7 +181,7 @@ public class BatchPrivateCloudConfiguration {
         for(FileInfoDto file : fileList){
             log.info("thumbNailSequence file str : " + file.toString());
             String uuid = UUID.nameUUIDFromBytes(commonService.changeSeparatorToUnderBar(file.getPath()).getBytes(StandardCharsets.UTF_8)).toString();
-            String fileLocation = commonService.changeSeparatorToUnderBar(uploadPath+ File.separator+uuid+".png");
+            String fileLocation = commonService.changeSeparatorToUnderBar(uploadPath+ File.separator+uuid+".jpg");
             FileServerThumbNailDto thumbNailDto = new FileServerThumbNailDto(0, file.getUuid(), fileLocation, file.getName(), type);
             File tmpFile = new File(file.getPath());
             if(thumbNailService.makeThumbNail(tmpFile, uuid, type)){
