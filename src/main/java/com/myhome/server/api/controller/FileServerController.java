@@ -285,6 +285,7 @@ public class FileServerController {
     })
     @PostMapping("/downloadPublicFile")
     public ResponseEntity<Resource> downloadPublicFile(@RequestBody FileServerPublicDto dto){
+        System.out.println("downloadPublicFile dto : "+dto.toString());
         return service.downloadFile(dto.getUuidName());
     }
 
