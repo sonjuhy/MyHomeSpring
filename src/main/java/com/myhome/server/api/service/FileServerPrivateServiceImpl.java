@@ -171,6 +171,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
             try {
                 HttpHeaders httpHeaders = getHttpHeaders(path, entity.getName());
                 Resource resource = new InputStreamResource(Files.newInputStream(path));
+                httpHeaders.add(HttpHeaders.CONTENT_LENGTH, String.valueOf(resource.contentLength()));
                 return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
             } catch (IOException e) {
                 logComponent.sendErrorLog("Cloud","downloadPrivateFile error : ", e, TOPIC_CLOUD_LOG);
@@ -190,6 +191,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
             try {
                 HttpHeaders httpHeaders = getHttpHeaders(path, entity.getName());
                 Resource resource = new InputStreamResource(Files.newInputStream(path));
+                httpHeaders.add(HttpHeaders.CONTENT_LENGTH, String.valueOf(resource.contentLength()));
                 return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
             } catch (IOException e) {
                 logComponent.sendErrorLog("Cloud","downloadPrivateMedia error : ", e, TOPIC_CLOUD_LOG);
@@ -237,6 +239,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
                     Path outPutPath = outPutFile.toPath();
                     HttpHeaders httpHeaders = getHttpHeaders(outPutPath, entity.getName());
                     Resource resource = new InputStreamResource(Files.newInputStream(outPutPath)); // save file resource
+                    httpHeaders.add(HttpHeaders.CONTENT_LENGTH, String.valueOf(resource.contentLength()));
                     outPutFile.delete();
                     return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
                 }

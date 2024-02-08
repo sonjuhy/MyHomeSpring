@@ -156,6 +156,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
             try{
                 HttpHeaders httpHeaders = getHttpHeader(path, entity.getName());
                 Resource resource = new InputStreamResource(Files.newInputStream(path)); // save file resource
+                httpHeaders.add(HttpHeaders.CONTENT_LENGTH, String.valueOf(resource.contentLength()));
                 return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
             } catch (IOException e) {
                 logComponent.sendErrorLog("Cloud","downloadPublicFile error : ", e, TOPIC_CLOUD_LOG);
@@ -175,6 +176,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
             try{
                 HttpHeaders httpHeaders = getHttpHeader(path, entity.getName());
                 Resource resource = new InputStreamResource(Files.newInputStream(path)); // save file resource
+                httpHeaders.add(HttpHeaders.CONTENT_LENGTH, String.valueOf(resource.contentLength()));
                 return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
             } catch (IOException e) {
                 logComponent.sendErrorLog("Cloud","downloadPublicMedia error : ", e, TOPIC_CLOUD_LOG);
@@ -221,6 +223,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                     Path outPutPath = outPutFile.toPath();
                     HttpHeaders httpHeaders = getHttpHeader(outPutPath, entity.getName());
                     Resource resource = new InputStreamResource(Files.newInputStream(outPutPath)); // save file resource
+                    httpHeaders.add(HttpHeaders.CONTENT_LENGTH, String.valueOf(resource.contentLength()));
                     outPutFile.delete();
                     return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
                 }
