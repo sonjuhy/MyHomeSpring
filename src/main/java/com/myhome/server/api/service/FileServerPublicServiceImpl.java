@@ -136,6 +136,8 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     @Override
     public HttpHeaders getHttpHeader(Path path, String fileName) throws IOException {
         String contentType = Files.probeContentType(path); // content type setting
+        long contentLen = (new InputStreamResource(Files.newInputStream(path))).contentLength();
+        System.out.println("getHttpHeader contentLen : "+contentLen);
 
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.setContentDisposition(ContentDisposition
@@ -144,9 +146,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
                 .build()
         );
         httpHeaders.add(HttpHeaders.CONTENT_TYPE, contentType);
-        httpHeaders.add(HttpHeaders.CONTENT_LENGTH, String.valueOf(
-                (new InputStreamResource(Files.newInputStream(path))).contentLength())
-        );
+        httpHeaders.add(HttpHeaders.CONTENT_LENGTH, String.valueOf(contentLen));
         return httpHeaders;
     }
 
