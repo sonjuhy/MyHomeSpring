@@ -286,7 +286,7 @@ public class FileServerController {
     @PostMapping("/downloadPublicFile")
     public ResponseEntity<Resource> downloadPublicFile(@RequestBody FileServerPublicDto dto){
         System.out.println("downloadPublicFile dto : "+dto.toString());
-        return service.downloadFile(dto.getUuidName());
+        return service.downloadFile(dto.getUuid());
     }
 
     @Operation(description = "Public 파일 중 미디어(영상 등) 파일 다운로드 하는 API")
