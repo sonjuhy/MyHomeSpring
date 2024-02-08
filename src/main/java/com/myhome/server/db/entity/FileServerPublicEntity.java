@@ -49,7 +49,7 @@ public class FileServerPublicEntity {
     public FileServerPublicEntity(FileServerPublicDto dto){
         this.path = dto.getPath();
         this.name = dto.getName();
-        this.uuid = dto.getUuidName();
+        this.uuid = dto.getUuid();
         this.type = dto.getType();
         this.size = dto.getSize();
         this.location = dto.getLocation();
