@@ -145,7 +145,7 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
         );
         httpHeaders.add(HttpHeaders.CONTENT_TYPE, contentType);
         httpHeaders.add(HttpHeaders.CONTENT_LENGTH, String.valueOf(
-                (new InputStreamResource(Files.newInputStream(path))))
+                (new InputStreamResource(Files.newInputStream(path))).contentLength())
         );
         return httpHeaders;
     }

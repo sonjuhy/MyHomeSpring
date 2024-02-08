@@ -159,7 +159,7 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
                 .build());
         httpHeaders.add(HttpHeaders.CONTENT_TYPE, contentType);
         httpHeaders.add(HttpHeaders.CONTENT_LENGTH, String.valueOf(
-                (new InputStreamResource(Files.newInputStream(path))))
+                (new InputStreamResource(Files.newInputStream(path))).contentLength())
         );
         return httpHeaders;
     }
