@@ -9,10 +9,16 @@ import com.myhome.server.db.repository.FileDefaultPathRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import org.springframework.batch.core.Job;
+import org.springframework.batch.core.JobParameter;
+import org.springframework.batch.core.JobParameters;
+import org.springframework.batch.core.JobParametersBuilder;
+import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.ResourceRegion;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +32,7 @@ import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Date;
 import java.util.List;
 
 
@@ -55,6 +62,13 @@ public class FileServerController {
 
     @Autowired
     LogComponent logComponent;
+
+    @Autowired
+    private Job publicCloudCheckJob;
+    @Autowired
+    private Job privateCloudCheckJob;
+    @Autowired
+    private JobLauncher jobLauncher;
 
     /*
      * COMMON PART
@@ -106,6 +120,28 @@ public class FileServerController {
         return new ResponseEntity<>("Public file check Success", HttpStatus.OK);
     }
 
+    @Operation(description = "Cloud 파일 중 Public 에 해당하는 파일만 Batch 탐색 시작하는 API")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "정상 완료"),
+            @ApiResponse(responseCode = "500", description = "에러")
+    })
+    @GetMapping("/checkPublicFileStatusBatch")
+    public ResponseEntity<String> checkPublicFileStatusBatch(){
+        StringWriter sw = new StringWriter();
+        try {
+            Date date = new Date();
+            JobParameters jobParameters = new JobParametersBuilder()
+                    .addString("publicCheck-"+date.getTime(), String.valueOf(System.currentTimeMillis()))
+                    .toJobParameters();
+            jobLauncher.run(publicCloudCheckJob, jobParameters);
+        }
+        catch (Exception e){
+            e.printStackTrace(new PrintWriter(sw));
+            return new ResponseEntity<>("publicFileCheck error : "+sw.toString(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        return new ResponseEntity<>("Public file check Success", HttpStatus.OK);
+    }
+
     @Operation(description = "Cloud 파일 중 Private 에 해당하는 파일만 탐색 시작하는 API")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "정상 완료"),
@@ -124,6 +160,28 @@ public class FileServerController {
         return new ResponseEntity<>("Private file check Success", HttpStatus.OK);
     }
 
+    @Operation(description = "Cloud 파일 중 Private 에 해당하는 파일만 Batch 탐색 시작하는 API")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "정상 완료"),
+            @ApiResponse(responseCode = "500", description = "에러")
+    })
+    @GetMapping("/checkPrivateFileStatusBatch")
+    public ResponseEntity<String> checkPrivateFileStatusBatch(){
+        StringWriter sw = new StringWriter();
+        try {
+            Date date = new Date();
+            JobParameters jobParameters = new JobParametersBuilder()
+                    .addString("privateCheck-"+date.getTime(), String.valueOf(System.currentTimeMillis()))
+                    .toJobParameters();
+            jobLauncher.run(privateCloudCheckJob, jobParameters);
+        }
+        catch (Exception e){
+            e.printStackTrace(new PrintWriter(sw));
+            return new ResponseEntity<>("Private FileCheck error : "+sw.toString(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        return new ResponseEntity<>("Private file check Success", HttpStatus.OK);
+    }
+
     @Operation(description = "썸네일 다운로드 받는 API")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "정상 다운로드 혹은 파일이 없음"),
@@ -132,19 +190,7 @@ public class FileServerController {
     @GetMapping("/downloadThumbNail/{uuid}/{accessToken}")
     public ResponseEntity<Resource> downloadThumbNail(@PathVariable String uuid, @PathVariable String accessToken){
         if(authService.validateAccessToken(accessToken)) {
-            FileServerThumbNailEntity entity = thumbNailService.findByUUID(uuid);
-            if (entity != null) {
-                Path path = Paths.get(entity.getPath());
-                try {
-                    HttpHeaders httpHeaders = service.getHttpHeader(path, entity.getOriginName());
-                    Resource resource = new InputStreamResource(Files.newInputStream(path)); // save file resource
-                    return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
-                } catch (IOException e) {
-                    logComponent.sendErrorLog("Cloud", "downloadThumbnail error : ", e, TOPIC_CLOUD_LOG);
-                    return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
-                }
-            }
-            return new ResponseEntity<>(null, HttpStatus.OK);
+            return commonService.downloadThumbNail(uuid);
         }
         else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
     }
@@ -207,8 +253,8 @@ public class FileServerController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "파일 리스트 반환")
     })
-    @GetMapping("/getPublicFilesInfo") // get PublicFiles info list
-    public ResponseEntity<List<FileServerPublicEntity>> getPublicFilesInfo(@RequestParam String location){
+    @GetMapping("/getPublicFileListInfo") // get PublicFiles info list
+    public ResponseEntity<List<FileServerPublicEntity>> getPublicFileListInfo(@RequestParam String location){
         List<FileServerPublicEntity> list = service.findByLocation(location, 0);
         return new ResponseEntity<>(list, HttpStatus.OK);
     }
@@ -217,8 +263,8 @@ public class FileServerController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "파일 리스트 반환")
     })
-    @GetMapping("/getPublicFilesPageInfo") // get PublicFiles info list
-    public ResponseEntity<List<FileServerPublicEntity>> getPublicFilesPageInfo(@RequestParam String location, @RequestParam int size, @RequestParam int page){
+    @GetMapping("/getPublicFileListInfoPage") // get PublicFiles info list
+    public ResponseEntity<List<FileServerPublicEntity>> getPublicFileListInfoPage(@RequestParam String location, @RequestParam int size, @RequestParam int page){
         List<FileServerPublicEntity> list = service.findByLocationPage(location, 0, size, page);
         return new ResponseEntity<>(list, HttpStatus.OK);
     }
@@ -239,12 +285,14 @@ public class FileServerController {
     })
     @PostMapping("/downloadPublicFile")
     public ResponseEntity<Resource> downloadPublicFile(@RequestBody FileServerPublicDto dto){
-        return service.downloadFile(dto.getUuidName());
+        System.out.println("downloadPublicFile dto : "+dto.toString());
+        return service.downloadFile(dto.getUuid());
     }
 
-    @Operation(description = "Public 파일 중 미디어(영상 등) 파일 스트리밍 및 다운로드 하는 API")
+    @Operation(description = "Public 파일 중 미디어(영상 등) 파일 다운로드 하는 API")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "정상 처리")
+            @ApiResponse(responseCode = "200", description = "정상 처리"),
+            @ApiResponse(responseCode = "401", description = "권한 에러")
     })
     @CrossOrigin(origins = "*")
     @GetMapping("/downloadPublicMedia/{uuid}/{accessToken}")
@@ -253,13 +301,37 @@ public class FileServerController {
         else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
     }
 
+    @Operation(description = "Public 파일 중 이미지 파일을 낮은 퀄리티로 다운로드 하는 API")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "정상 처리"),
+            @ApiResponse(responseCode = "401", description = "권한 에러")
+    })
+    @CrossOrigin(origins = "*")
+    @GetMapping("/downloadPublicImageLowQuality/{uuid}/{accessToken}")
+    public ResponseEntity<Resource> downloadPublicImageLowQuality(@PathVariable String uuid, @PathVariable String accessToken){
+        if(authService.validateAccessToken(accessToken)) return service.downloadPublicImageLowQuality(uuid);
+        else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+    }
+
+    @Operation(description = "Public 파일 중 미디어(영상) 파일 스트리밍 하는 API")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "정상 처리"),
+            @ApiResponse(responseCode = "401", description = "권한 에러")
+    })
+    @CrossOrigin(origins = "*")
+    @GetMapping("/streamingPublicVideo/{uuid}/{accessToken}")
+    public ResponseEntity<ResourceRegion> streamingPublicVideo(@RequestHeader HttpHeaders httpHeaders, @PathVariable String uuid, @PathVariable String accessToken){
+        if(authService.validateAccessToken(accessToken)) return service.streamingPublicVideo(httpHeaders, uuid);
+        else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+    }
+
     @Operation(description = "Public 휴지통 파일 목록 중 원하는 폴더 기준으로 다 받아 오는 API")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "정상 처리")
     })
-    @GetMapping("/getPublicTrashFiles")
-    public ResponseEntity<List<FileServerPublicEntity>> getPublicTrashFiles(@RequestParam String location){
-        List<FileServerPublicEntity> list = service.findByLocation(location, 1);
+    @GetMapping("/getPublicTrashFileListInfo")
+    public ResponseEntity<List<FileServerPublicTrashEntity>> getPublicTrashFileListInfo(@RequestParam String location){
+        List<FileServerPublicTrashEntity> list = service.findByLocationTrash(location);
         return new ResponseEntity<>(list, HttpStatus.OK);
     }
 
@@ -267,9 +339,9 @@ public class FileServerController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "정상 처리")
     })
-    @GetMapping("/getPublicTrashPageFiles")
-    public ResponseEntity<List<FileServerPublicEntity>> getPublicTrashPageFiles(@RequestParam String location, @RequestParam int size, @RequestParam int page){
-        List<FileServerPublicEntity> list = service.findByLocationPage(location, 1, size, page);
+    @GetMapping("/getPublicTrashFileListInfoPage")
+    public ResponseEntity<List<FileServerPublicTrashEntity>> getPublicTrashFileListInfoPage(@RequestParam String location, @RequestParam int size, @RequestParam int page){
+        List<FileServerPublicTrashEntity> list = service.findByLocationPageTrash(location,  size, page);
         return new ResponseEntity<>(list, HttpStatus.OK);
     }
 
@@ -365,8 +437,8 @@ public class FileServerController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "정상 처리")
     })
-    @GetMapping("/getPrivateFilesInfo") // get PrivateFile info list
-    public ResponseEntity<List<FileServerPrivateEntity>> getPrivateFilesInfo(@RequestParam String location){
+    @GetMapping("/getPrivateFileListInfo") // get PrivateFile info list
+    public ResponseEntity<List<FileServerPrivateEntity>> getPrivateFileListInfo(@RequestParam String location){
         List<FileServerPrivateEntity> list = privateService.findByLocation(location, 0);
         return new ResponseEntity<>(list, HttpStatus.OK);
     }
@@ -375,8 +447,8 @@ public class FileServerController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "정상 처리")
     })
-    @GetMapping("/getPrivateFilesPageInfo") // get PrivateFile info list
-    public ResponseEntity<List<FileServerPrivateEntity>> getPrivateFilesPageInfo(@RequestParam String location, @RequestParam int size, @RequestParam int page){
+    @GetMapping("/getPrivateFileListInfoPage") // get PrivateFile info list
+    public ResponseEntity<List<FileServerPrivateEntity>> getPrivateFileListInfoPage(@RequestParam String location, @RequestParam int size, @RequestParam int page){
         List<FileServerPrivateEntity> list = privateService.findByLocationPage(location, 0, size, page);
         return new ResponseEntity<>(list, HttpStatus.OK);
     }
@@ -411,13 +483,36 @@ public class FileServerController {
         else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
     }
 
+    @Operation(description = "Private 파일 중 미디어 파일 받는(영상 스트리밍) API")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "정상 처리")
+    })
+    @CrossOrigin(origins = "*")
+    @GetMapping("/downloadPrivateImageLowQuality/{uuid}/{accessToken}")
+    public ResponseEntity<Resource> downloadPrivateImageLowQuality(@PathVariable String uuid, @PathVariable String accessToken){
+        if(authService.validateAccessToken(accessToken)) return privateService.downloadPrivateImageLowQuality(uuid);
+        else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+    }
+
+    @Operation(description = "Public 파일 중 미디어(영상) 파일 스트리밍 하는 API")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "정상 처리"),
+            @ApiResponse(responseCode = "401", description = "권한 에러")
+    })
+    @CrossOrigin(origins = "*")
+    @GetMapping("/streamingPrivateVideo/{uuid}/{accessToken}")
+    public ResponseEntity<ResourceRegion> streamingPrivateVideo(@RequestHeader HttpHeaders httpHeaders, @PathVariable String uuid, @PathVariable String accessToken){
+        if(authService.validateAccessToken(accessToken)) return privateService.streamingPrivateVideo(httpHeaders, uuid);
+        else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+    }
+
     @Operation(description = "Private 의 휴지통(개인)에서 원하는 폴더 내 파일 리스트 불러오는 API")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "정상 처리")
     })
-    @GetMapping("/getPrivateTrashFilesInfo")
-    public ResponseEntity<List<FileServerPrivateEntity>> getPrivateTrashFiles(@RequestParam String location){
-        List<FileServerPrivateEntity> list = privateService.findByLocation(location, 1);
+    @GetMapping("/getPrivateTrashFileListInfo")
+    public ResponseEntity<List<FileServerPrivateTrashEntity>> getPrivateTrashFileListInfo(@RequestParam String location){
+        List<FileServerPrivateTrashEntity> list = privateService.findByLocationTrash(location);
         return new ResponseEntity<>(list, HttpStatus.OK);
     }
 
@@ -425,9 +520,9 @@ public class FileServerController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "정상 처리")
     })
-    @GetMapping("/getPrivateTrashFilesPageInfo")
-    public ResponseEntity<List<FileServerPrivateEntity>> getPrivateTrashPageFiles(@RequestParam String location, @RequestParam int size, @RequestParam int page){
-        List<FileServerPrivateEntity> list = privateService.findByLocationPage(location, 1, size, page);
+    @GetMapping("/getPrivateTrashFileListInfoPage")
+    public ResponseEntity<List<FileServerPrivateTrashEntity>> getPrivateTrashFileListInfoPage(@RequestParam String location, @RequestParam int size, @RequestParam int page){
+        List<FileServerPrivateTrashEntity> list = privateService.findByLocationPageTrash(location,  size, page);
         return new ResponseEntity<>(list, HttpStatus.OK);
     }
 
@@ -435,7 +530,7 @@ public class FileServerController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "정상 처리. 업로드 된 파일 이름들 리턴")
     })
-    @PostMapping("/uploadPrivateFile/{token}") // upload PrivateFiles
+    @PostMapping("/uploadPrivateFileInfo/{token}") // upload PrivateFiles
     public ResponseEntity<List<String>> uploadPrivateFileInfo(@RequestParam MultipartFile[] uploadFile, @RequestParam String path, Model model, @PathVariable String token)
     {
         List<String> resultArr = privateService.uploadFiles(uploadFile, path, token, model);
@@ -461,7 +556,7 @@ public class FileServerController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "결과 값이 0이면 정상 처리")
     })
-    @PutMapping("/updatePrivateFileInfo")
+    @PutMapping("/updatePrivateFile")
     public ResponseEntity<Integer> updatePrivateFileInfo(@RequestBody FileServerPrivateDto dto){
         int result = privateService.updateByFileServerPrivateEntity(new FileServerPrivateEntity(dto));
         return new ResponseEntity<>(result, HttpStatus.OK);

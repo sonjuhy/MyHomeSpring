@@ -9,7 +9,7 @@ import lombok.*;
 public class FileServerPublicDto {
     private String path;
     private String name;
-    private String uuidName;
+    private String uuid;
     private String type;
     private float size;
     private String location;
@@ -20,7 +20,7 @@ public class FileServerPublicDto {
     public FileServerPublicDto(String path, String name, String uuidName, String type, float size, String location, int state, int delete){
         this.path = path;
         this.name = name;
-        this.uuidName = uuidName;
+        this.uuid = uuidName;
         this.type = type;
         this.size = size;
         this.location = location;

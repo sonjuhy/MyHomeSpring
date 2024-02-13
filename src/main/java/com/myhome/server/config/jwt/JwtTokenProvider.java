@@ -66,7 +66,6 @@ public class JwtTokenProvider implements InitializingBean {
     // JWT 토큰에서 인증 정보 조회
     public Authentication getAuthentication(String token) {
         UserDetails userDetails = userRepository.findByAccessToken(token).orElseThrow(() -> new UsernameNotFoundException(token));
-        System.out.println(userDetails.getUsername());
         return new UsernamePasswordAuthenticationToken(userDetails, "", userDetails.getAuthorities());
     }
 

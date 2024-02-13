@@ -8,7 +8,10 @@ import lombok.*;
 @ToString
 @NoArgsConstructor
 @AllArgsConstructor
-public class OpenWeatherForecastItemRainDto {
+public class OpenWeatherForecastItemSnowDto {
+    @JsonProperty(value = "1h")
+    private double oneHour;
+
     @JsonProperty(value = "3h")
     private double threeHour;
 }

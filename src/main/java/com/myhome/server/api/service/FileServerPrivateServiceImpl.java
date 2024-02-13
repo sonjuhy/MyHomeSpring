@@ -11,14 +11,13 @@ import com.myhome.server.db.entity.*;
 import com.myhome.server.db.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.ResourceRegion;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.ContentDisposition;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
@@ -26,14 +25,23 @@ import org.springframework.util.ObjectUtils;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriUtils;
 
+import javax.imageio.IIOImage;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageOutputStream;
+import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -83,10 +91,10 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
 
         producer = kafkaProducer;
         logComponent = component;
-        logComponent.sendLog("Cloud",
-                "[FileServerPrivateServiceImpl] diskPath : "+diskPath+", trashPath : "+trashPath+", thumbnailPath : " + thumbnailPath,
-                true,
-                TOPIC_CLOUD_LOG);
+//        logComponent.sendLog("Cloud",
+//                "[FileServerPrivateServiceImpl] diskPath : "+diskPath+", trashPath : "+trashPath+", thumbnailPath : " + thumbnailPath,
+//                true,
+//                TOPIC_CLOUD_LOG);
 
     }
 
@@ -123,6 +131,19 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
     }
 
     @Override
+    public List<FileServerPrivateTrashEntity> findByLocationTrash(String location) {
+        List<FileServerPrivateTrashEntity> list = trashRepository.findByLocation(location);
+        return list;
+    }
+
+    @Override
+    public List<FileServerPrivateTrashEntity> findByLocationPageTrash(String location, int size, int page) {
+        Pageable pageable = PageRequest.of(page, size);
+        List<FileServerPrivateTrashEntity> list = trashRepository.findByLocation(location, pageable);
+        return list;
+    }
+
+    @Override
     public List<FileServerPrivateEntity> findByOwner(String owner) {
         List<FileServerPrivateEntity> list = repository.findByOwner(owner);
         return list;
@@ -137,6 +158,9 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
                 .filename(fileName)
                 .build());
         httpHeaders.add(HttpHeaders.CONTENT_TYPE, contentType);
+        httpHeaders.add(HttpHeaders.CONTENT_LENGTH, String.valueOf(
+                (new InputStreamResource(Files.newInputStream(path))).contentLength())
+        );
         return httpHeaders;
     }
 
@@ -176,6 +200,98 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
             }
         }
         logComponent.sendLog("Cloud","downloadPrivateMedia error : file doesn't exist", false, TOPIC_CLOUD_LOG);
+        return new ResponseEntity<>(null, HttpStatus.OK);
+    }
+
+    @Override
+    public ResponseEntity<Resource> downloadPrivateImageLowQuality(String uuid) {
+        FileServerPrivateEntity entity = repository.findByUuid(uuid);
+        if(entity!= null){
+            String pathStr = commonService.changeUnderBarToSeparator(entity.getPath());
+            Path path = Paths.get(pathStr);
+            try{
+                File imageFile = new File(pathStr);
+
+                String tmpFileName = "tmpImageName"+System.currentTimeMillis();
+                File outPutFile = new File(commonService.changeUnderBarToSeparator(thumbnailPath)+File.separator+tmpFileName);
+                OutputStream os = new FileOutputStream(outPutFile);
+
+                float quality = 0.2f;
+
+                BufferedImage bufferedImage = ImageIO.read(imageFile);
+                Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName("jpg");
+                if(!writers.hasNext()){
+                    logComponent.sendLog("Cloud","downloadPrivateImageLowQuality error : doesn't support format", false, TOPIC_CLOUD_LOG);
+                    return new ResponseEntity<>(commonService.getDefaultImageIconFile(), HttpStatus.OK);
+                }
+                else{
+                    ImageWriter imageWriter = writers.next();
+                    ImageOutputStream imageOutputStream = ImageIO.createImageOutputStream(os);
+                    imageWriter.setOutput(imageOutputStream);
+
+                    ImageWriteParam param = imageWriter.getDefaultWriteParam();
+                    param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+                    param.setCompressionQuality(quality);
+                    imageWriter.write(null, new IIOImage(bufferedImage, null, null), param);
+                    os.close();
+                    imageOutputStream.close();
+                    imageWriter.dispose();
+
+                    Path outPutPath = outPutFile.toPath();
+                    HttpHeaders httpHeaders = getHttpHeaders(outPutPath, entity.getName());
+                    Resource resource = new InputStreamResource(Files.newInputStream(outPutPath)); // save file resource
+                    outPutFile.delete();
+                    return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
+                }
+            } catch (IOException e) {
+                logComponent.sendErrorLog("Cloud","downloadPrivateImageLowQuality error : ", e, TOPIC_CLOUD_LOG);
+                return new ResponseEntity<>(commonService.getDefaultImageIconFile(), HttpStatus.OK);
+            }
+        }
+        logComponent.sendLog("Cloud","downloadPrivateImageLowQuality error : file doesn't exist", false, TOPIC_CLOUD_LOG);
+        return new ResponseEntity<>(null, HttpStatus.OK);
+    }
+
+    @Override
+    public ResponseEntity<ResourceRegion> streamingPrivateVideo(HttpHeaders httpHeaders, String uuid) {
+        FileServerPrivateEntity entity = repository.findByUuid(uuid);
+        if(entity!= null){
+            String pathStr = commonService.changeUnderBarToSeparator(entity.getPath());
+            Path path = Paths.get(pathStr);
+            try {
+                Resource resource = new FileSystemResource(path);
+                long chunkSize = 1024*1024;
+                long contentLength = resource.contentLength();
+                ResourceRegion resourceRegion;
+                try{
+                    HttpRange httpRange;
+                    if(httpHeaders.getRange().stream().findFirst().isPresent()){
+                        httpRange = httpHeaders.getRange().stream().findFirst().get();
+                        long start = httpRange.getRangeStart(contentLength);
+                        long end = httpRange.getRangeEnd(contentLength);
+                        long rangeLength = Long.min(chunkSize, end-start+1);
+
+                        resourceRegion = new ResourceRegion(resource, start, rangeLength);
+                    }
+                    else{
+                        resourceRegion = new ResourceRegion(resource, 0, Long.min(chunkSize, resource.contentLength()));
+                    }
+                }
+                catch(Exception e){
+                    long rangeLength = Long.min(chunkSize, resource.contentLength());
+                    resourceRegion = new ResourceRegion(resource, 0, rangeLength);
+                }
+                return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
+                        .cacheControl(CacheControl.maxAge(10, TimeUnit.MINUTES)) // 10분
+                        .contentType(MediaTypeFactory.getMediaType(resource).orElse(MediaType.APPLICATION_OCTET_STREAM))
+                        .header(HttpHeaders.ACCEPT_RANGES, "bytes")
+                        .body(resourceRegion);
+            } catch (IOException e) {
+                logComponent.sendErrorLog("Cloud","streamingPrivateVideo error : ", e, TOPIC_CLOUD_LOG);
+                return new ResponseEntity<>(null, HttpStatus.OK);
+            }
+        }
+        logComponent.sendLog("Cloud","streamingPrivateVideo error : file doesn't exist", false, TOPIC_CLOUD_LOG);
         return new ResponseEntity<>(null, HttpStatus.OK);
     }
 
@@ -400,6 +516,59 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
         return !ObjectUtils.isEmpty(repository.save(entity));
     }
 
+    @Override
+    public List<File> filesWalkWithReturnMediaFileList(String pathUrl, String owner) {
+        Path originPath = Paths.get(pathUrl);
+        List<Path> pathList;
+        try{
+            Stream<Path> pathStream = Files.walk(originPath);
+            pathList = pathStream.collect(Collectors.toList());
+            List<FileServerPrivateDto> fileList = new ArrayList<>();
+            List<File> mediaFileList = new ArrayList<>();
+            for(Path path : pathList){
+                File file = new File(path.toString());
+                String extension = "dir";
+                if(!file.isDirectory()) {
+                    extension = file.getName().substring(file.getName().lastIndexOf(".") + 1); // file type (need to check ex: txt file -> text/plan)
+                }
+                try {
+                    String tmpPath = commonService.changeSeparatorToUnderBar(file.getPath());
+                    StringBuilder sb = new StringBuilder();
+                    String[] tmpPathArr = tmpPath.split("__");
+                    for(int i=0;i<tmpPathArr.length-1;i++){
+                        sb.append(tmpPathArr[i]).append("__");
+                    }
+                    String tmpLocation = sb.toString();
+
+                    String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
+                    fileList.add(new FileServerPrivateDto(
+                            tmpPath,
+                            file.getName(),
+                            uuid,
+                            extension,
+                            (float) (file.length() / 1024),
+                            owner,
+                            tmpLocation,
+                            1,
+                            0
+                    ));
+                    if (Arrays.asList(videoExtensionList).contains(extension) && !thumbNailRepository.existsByUuid(uuid)) {
+                        mediaFileList.add(file);
+                    }
+                }
+                catch (Exception e){
+                    System.out.println(e.getMessage());
+                }
+            }
+            fileServerCustomRepository.saveBatchPrivate(fileList);
+            return mediaFileList;
+        }
+        catch (Exception e){
+            logComponent.sendErrorLog("Cloud-Check", "[filesWalk(private)] file check error : ", e, TOPIC_CLOUD_CHECK_LOG);
+        }
+        return null;
+    }
+
     @Transactional
     @Override
     public void privateFileCheck() {
@@ -437,6 +606,26 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
         }
         deleteThumbNail();
     }
+
+    @Override
+    public void privateFileTrashCheck() {
+        List<UserEntity> userList = userService.findAll();
+        File trashDefaultPath = new File(trashPath);
+        File[] trashFiles = trashDefaultPath.listFiles();
+        if(trashFiles != null){
+            for(File file : trashFiles){
+                String fileName = file.getName();
+                for(UserEntity entity : userList){
+                    if(entity.getId().equals(fileName)){
+                        String owner = entity.getId();
+                        filesWalkTrash(trashPath+File.separator+owner, owner);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
     @Override
     public void filesWalk(String pathUrl, String owner){
         Path originPath = Paths.get(pathUrl);
@@ -453,7 +642,14 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
                     extension = file.getName().substring(file.getName().lastIndexOf(".") + 1); // file type (need to check ex: txt file -> text/plan)
                 }
                 try {
-                    String tmpPath = commonService.changeSeparatorToUnderBar(file.getPath()), tmpLocation = commonService.changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
+                    String tmpPath = commonService.changeSeparatorToUnderBar(file.getPath());
+                    StringBuilder sb = new StringBuilder();
+                    String[] tmpPathArr = tmpPath.split("__");
+                    for(int i=0;i<tmpPathArr.length-1;i++){
+                        sb.append(tmpPathArr[i]).append("__");
+                    }
+                    String tmpLocation = sb.toString();
+
                     String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
                     fileList.add(new FileServerPrivateDto(
                             tmpPath,

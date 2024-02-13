@@ -55,6 +55,10 @@ public class SecurityConfiguration {
                                 new AntPathRequestMatcher("/file/downloadPublicMedia/**"),
                                 new AntPathRequestMatcher("/file/downloadPrivateMedia/**"),
                                 new AntPathRequestMatcher("/file/downloadThumbNail/**"),
+                                new AntPathRequestMatcher("/file/streamingPublicVideo/**"),
+                                new AntPathRequestMatcher("/file/streamingPrivateVideo/**"),
+                                new AntPathRequestMatcher("/file/downloadPublicImageLowQuality/**"),
+                                new AntPathRequestMatcher("/file/downloadPrivateImageLowQuality/**"),
                                 new AntPathRequestMatcher("/swagger-ui/**")
                         ).permitAll()
                         .anyRequest().hasAnyAuthority("regular", "admin")
