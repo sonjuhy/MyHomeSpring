@@ -16,6 +16,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Arrays;
 
 
 @Configuration
@@ -24,6 +25,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        String[] excludePath = {"/auth/**",
+                "/file/downloadPublicMedia/**",
+                "/file/downloadPrivateMedia/**",
+                "/file/downloadThumbNail/**",
+                "/swagger-ui/**"
+        };
+        String path = request.getRequestURI();
+        // 제외할 url 을 설정합니다.
+        return Arrays.stream(excludePath).anyMatch(path::startsWith);
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -38,16 +52,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     // SecurityContext 에 Authentication 객체를 저장합니다.
                     SecurityContextHolder.getContext().setAuthentication(authentication);
 
+                    filterChain.doFilter(request, response);
                 }
                 else {
                     response.sendError(HttpServletResponse.SC_UNAUTHORIZED,"AccessDenied");
                 }
             }
-
-            filterChain.doFilter(request, response);
         }
         catch (Exception e){
-            e.printStackTrace();
             response.setStatus(401);
             response.setContentType("application/json;charset=UTF-8");
         }
