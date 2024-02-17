@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.core.AuthenticationException;
@@ -22,6 +23,7 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
 
+@Slf4j
 @Configuration
 public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
@@ -39,6 +41,7 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
         }
     }
     private int isEndPointExist(HttpServletRequest request){
+        log.info("isEndPoint request url : {}", request.getRequestURI());
         Map<RequestMappingInfo, HandlerMethod> map = requestMappingHandlerMapping.getHandlerMethods();
         Set<RequestMappingInfo> requestMappingInfoSet = map.keySet();
 
