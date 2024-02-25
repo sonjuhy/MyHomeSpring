@@ -18,6 +18,7 @@ public class LightReserveDto {
     private String day;
     private String activated;
     private String reiteration;
+    private boolean holiday;
 
     public LightReserveEntity toEntity(){
         return LightReserveEntity.builder()
@@ -30,6 +31,7 @@ public class LightReserveDto {
                 .day(this.day)
                 .activated(this.activated)
                 .reiteration(this.reiteration)
+                .holiday(this.holiday)
                 .build();
     }
 }

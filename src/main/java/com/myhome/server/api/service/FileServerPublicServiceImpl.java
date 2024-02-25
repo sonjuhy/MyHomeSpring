@@ -3,58 +3,97 @@ package com.myhome.server.api.service;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.myhome.server.api.dto.FileServerPublicDto;
+import com.myhome.server.api.dto.FileServerThumbNailDto;
+import com.myhome.server.component.KafkaProducer;
+import com.myhome.server.component.LogComponent;
 import com.myhome.server.db.entity.*;
-import com.myhome.server.db.repository.FileServerPublicRepository;
-import com.myhome.server.db.repository.FileServerThumbNailRepository;
+import com.myhome.server.db.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ContentDisposition;
-import org.springframework.http.HttpHeaders;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.ResourceRegion;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
-import org.springframework.util.FileCopyUtils;
 import org.springframework.util.ObjectUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.io.IOException;
+import javax.imageio.IIOImage;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageOutputStream;
+import javax.swing.*;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.*;
+import java.nio.Buffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.regex.Matcher;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 @Service
 public class FileServerPublicServiceImpl implements FileServerPublicService {
 
-//    private final String diskPath = "/home/disk1/home/public";
-//    private final String trashPath = "/home/disk1/home/public/휴지통";
+    private final String diskPath;
+    private final String trashPath;
+    private final String thumbnailPath;
 
-    private final String diskPath = "C:\\Users\\SonJunHyeok\\Desktop\\test\\public";
-    private final String trashPath = "C:\\Users\\SonJunHyeok\\Desktop\\test\\trash";
-
-    @Value("${part4.upload.path}")
-    private String defaultUploadPath;
+    private final static String TOPIC_CLOUD_LOG = "cloud-log-topic";
+    private final static String TOPIC_CLOUD_CHECK_LOG = "cloud-check-log";
 
     private final String[] videoExtensionList = {"mp4", "avi", "mov", "wmv", "avchd", "webm", "mpeg4"};
 
-    @Autowired
     KafkaProducer producer;
+
+    LogComponent logComponent;
 
     @Autowired
     FileServerPublicRepository fileServerRepository;
+    @Autowired
+    FileServerPublicTrashRepository fileServerPublicTrashRepository;
+    @Autowired
+    FileServerCustomRepository fileServerCustomRepository;
 
     @Autowired
     FileServerThumbNailRepository thumbNailRepository;
-
     @Autowired
-    FileServerThumbNailService thumbNailService = new FileServerThumbNailServiceImpl();
+    FileServerThumbNailService thumbNailService;
+    @Autowired
+    FileServerCommonService commonService;
+    @Autowired
+    public FileServerPublicServiceImpl(FileDefaultPathRepository fileDefaultPathRepository, FileServerCommonService commonService, KafkaProducer kafkaProducer, LogComponent component){
+        FileDefaultPathEntity storeEntity = fileDefaultPathRepository.findByPathName("store");
+        FileDefaultPathEntity trashEntity = fileDefaultPathRepository.findByPathName("trash");
+        FileDefaultPathEntity thumbnailEntity = fileDefaultPathRepository.findByPathName("thumbnail");
+        diskPath = commonService.changeUnderBarToSeparator(storeEntity.getPublicDefaultPath());
+        trashPath = commonService.changeUnderBarToSeparator(trashEntity.getPublicDefaultPath());
+        thumbnailPath = commonService.changeUnderBarToSeparator(thumbnailEntity.getPublicDefaultPath());
+
+        producer = kafkaProducer;
+        logComponent = component;
+
+//        logComponent.sendLog("Cloud",
+//                "[FileServerPublicServiceImpl] diskPath : "+diskPath+", trashPath : "+trashPath+", thumbnailPath : " + thumbnailPath,
+//                true,
+//                TOPIC_CLOUD_LOG);
+    }
 
     @Override
     public FileServerPublicEntity findByPath(String path) {
-        String originPath = changeUnderBarToSeparator(path);
+        String originPath = path;
         if("default".equals(originPath)) originPath = diskPath;
         FileServerPublicEntity entity = fileServerRepository.findByPath(originPath);
         return entity;
@@ -68,150 +107,299 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
 
     @Override
     public List<FileServerPublicEntity> findByLocation(String location, int mode) {
-        String originLocation = changeUnderBarToSeparator(location);
-        System.out.println("location : " + originLocation);
-        if("default".equals(originLocation)) originLocation = diskPath;
-        List<FileServerPublicEntity> list = fileServerRepository.findByLocationAndDelete(originLocation, mode);
+        if("default".equals(location)) location = diskPath;
+        List<FileServerPublicEntity> list = fileServerRepository.findByLocationAndDelete(location, mode);
+        return list;
+    }
+
+    @Override
+    public List<FileServerPublicEntity> findByLocationPage(String location, int mode, int size, int page) {
+        Pageable pageable = PageRequest.of(page, size);
+        if("default".equals(location)) location = diskPath;
+        List<FileServerPublicEntity> list = fileServerRepository.findByLocationAndDelete(location, mode, pageable);
+        return list;
+    }
+
+    @Override
+    public List<FileServerPublicTrashEntity> findByLocationTrash(String location) {
+        List<FileServerPublicTrashEntity> list = fileServerPublicTrashRepository.findByLocation(location);
+        return list;
+    }
+
+    @Override
+    public List<FileServerPublicTrashEntity> findByLocationPageTrash(String location, int size, int page) {
+        Pageable pageable = PageRequest.of(page, size);
+        List<FileServerPublicTrashEntity> list = fileServerPublicTrashRepository.findByLocation(location, pageable);
         return list;
     }
 
     @Override
     public HttpHeaders getHttpHeader(Path path, String fileName) throws IOException {
         String contentType = Files.probeContentType(path); // content type setting
+        long contentLen = (new InputStreamResource(Files.newInputStream(path))).contentLength();
+        System.out.println("getHttpHeader contentLen : "+contentLen);
 
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.setContentDisposition(ContentDisposition
                 .builder("attachment") //builder type
-//                .filename(entity.getOriginName(), StandardCharsets.UTF_8) // filename setting by utf-8
-                .filename(fileName, StandardCharsets.UTF_8)
-                .build());
+                .filename(fileName)
+                .build()
+        );
         httpHeaders.add(HttpHeaders.CONTENT_TYPE, contentType);
+        httpHeaders.add(HttpHeaders.CONTENT_LENGTH, String.valueOf(contentLen));
+        return httpHeaders;
+    }
 
-        return null;
+    @Override
+    public ResponseEntity<Resource> downloadFile(String uuid) {
+        FileServerPublicEntity entity = fileServerRepository.findByUuid(uuid);
+        if(entity != null){
+            String pathStr = commonService.changeUnderBarToSeparator(entity.getPath());
+            Path path = Paths.get(pathStr);
+            try{
+                HttpHeaders httpHeaders = getHttpHeader(path, entity.getName());
+                Resource resource = new InputStreamResource(Files.newInputStream(path)); // save file resource
+                return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
+            } catch (IOException e) {
+                logComponent.sendErrorLog("Cloud","downloadPublicFile error : ", e, TOPIC_CLOUD_LOG);
+                return new ResponseEntity<>(null, HttpStatus.OK);
+            }
+        }
+        logComponent.sendLog("Cloud","downloadPublicFile error : file doesn't exist", false, TOPIC_CLOUD_LOG);
+        return new ResponseEntity<>(null, HttpStatus.OK);
+    }
+
+    @Override
+    public ResponseEntity<Resource> downloadPublicMedia(String uuid) {
+        FileServerPublicEntity entity = fileServerRepository.findByUuid(uuid);
+        if(entity != null){
+            String pathStr = commonService.changeUnderBarToSeparator(entity.getPath());
+            Path path = Paths.get(pathStr);
+            try{
+                HttpHeaders httpHeaders = getHttpHeader(path, entity.getName());
+                Resource resource = new InputStreamResource(Files.newInputStream(path)); // save file resource
+                return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
+            } catch (IOException e) {
+                logComponent.sendErrorLog("Cloud","downloadPublicMedia error : ", e, TOPIC_CLOUD_LOG);
+                return new ResponseEntity<>(null, HttpStatus.OK);
+            }
+        }
+        logComponent.sendLog("Cloud","downloadPublicMedia error : file doesn't exist", false, TOPIC_CLOUD_LOG);
+        return new ResponseEntity<>(null, HttpStatus.OK);
+    }
+
+    @Override
+    public ResponseEntity<Resource> downloadPublicImageLowQuality(String uuid) {
+        FileServerPublicEntity entity = fileServerRepository.findByUuid(uuid);
+        if(entity != null){
+            String pathStr = commonService.changeUnderBarToSeparator(entity.getPath());
+            try{
+                File imageFile = new File(pathStr);
+
+                String tmpFileName = "tmpImageName"+System.currentTimeMillis();
+                File outPutFile = new File(commonService.changeUnderBarToSeparator(thumbnailPath)+File.separator+tmpFileName);
+                OutputStream os = new FileOutputStream(outPutFile);
+
+                float quality = 0.2f;
+
+                BufferedImage bufferedImage = ImageIO.read(imageFile);
+                Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName("jpg");
+                if(!writers.hasNext()){
+                    logComponent.sendLog("Cloud","downloadPublicMediaLowQuality error : doesn't support format", false, TOPIC_CLOUD_LOG);
+                    return new ResponseEntity<>(commonService.getDefaultImageIconFile(), HttpStatus.OK);
+                }
+                else{
+                    ImageWriter imageWriter = writers.next();
+                    ImageOutputStream imageOutputStream = ImageIO.createImageOutputStream(os);
+                    imageWriter.setOutput(imageOutputStream);
+
+                    ImageWriteParam param = imageWriter.getDefaultWriteParam();
+                    param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+                    param.setCompressionQuality(quality);
+                    imageWriter.write(null, new IIOImage(bufferedImage, null, null), param);
+                    os.close();
+                    imageOutputStream.close();
+                    imageWriter.dispose();
+
+                    Path outPutPath = outPutFile.toPath();
+                    HttpHeaders httpHeaders = getHttpHeader(outPutPath, entity.getName());
+                    Resource resource = new InputStreamResource(Files.newInputStream(outPutPath)); // save file resource
+                    outPutFile.delete();
+                    return new ResponseEntity<>(resource, httpHeaders, HttpStatus.OK);
+                }
+            } catch (IOException e) {
+                logComponent.sendErrorLog("Cloud","downloadPublicMediaLowQuality error : ", e, TOPIC_CLOUD_LOG);
+                return new ResponseEntity<>(commonService.getDefaultImageIconFile(), HttpStatus.OK);
+            }
+        }
+        else {
+            logComponent.sendLog("Cloud", "downloadPublicMediaLowQuality error : file doesn't exist", false, TOPIC_CLOUD_LOG);
+            return new ResponseEntity<>(commonService.getDefaultImageIconFile(), HttpStatus.OK);
+        }
+    }
+
+    @Override
+    public ResponseEntity<ResourceRegion> streamingPublicVideo(HttpHeaders httpHeaders, String uuid) {
+        FileServerPublicEntity entity = fileServerRepository.findByUuid(uuid);
+        if(entity != null){
+            String pathStr = commonService.changeUnderBarToSeparator(entity.getPath());
+            Path path = Paths.get(pathStr);
+            try{
+                Resource resource = new FileSystemResource(path);
+                long chunkSize = 1024*1024;
+                long contentLength = resource.contentLength();
+                ResourceRegion resourceRegion;
+                try{
+                    HttpRange httpRange;
+                    if(httpHeaders.getRange().stream().findFirst().isPresent()){
+                        httpRange = httpHeaders.getRange().stream().findFirst().get();
+                        long start = httpRange.getRangeStart(contentLength);
+                        long end = httpRange.getRangeEnd(contentLength);
+                        long rangeLength = Long.min(chunkSize, end-start+1);
+                        System.out.println("contentLength : "+contentLength+", start : "+start+", end : "+end+", rangeLength : "+rangeLength);
+
+                        resourceRegion = new ResourceRegion(resource, start, rangeLength);
+                    }
+                    else{
+                        resourceRegion = new ResourceRegion(resource, 0, Long.min(chunkSize, resource.contentLength()));
+                    }
+                }
+                catch(Exception e){
+                    long rangeLength = Long.min(chunkSize, resource.contentLength());
+                    resourceRegion = new ResourceRegion(resource, 0, rangeLength);
+                }
+               return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
+                       .cacheControl(CacheControl.maxAge(10, TimeUnit.MINUTES)) // 10분
+                       .contentType(MediaTypeFactory.getMediaType(resource).orElse(MediaType.APPLICATION_OCTET_STREAM))
+                       .header(HttpHeaders.ACCEPT_RANGES, "bytes")
+                       .body(resourceRegion);
+            } catch (IOException e) {
+                logComponent.sendErrorLog("Cloud","streamingPublicVideo error : ", e, TOPIC_CLOUD_LOG);
+                return new ResponseEntity<>(null, HttpStatus.OK);
+            }
+        }
+        logComponent.sendLog("Cloud","streamingPublicVideo error : file doesn't exist", false, TOPIC_CLOUD_LOG);
+        return new ResponseEntity<>(null, HttpStatus.OK);
     }
 
     @Override
     public List<String> uploadFiles(MultipartFile[] files, String path, Model model) {
+        if(path != null && path.isBlank() && !path.isEmpty()) {
+            path += File.separator;
+            String originPath = commonService.changeSeparatorToUnderBar(path);
+            List<FileServerPublicEntity> list = new ArrayList<>();
+            for(MultipartFile file : files){
+                if(!file.isEmpty()){
+                    try{
+                        String tmpPath = commonService.changeSeparatorToUnderBar(originPath+file.getOriginalFilename());
+                        String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
 
-//        String fileLocation = defaultUploadPath+File.separator+path+File.separator;
-        String originPath = changeUnderBarToSeparator(path);
-        if(originPath != null && originPath.isBlank() && !originPath.isEmpty()) {
-            System.out.println("uploadFile impl here : " + originPath);
-            originPath += File.separator;
-        }
-        else{
-            System.out.println("uploadFile impl path is empty");
-        }
-        String fileLocation = "C:\\Users\\SonJunHyeok\\Desktop\\test\\public"+File.separator+originPath;
-        List<FileServerPublicEntity> list = new ArrayList<>();
-        for(MultipartFile file : files){
-            if(!file.isEmpty()){
-                System.out.println("uploadFile impl filepath : " + fileLocation+file.getOriginalFilename());
-                try{
-                    FileServerPublicDto dto = new FileServerPublicDto(
-                            fileLocation+file.getOriginalFilename(), // file path (need to change)
-                            file.getOriginalFilename(), // file name
-                            UUID.randomUUID().toString(), // file name to change UUID
-                            Objects.requireNonNull(file.getOriginalFilename()).substring(file.getOriginalFilename().lastIndexOf(".") + 1), // file type (need to check ex: txt file -> text/plan)
-                            (float)file.getSize(), // file size(KB)
-                            fileLocation, // file folder path (need to change)
-                            0,
-                            0
-                    );
-                    System.out.println(file.getResource());
-                    list.add(new FileServerPublicEntity(dto));
-                    String saveName = fileLocation+dto.getName();
-                    Path savePath = Paths.get(saveName);
-                    file.transferTo(savePath);
-                } catch (IOException e) {
-                    e.printStackTrace();
+                        FileServerPublicDto dto = new FileServerPublicDto(
+                                tmpPath,
+                                file.getOriginalFilename(), // file name
+                                uuid, // file name to change UUID
+                                Objects.requireNonNull(file.getOriginalFilename()).substring(file.getOriginalFilename().lastIndexOf(".") + 1), // file type (need to check ex: txt file -> text/plan)
+                                (float)file.getSize(), // file size(KB)
+                                originPath, // file folder path (need to change)
+                                0,
+                                0
+                        );
+                        list.add(new FileServerPublicEntity(dto));
+                        String saveName = path+dto.getName();
+                        Path savePath = Paths.get(saveName);
+                        file.transferTo(savePath);
+                    } catch (IOException e) {
+                        logComponent.sendErrorLog("Cloud", "[uploadFiles(public)] error : ", e, TOPIC_CLOUD_LOG);
+                    }
                 }
             }
-        }
-        model.addAttribute("files", list);
-        List<String> resultArr = new ArrayList<>();
-        for (FileServerPublicEntity entity : list) {
-            if (save(entity)) {
-                resultArr.add(entity.getName());
+            model.addAttribute("files", list);
+            List<String> resultArr = new ArrayList<>();
+            for (FileServerPublicEntity entity : list) {
+                if (save(entity)) {
+                    resultArr.add(entity.getName());
+                }
             }
+            logComponent.sendLog("Cloud", "[uploadFiles(public)] file size : "+resultArr.size(), true, TOPIC_CLOUD_LOG);
+            return resultArr;
         }
-        return resultArr;
+        else{
+            logComponent.sendLog("Cloud", "[uploadFiles(public)] uploadFile impl path is empty", false, TOPIC_CLOUD_LOG);
+            return null;
+        }
     }
 
     @Override
-    public void mkdir(String path) {
-        String originPath = changeUnderBarToSeparator(path);
+    public boolean mkdir(String path) {
+        String originPath = commonService.changeUnderBarToSeparator(path);
         File file = new File(originPath);
-        file.mkdir();
-        System.out.println("Public mkdir : " + originPath);
-//        String[] paths = path.split(File.separator);
-        String[] paths = originPath.split("\\\\");
-        String name = paths[paths.length-1];
-        StringBuilder location = new StringBuilder();
-        for(int i=0;i<paths.length-1;i++){
-            location.append(paths[i]).append(File.separator);
+        if(file.mkdir()){
+            String underBar = "__";
+            String[] paths = path.split(underBar);
+            String name = paths[paths.length-1];
+            StringBuilder location = new StringBuilder();
+            for(int i=0;i<paths.length-1;i++){
+                location.append(paths[i]).append(underBar);
+            }
+            String uuid = UUID.nameUUIDFromBytes(path.getBytes(StandardCharsets.UTF_8)).toString();
+            FileServerPublicDto dto = new FileServerPublicDto(
+                    path, // file path (need to change)
+                    name, // file name
+                    uuid, // file name to change UUID
+                    "dir",
+                    0, // file size(KB)
+                    location.toString(), // file folder path (need to change)
+                    0,
+                    0
+            );
+            fileServerRepository.save(new FileServerPublicEntity(dto));
+            logComponent.sendLog("Cloud", "[mkdir(public)] mkdir dto : "+dto, true, TOPIC_CLOUD_LOG);
+            return true;
         }
-        System.out.println("Public mkdir location : " + location.toString());
-        FileServerPublicDto dto = new FileServerPublicDto(
-                originPath, // file path (need to change)
-                name, // file name
-                UUID.randomUUID().toString(), // file name to change UUID
-                "dir",
-                0, // file size(KB)
-                location.toString(), // file folder path (need to change)
-                0,
-                0
-        );
-        fileServerRepository.save(new FileServerPublicEntity(dto));
+        else{
+            logComponent.sendLog("Cloud", "[mkdir(public)] failed to mkdir (path) : "+path, false, TOPIC_CLOUD_LOG);
+            return false;
+        }
     }
 
     @Override
     public boolean existsByPath(String path) {
-        String originPath = changeUnderBarToSeparator(path);
-        boolean result = fileServerRepository.existsByPath(originPath);
+//        String originPath = changeUnderBarToSeparator(path);
+        boolean result = fileServerRepository.existsByPath(path);
         return result;
     }
 
     @Override
     public long deleteByPath(String path) {
-        String originPath = changeUnderBarToSeparator(path);
-        FileServerPublicEntity entity = fileServerRepository.findByPath(originPath);
+//        String originPath = changeUnderBarToSeparator(path);
+        FileServerPublicEntity entity = fileServerRepository.findByPath(path);
         if(ObjectUtils.isEmpty(entity)){
+            logComponent.sendLog("Cloud", "[deleteByPath(public)] file entity is null (path) : "+path, false, TOPIC_CLOUD_LOG);
             return -1;
         }
         // json type { file : origin file path, path : destination to move file }
-        Gson gson = new Gson();
-        JsonObject jsonObject = new JsonObject();
-        jsonObject.addProperty("purpose", "delete");
-        jsonObject.addProperty("action", "delete");
-        jsonObject.addProperty("uuid", entity.getUuid());
-        jsonObject.addProperty("file", trashPath+"\\"+entity.getName());
-        jsonObject.addProperty("path", entity.getPath());
-        String jsonResult = gson.toJson(jsonObject);
+        String jsonResult = encodingJSON("delete", "delete", entity.getUuid(), entity.getPath(), entity.getLocation());
         System.out.println("deleteByPath : " + jsonResult);
         // kafka send
-        producer.sendMessage(jsonResult);
+        producer.sendCloudMessage(jsonResult);
+        logComponent.sendLog("Cloud", "[deleteByPath(public)] json : "+jsonResult, true, TOPIC_CLOUD_LOG);
         return 0;
     }
 
     @Override
     public int moveFile(String path, String location) {
-        String originPath = changeUnderBarToSeparator(path);
-        FileServerPublicEntity entity = fileServerRepository.findByPath(originPath);
+//        String originPath = changeUnderBarToSeparator(path);
+        FileServerPublicEntity entity = fileServerRepository.findByPath(path);
         if(ObjectUtils.isEmpty(entity)){
+            logComponent.sendLog("Cloud", "[moveFile(public)] file entity is null (path) : "+path+", location : " + location, false, TOPIC_CLOUD_LOG);
             return -1; // file info doesn't exist
         }
+        String movePath = location + entity.getName();
         // json type { file : origin file path, path : destination to move file }
-        Gson gson = new Gson();
-        JsonObject jsonObject = new JsonObject();
-        jsonObject.addProperty("purpose", "move");
-        jsonObject.addProperty("action", "move");
-        jsonObject.addProperty("uuid", entity.getUuid());
-        jsonObject.addProperty("file", originPath);
-        jsonObject.addProperty("path", location);
-        String jsonResult = gson.toJson(jsonObject);
+        String jsonResult = encodingJSON("move", "move", entity.getUuid(), path, movePath);
         // kafka send
-        producer.sendMessage(jsonResult);
+        producer.sendCloudMessage(jsonResult);
+        logComponent.sendLog("Cloud", "[moveFile(public)] json : "+jsonResult, true, TOPIC_CLOUD_LOG);
         return 0;
     }
 
@@ -219,54 +407,60 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     public int moveTrash(String uuid) {
         FileServerPublicEntity entity = fileServerRepository.findByUuid(uuid);
         if(entity != null){
+            String underBar = "__";
+            String tmpTrashPath = commonService.changeSeparatorToUnderBar(trashPath)+underBar;
             // json type { file : origin file path, path : destination to move file }
-            Gson gson = new Gson();
-            JsonObject jsonObject = new JsonObject();
-            jsonObject.addProperty("purpose", "move");
-            jsonObject.addProperty("action", "delete");
-            jsonObject.addProperty("uuid", entity.getUuid());
-            jsonObject.addProperty("file", entity.getPath());
-            jsonObject.addProperty("path", trashPath);
-            String jsonResult = gson.toJson(jsonObject);
+            String jsonResult = encodingJSON("move", "delete", entity.getUuid(), entity.getPath(), tmpTrashPath);
             // kafka send
-            producer.sendMessage(jsonResult);
+            producer.sendCloudMessage(jsonResult);
+            logComponent.sendLog("Cloud", "[moveTrash(public)] file info send to django (json) : "+jsonResult, true, TOPIC_CLOUD_LOG);
+            return 0;
         }
+        logComponent.sendLog("Cloud", "[moveTrash(public)] entity is null (uuid) : "+uuid, false, TOPIC_CLOUD_LOG);
         return -1;
     }
 
     @Override
     public int restore(String uuid) {
-        FileServerPublicEntity entity = fileServerRepository.findByUuid(uuid);
-
-        if(entity != null){
+        FileServerPublicTrashEntity trashEntity = fileServerPublicTrashRepository.findByUuid(uuid);
+        if(trashEntity != null){
             // json type { file : origin file path, path : destination to move file }
-            Gson gson = new Gson();
-            JsonObject jsonObject = new JsonObject();
-            jsonObject.addProperty("purpose", "move");
-            jsonObject.addProperty("action", "restore");
-            jsonObject.addProperty("uuid", entity.getUuid());
-            jsonObject.addProperty("file", trashPath+"\\"+entity.getName());
-            jsonObject.addProperty("path", entity.getPath());
-            String jsonResult = gson.toJson(jsonObject);
+            String jsonResult = encodingJSON("move", "restore", trashEntity.getUuid(), trashEntity.getPath(), trashEntity.getOriginPath());
             // kafka send
-            producer.sendMessage(jsonResult);
+            producer.sendCloudMessage(jsonResult);
+            logComponent.sendLog("Cloud", "[restore(public)] file info send to django (json) : "+jsonResult, true, TOPIC_CLOUD_LOG);
+            return 0;
         }
+        logComponent.sendLog("Cloud", "[restore(public)] file entity is null (uuid) : "+uuid, false, TOPIC_CLOUD_LOG);
         return -1;
+    }
+
+    @Override
+    public String encodingJSON(String purpose, String action, String uuid, String file, String path) {
+        Gson gson = new Gson();
+        JsonObject jsonObject = new JsonObject();
+        jsonObject.addProperty("purpose", purpose);
+        jsonObject.addProperty("action", action);
+        jsonObject.addProperty("uuid", uuid);
+        jsonObject.addProperty("file", file);
+        jsonObject.addProperty("path", path);
+        return gson.toJson(jsonObject);
     }
 
     @Override
     public int updateByFileServerPublicEntity(FileServerPublicEntity entity) {
         if(existsByPath(entity.getPath())){
-            System.out.println("already exist file in location");
+            logComponent.sendLog("Cloud", "[updateByFileServerPublicEntity(public)] already exist file in location (path): "+entity.getPath(), false, TOPIC_CLOUD_LOG);
             return -1;
         }
         else{
             FileServerPublicEntity resultEntity = fileServerRepository.save(entity);
             if(ObjectUtils.isEmpty(resultEntity)){ // error during change info on DB
-                System.out.println("Error during change info on DB");
+                logComponent.sendLog("Cloud", "[updateByFileServerPublicEntity(public)] Error during change info on DB (uuid): "+entity.getUuid(), false, TOPIC_CLOUD_LOG);
                 return -2;
             }
             else{ // success update file info
+                logComponent.sendLog("Cloud", "[updateByFileServerPublicEntity(public)] change info on DB (uuid) : "+entity.getUuid(), true, TOPIC_CLOUD_LOG);
                 return 0;
             }
         }
@@ -279,80 +473,218 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     }
 
     @Override
+    public List<File> filesWalkWithReturnMediaFileList() {
+        Path originPath = Paths.get(diskPath);
+        List<Path> pathList;
+        try{
+            Stream<Path> pathStream = Files.walk(originPath);
+            pathList = pathStream.collect(Collectors.toList());
+            List<FileServerPublicDto> fileList = new ArrayList<>();
+            List<File> mediaFileList = new ArrayList<>();
+            for(Path path : pathList){
+                File file = new File(path.toString());
+                String extension = "dir";
+                if(!file.isDirectory()) {
+                    extension = file.getName().substring(file.getName().lastIndexOf(".") + 1); // file type (need to check ex: txt file -> text/plan)
+                }
+                try {
+                    String tmpPath = commonService.changeSeparatorToUnderBar(file.getPath());
+                    StringBuilder sb = new StringBuilder();
+                    String[] tmpPathArr = tmpPath.split("__");
+                    for(int i=0;i<tmpPathArr.length-1;i++){
+                        sb.append(tmpPathArr[i]).append("__");
+                    }
+                    String tmpLocation = sb.toString();
+
+                    String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
+                    fileList.add(new FileServerPublicDto(
+                            tmpPath,
+                            file.getName(),
+                            uuid,
+                            extension,
+                            (float) (file.length() / 1024),
+                            tmpLocation,
+                            1,
+                            0
+                    ));
+                    if (Arrays.asList(videoExtensionList).contains(extension) && !thumbNailRepository.existsByUuid(uuid)) {
+                        mediaFileList.add(file);
+                    }
+                }
+                catch(Exception e){
+                    System.out.println(e.getMessage());
+                }
+            }
+            fileServerCustomRepository.saveBatchPublic(fileList);
+            return mediaFileList;
+        }
+        catch (Exception e){
+            logComponent.sendErrorLog("Cloud-Check", "[filesWalk(public)] file check error : ", e, TOPIC_CLOUD_CHECK_LOG);
+        }
+        return null;
+    }
+
+    @Override
     public void publicFileStateCheck() {
-        String tmpPath = "C:\\Users\\SonJunHyeok\\Desktop\\test\\public\\";
-        String tmpTrashPath = "C:\\Users\\SonJunHyeok\\Desktop\\test\\trash\\";
-        fileServerRepository.updateAllStateToOne();
-        traversalFolder(tmpPath, true);
-        traversalFolder(tmpTrashPath, false);
         deleteThumbNail();
-        fileServerRepository.deleteByState(0);
-    }
-    private String changeUnderBarToSeparator(String path){
-        return path.replaceAll("_", Matcher.quoteReplacement(File.separator));
-    }
-    private String changeSeparatorToUnderBar(String path){
-        return path.replaceAll(Matcher.quoteReplacement(File.separator), "_");
+        filesWalk(diskPath);
+        filesWalkTrashPath(trashPath);
     }
 
-    private void traversalFolder(String path, boolean mode){
-        System.out.println("This is Path : " + path);
-        File dir = new File(path);
-        File[] files = dir.listFiles();
-        assert files != null;
-        ArrayList<String> dirList = new ArrayList<>();
-        System.out.println("Files size : " + files.length);
-        for(File file : files){
-            String type, extension;
-            if(file.isDirectory()) {
-                type = "dir : ";
-                extension = "dir";
-                dirList.add(file.getName());
-            }
-            else {
-                type = "file : ";
-                extension = file.getName().substring(file.getName().lastIndexOf(".") + 1); // file type (need to check ex: txt file -> text/plan)
-            }
-            FileServerPublicEntity entity = fileServerRepository.findByPath(file.getPath());
-            int deleteStatus = 0;
-            String tmpPath = changeSeparatorToUnderBar(file.getPath()), tmpLocation = changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
-            if(!mode) {
-                deleteStatus = 1;
-            }
-            if(entity == null){
-                String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
-                FileServerPublicDto dto = new FileServerPublicDto(
-                        tmpPath, // file path
-                        file.getName(), // file name
-                        uuid, // file name to change UUID
-                        extension,
-                        (float)(file.length()/1024), // file size(KB)
-                        tmpLocation, // file folder path (location)
-                        1,
-                        deleteStatus
-                );
-                fileServerRepository.save(new FileServerPublicEntity(dto));
-                if(Arrays.asList(videoExtensionList).contains(extension)){
-                    thumbNailService.makeThumbNail(file, uuid);
+    @Override
+    public void publicFileTrashStateCheck() {
+        filesWalkTrashPath(trashPath);
+    }
+
+    @Override
+    public void filesWalk(String pathUrl){
+        Path originPath = Paths.get(pathUrl);
+        List<Path> pathList;
+        try{
+            Stream<Path> pathStream = Files.walk(originPath);
+            pathList = pathStream.collect(Collectors.toList());
+            List<FileServerPublicDto> fileList = new ArrayList<>();
+            List<File> mediaFileList = new ArrayList<>();
+            for(Path path : pathList){
+                File file = new File(path.toString());
+                String extension = "dir";
+                if(!file.isDirectory()) {
+                    extension = file.getName().substring(file.getName().lastIndexOf(".") + 1); // file type (need to check ex: txt file -> text/plan)
+                }
+                try {
+                    String tmpPath = commonService.changeSeparatorToUnderBar(file.getPath());
+                    StringBuilder sb = new StringBuilder();
+                    String[] tmpPathArr = tmpPath.split("__");
+                    for(int i=0;i<tmpPathArr.length-1;i++){
+                        sb.append(tmpPathArr[i]).append("__");
+                    }
+                    String tmpLocation = sb.toString();
+
+                    String uuid = UUID.nameUUIDFromBytes(tmpPath.getBytes(StandardCharsets.UTF_8)).toString();
+                    fileList.add(new FileServerPublicDto(
+                            tmpPath,
+                            file.getName(),
+                            uuid,
+                            extension,
+                            (float) (file.length() / 1024),
+                            tmpLocation,
+                            1,
+                            0
+                    ));
+                    if (Arrays.asList(videoExtensionList).contains(extension) && !thumbNailRepository.existsByUuid(uuid)) {
+                        mediaFileList.add(file);
+                    }
+                }
+                catch(Exception e){
+                    System.out.println(e.getMessage());
                 }
             }
-            System.out.println(file.getPath()+", "+type+file.getName());
-        }
+            fileServerCustomRepository.saveBatchPublic(fileList);
 
-        for(String folder : dirList){
-            traversalFolder(path+File.separator+folder, mode);
-        }
-
-    }
-    private void deleteThumbNail(){
-        List<FileServerPublicEntity> list = fileServerRepository.findByState(0);
-        for(FileServerPublicEntity entity : list){
-            File out = new File(entity.getPath());
-            if(out.exists()){
-                if(out.delete()){
-                    thumbNailRepository.deleteByUuid(entity.getUuid());
-                }
+            int divNum = 10;
+            int partitionSize = (int) Math.ceil((double) mediaFileList.size() / divNum);
+            List<List<File>> groups = IntStream.range(0, divNum)
+                    .mapToObj(i -> mediaFileList.subList(i * partitionSize, Math.min((i + 1) * partitionSize, mediaFileList.size())))
+                    .toList();
+            System.out.println("List<List>> size : " + groups.size());
+            for(int i=0;i<10;i++){
+                System.out.println("FileServerPublicServiceImpl make Thumbnail i : "+i);
+                List<File> list = groups.get(i);
+                System.out.println("list size : "+list.size());
+                CompletableFuture<List<FileServerThumbNailEntity>> futureResult = thumbNailService.setThumbNail(list, "public");
+                futureResult.thenAccept(result -> {
+                    thumbNailRepository.saveAll(result);
+                    System.out.println("FileServerPublicServiceImpl make Thumbnail end");
+                });
             }
+
         }
+        catch (Exception e){
+            logComponent.sendErrorLog("Cloud-Check", "[filesWalk(public)] file check error : ", e, TOPIC_CLOUD_CHECK_LOG);
+        }
+    }
+    @Transactional
+    @Override
+    public void filesWalkTrashPath(String pathUrl){
+        /*
+        * 1. load all data from db
+        * 2. compare file list
+        * 3. if file is existed, data is not existed - new data, origin data  = default path
+        * 4. if file is not existed, data is existed - delete data
+        * */
+        List<FileServerPublicTrashEntity> list = fileServerPublicTrashRepository.findAll();
+        Path originPath = Paths.get(pathUrl);
+        List<Path> pathList;
+        try{
+            Stream<Path> pathStream = Files.walk(originPath);
+            pathList = pathStream.collect(Collectors.toList());
+            List<FileServerPublicTrashEntity> existFileList = new ArrayList<>();
+            List<FileServerPublicTrashEntity> newFileList = new ArrayList<>();
+            for(Path path : pathList){
+                File file = path.toFile();
+                try{
+                    String uuid = UUID.nameUUIDFromBytes(commonService.changeSeparatorToUnderBar(file.getPath()).getBytes(StandardCharsets.UTF_8)).toString();
+                    List<FileServerPublicTrashEntity> filterList = list.stream()
+                            .filter(entity -> uuid.equals(entity.getUuid()))
+                            .toList();
+                    if(filterList.isEmpty()){
+                        String tmpPath = commonService.changeSeparatorToUnderBar(file.getPath()), tmpLocation = commonService.changeSeparatorToUnderBar(file.getPath().split(file.getName())[0]);
+                        String extension = "dir";
+                        if(!file.isDirectory()) {
+                            extension = file.getName().substring(file.getName().lastIndexOf(".") + 1); // file type (need to check ex: txt file -> text/plan)
+                        }
+                        newFileList.add(new FileServerPublicTrashEntity(
+                                0,
+                                uuid,
+                                tmpPath,
+                                commonService.changeSeparatorToUnderBar(diskPath),
+                                file.getName(),
+                                extension,
+                                (float) (file.length() / 1024),
+                                tmpLocation,
+                                0
+                        ));
+                    }
+                    else{
+                        existFileList.addAll(filterList); // db data, file both exist
+                    }
+                }
+                catch(Exception e){
+                    System.out.println("fileswalkTrash public error : "+e.getMessage());
+                }
+
+            }
+            for(FileServerPublicTrashEntity entity : existFileList){
+                list.remove(entity);
+            }
+            fileServerPublicTrashRepository.deleteAll(list);
+            fileServerPublicTrashRepository.saveAll(newFileList);
+        }
+        catch (Exception e){
+            logComponent.sendErrorLog("Cloud-Check", "[filesWalkTrash(public)] file check error : ", e, TOPIC_CLOUD_CHECK_LOG);
+        }
+    }
+    @Transactional
+    @Override
+    public void deleteThumbNail(){
+        File[] thumbnailList = new File(thumbnailPath).listFiles();
+        for(File file : thumbnailList){
+            file.delete();
+        }
+        thumbNailRepository.deleteAll();
+//        List<FileServerThumbNailEntity> thumbNailEntityList = thumbNailRepository.findAllNotInPublic();
+//        for(FileServerThumbNailEntity entity : thumbNailEntityList){
+//            String path = commonService.changeUnderBarToSeparator(entity.getPath());
+//            File thumbnailFile = new File(path);
+//            if(thumbnailFile.exists()){
+//                if(thumbnailFile.delete()){
+//                    thumbNailRepository.deleteByUuid(entity.getUuid());
+////                    logComponent.sendLog("Cloud-Check", "[deleteThumbNail(public)] files is deleted (uuid) : "+entity.getUuid(), true, TOPIC_CLOUD_CHECK_LOG);
+//                }
+//                else{
+//                    logComponent.sendLog("Cloud-Check", "[deleteThumbNail(public)] files is doesn't delete (uuid) : "+entity.getUuid(), false, TOPIC_CLOUD_CHECK_LOG);
+//                }
+//            }
+//        }
     }
 }

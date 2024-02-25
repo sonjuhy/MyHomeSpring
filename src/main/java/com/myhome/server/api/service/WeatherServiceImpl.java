@@ -2,25 +2,42 @@ package com.myhome.server.api.service;
 
 import com.google.gson.*;
 import com.myhome.server.api.dto.LocationDto;
+import com.myhome.server.api.dto.SGISDto.SGISAddressDto;
+import com.myhome.server.api.dto.SGISDto.geoCodeDto.GeoCodeDto;
+import com.myhome.server.api.dto.SGISDto.tokenDto.SGISTokenDto;
+import com.myhome.server.api.dto.SGISDto.tokenDto.SGISTokenResultDto;
+import com.myhome.server.api.dto.openWeatherDto.ForecastDayDto;
+import com.myhome.server.api.dto.openWeatherDto.OpenWeatherCurrentDto;
+import com.myhome.server.api.dto.openWeatherDto.OpenWeatherForecastDto;
 import com.myhome.server.api.dto.WeatherDto;
+import com.myhome.server.api.dto.openWeatherDto.forecast.OpenWeatherForecastItemDto;
+import com.myhome.server.api.dto.openWeatherDto.forecast.OpenWeatherForecastItemMainDto;
+import com.myhome.server.api.dto.openWeatherDto.forecast.OpenWeatherForecastItemWeatherDto;
+import com.myhome.server.component.KafkaProducer;
+import com.myhome.server.component.LogComponent;
+import com.myhome.server.db.entity.WeatherAPIKeyEntity;
 import com.myhome.server.db.entity.WeatherKeyEntity;
+import com.myhome.server.db.repository.WeatherAPIKeyRepository;
+import com.myhome.server.db.repository.WeatherAPIRepository;
 import com.myhome.server.db.repository.WeatherRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.lang.reflect.Type;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.Objects;
-import java.util.StringTokenizer;
+import java.time.DayOfWeek;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
 @Service
 public class WeatherServiceImpl implements WeatherService{
@@ -30,11 +47,48 @@ public class WeatherServiceImpl implements WeatherService{
     private String url_UltraFcst = ""; //need key, pageNo, numOfRows, base_date, base_time, x, y | 초단기예보
     private String url_VilageFcst = "";// need key, pageNo, numOfRows, dataType, base_date, base_time, x, y | 동네예보조회
     private String url_main = null;
+    private String SGIS_SECURITY_KEY;
+    private String SGIS_SERVICE_KEY;
+    private String OPENWEATHERAPI_KEY;
+    private HashMap<Integer, String> openWeatherAPIWeatherHash;
+
+    private final String TOPIC_WEATHER_LOG = "weather-log-topic";
 
     private final static String locationURL = "https://www.kma.go.kr/DFSROOT/POINT/DATA";
 
     @Autowired
+    LogComponent logComponent;
+
+    @Autowired
     WeatherRepository repository;
+    @Autowired
+    WeatherAPIRepository weatherAPIRepository;
+    @Autowired
+    WeatherAPIKeyRepository weatherAPIKeyRepository;
+
+    @Autowired
+    KafkaProducer producer;
+
+    @Autowired
+    public WeatherServiceImpl(WeatherAPIKeyRepository weatherAPIKeyRepository){
+        OPENWEATHERAPI_KEY = weatherAPIKeyRepository.findByServiceName("OpenWeatherAPI").getKey();
+        SGIS_SERVICE_KEY = weatherAPIKeyRepository.findByServiceName("SGISServiceKey").getKey();
+        SGIS_SECURITY_KEY = weatherAPIKeyRepository.findByServiceName("SGISSecurityKey").getKey();
+
+        // Thunderstorm, Drizzle, Rain, Snow, Atmosphere, Clear, Clouds
+        openWeatherAPIWeatherHash = new HashMap<>();
+        openWeatherAPIWeatherHash.put(0, "Clear");
+        openWeatherAPIWeatherHash.put(1, "Clouds");
+        openWeatherAPIWeatherHash.put(2, "Atmosphere");
+        openWeatherAPIWeatherHash.put(3, "Rain");
+        openWeatherAPIWeatherHash.put(4, "Snow");
+        openWeatherAPIWeatherHash.put(5, "Drizzle");
+        openWeatherAPIWeatherHash.put(6, "Thunderstorm");
+
+        System.out.println("open api : "+OPENWEATHERAPI_KEY);
+        System.out.println("service key : "+SGIS_SERVICE_KEY);
+        System.out.println("security key : "+SGIS_SECURITY_KEY);
+    }
 
     @Override
     public String getKey() {
@@ -325,9 +379,11 @@ public class WeatherServiceImpl implements WeatherService{
                         break;
                     }
                 }
+                logComponent.sendLog("Weather", "[JsonParsing] tmp weather : "+tmp_weather+", mode : " + mode, true, TOPIC_WEATHER_LOG);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            logComponent.sendErrorLog("Weather", "[JsonParsing] error : ", e, TOPIC_WEATHER_LOG);
+            return null;
         }
 
         return tmp_weathers;
@@ -345,19 +401,18 @@ public class WeatherServiceImpl implements WeatherService{
             JsonObject objectItem = objectBody.getAsJsonObject("items");
             JsonArray array = objectItem.getAsJsonArray("item");
 
-            System.out.println("json array length : " + array.size());
-
             String result = objectHeader.get("resultCode").getAsString();
 
             if(!"00".equals(result)){
-                System.out.println("JSON data is error : " + result);
+                logComponent.sendLog("Weather", "[fnJson] JSON data is error : "+result, false, TOPIC_WEATHER_LOG);
                 return null;
             }
             else{
+                logComponent.sendLog("Weather", "[fnJson] array size : "+array.size(), true, TOPIC_WEATHER_LOG);
                 return array;
             }
         } catch (Exception e) {
-            System.out.println("error in fn_Jsnop : " + e.getMessage());
+            logComponent.sendErrorLog("Weather", "[fnJson] error : ", e, TOPIC_WEATHER_LOG);
             return null;
         }
     }
@@ -394,14 +449,13 @@ public class WeatherServiceImpl implements WeatherService{
 
         try {
             URL url = new URL(url_main);
-            System.out.println("url : " + url_main);
             conn = url.openConnection();
             BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
             String ResData = br.readLine();
 
 
             if (ResData == null) {
-                System.out.println("응답데이터 == NULL");
+                logComponent.sendLog("Weather", "[getUtlraNcst] 응답데이터 == NULL", false, TOPIC_WEATHER_LOG);
             } else {
                 JsonArray array = fnJson(ResData);
 
@@ -470,11 +524,12 @@ public class WeatherServiceImpl implements WeatherService{
                         dto.setVEC(DataValue);
                     }
                 }
-
+                logComponent.sendLog("Weather", "[getUtlraNcst] array size : "+array.size()+", url : "+url_main, true, TOPIC_WEATHER_LOG);
             }
             br.close();
         } catch (Exception e) {
-            System.out.println("getUltraNcst error : " + e.getMessage());
+            logComponent.sendErrorLog("Weather", "[getUtlraNcst] getUltraNcst error : ", e, TOPIC_WEATHER_LOG);
+            return null;
         }
         return dto;
     }
@@ -513,16 +568,16 @@ public class WeatherServiceImpl implements WeatherService{
             String ResData = br.readLine();
 
             if (ResData == null) {
-                System.out.println("응답데이터 == NULL");
+                logComponent.sendLog("Weather", "[getUtlraFsct] 응답데이터 == NULL", false, TOPIC_WEATHER_LOG);
             } else {
                 JsonArray array = fnJson(ResData);
                 ArrayList<WeatherDto> list = JsonParsing(array, 1);
-
+                logComponent.sendLog("Weather", "[getUtlraFsct] list size : "+list.size()+", url : "+url_main, true, TOPIC_WEATHER_LOG);
                 return list;
             }
             br.close();
         } catch (Exception e) {
-            System.out.println("getUtlraFsct error : " + e.getMessage());
+            logComponent.sendErrorLog("Weather", "[getUtlraFsct] getUtlraFsct error : ", e, TOPIC_WEATHER_LOG);
         }
 
         return null;
@@ -560,17 +615,17 @@ public class WeatherServiceImpl implements WeatherService{
             String ResData = br.readLine();
 
             if (ResData == null) {
-                System.out.println("응답데이터 == NULL");
+                logComponent.sendLog("Weather", "[getVilageFcst] 응답데이터 == NULL", false, TOPIC_WEATHER_LOG);
             } else {
                 JsonArray array = fnJson(ResData);
                 if(array == null) return null;
                 ArrayList<WeatherDto> list = JsonParsing(array, 2);
-
+                logComponent.sendLog("Weather", "[getVilageFcst] list size : "+list.size()+", url : "+url_main, true, TOPIC_WEATHER_LOG);
                 return list;
             }
             br.close();
         } catch (Exception e) {
-            System.out.println("getVilageFsct error : " + e.getMessage());
+            logComponent.sendErrorLog("Weather", "[getVilageFcst] getVilageFcst error : ", e, TOPIC_WEATHER_LOG);
         }
 
         return null;
@@ -597,7 +652,7 @@ public class WeatherServiceImpl implements WeatherService{
             String ResData = br.readLine();
 
             if (ResData == null) {
-                System.out.println("응답데이터 == NULL");
+                logComponent.sendLog("Weather", "[getTopPlace] 응답데이터 == NULL", false, TOPIC_WEATHER_LOG);
             } else {
                 JsonArray jsonArray = (JsonArray) JsonParser.parseString(ResData);
                 for(int i=0;i<jsonArray.size();i++){
@@ -607,11 +662,12 @@ public class WeatherServiceImpl implements WeatherService{
                     dto.setCode(jsonObject.get("code").getAsString());
                     list.add(dto);
                 }
+                logComponent.sendLog("Weather", "[getTopPlace] list size : "+list.size()+", url : "+url_main, true, TOPIC_WEATHER_LOG);
                 return list;
             }
             br.close();
         } catch (Exception e) {
-            System.out.println("getTopPlace error : " + e.getMessage());
+            logComponent.sendErrorLog("Weather", "[getTopPlace] getTopPlace error : ", e, TOPIC_WEATHER_LOG);
         }
         return null;
     }
@@ -637,7 +693,7 @@ public class WeatherServiceImpl implements WeatherService{
             String ResData = br.readLine();
 
             if (ResData == null) {
-                System.out.println("응답데이터 == NULL");
+                logComponent.sendLog("Weather", "[getMiddlePlace] 응답데이터 == NULL", false, TOPIC_WEATHER_LOG);
             } else {
                 JsonArray jsonArray = (JsonArray) JsonParser.parseString(ResData);
                 for(int i=0;i<jsonArray.size();i++){
@@ -647,11 +703,12 @@ public class WeatherServiceImpl implements WeatherService{
                     dto.setCode(jsonObject.get("code").getAsString());
                     list.add(dto);
                 }
+                logComponent.sendLog("Weather", "[getMiddlePlace] list size : "+list.size()+", url : "+url_main, true, TOPIC_WEATHER_LOG);
                 return list;
             }
             br.close();
         } catch (Exception e) {
-            System.out.println("getMiddlePlace error : " + e.getMessage());
+            logComponent.sendErrorLog("Weather", "[getMiddlePlace] getMiddlePlace error : ", e, TOPIC_WEATHER_LOG);
         }
         return null;
     }
@@ -677,7 +734,7 @@ public class WeatherServiceImpl implements WeatherService{
             String ResData = br.readLine();
 
             if (ResData == null) {
-                System.out.println("응답데이터 == NULL");
+                logComponent.sendLog("Weather", "[getLeafPlace] 응답데이터 == NULL", false, TOPIC_WEATHER_LOG);
             } else {
                 JsonArray jsonArray = (JsonArray) JsonParser.parseString(ResData);
                 for(int i=0;i<jsonArray.size();i++){
@@ -689,11 +746,12 @@ public class WeatherServiceImpl implements WeatherService{
                     dto.setCode(jsonObject.get("code").getAsString());
                     list.add(dto);
                 }
+                logComponent.sendLog("Weather", "[getLeafPlace] list size : "+list.size()+", url : "+url_main, true, TOPIC_WEATHER_LOG);
                 return list;
             }
             br.close();
         } catch (Exception e) {
-            System.out.println("getLeafPlace error : " + e.getMessage());
+            logComponent.sendErrorLog("Weather", "[getLeafPlace] getLeafPlace error : ", e, TOPIC_WEATHER_LOG);
         }
         return null;
     }
@@ -762,4 +820,325 @@ public class WeatherServiceImpl implements WeatherService{
         }
         return baseTime;
     }
+
+    @Override
+    public String getSGISAccessToken() {
+        WebClient webClient = WebClient.builder().baseUrl("https://sgisapi.kostat.go.kr/OpenAPI3").build();
+
+        SGISTokenDto token = webClient
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/auth/authentication.json")
+                        .queryParam("consumer_key", SGIS_SERVICE_KEY)
+                        .queryParam("consumer_secret", SGIS_SECURITY_KEY)
+                        .build()
+                )
+                .retrieve()
+                .bodyToMono(SGISTokenDto.class)
+                .block();
+        if(token.getErrCd() == 0) return token.getResult().getAccessToken();
+        else return "error";
+    }
+
+    @Override
+    public SGISAddressDto getSGISAddressInfo(int cd) {
+        String key = getSGISAccessToken();
+        if("error".equals(key)) return null;
+        WebClient webClient = WebClient.builder().baseUrl("https://sgisapi.kostat.go.kr/OpenAPI3").build();
+        SGISAddressDto addressDto;
+        if(cd == 0){
+            addressDto = webClient
+                    .get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/addr/stage.json")
+                            .queryParam("accessToken", key)
+                            .build()
+                    )
+                    .retrieve()
+                    .bodyToMono(SGISAddressDto.class)
+                    .block();
+        }
+        else{
+            addressDto = webClient
+                    .get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/addr/stage.json")
+                            .queryParam("accessToken", key)
+                            .queryParam("cd", String.valueOf(cd))
+                            .build()
+                    )
+                    .retrieve()
+                    .bodyToMono(SGISAddressDto.class)
+                    .block();
+        }
+        return addressDto;
+    }
+
+    @Override
+    public double[] convertCoordinate(double x, double y) {
+        String key = getSGISAccessToken();
+        if("error".equals(key)) return null;
+        WebClient webClient = WebClient.builder().baseUrl("https://sgisapi.kostat.go.kr/OpenAPI3").build();
+        GeoCodeDto geoCodeDto = webClient
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/transformation/transcoord.json")
+                        .queryParam("accessToken", key)
+                        .queryParam("src","5179")
+                        .queryParam("dst","4326")
+                        .queryParam("posX", x)
+                        .queryParam("posY", y)
+                        .build()
+                )
+                .retrieve()
+                .bodyToMono(GeoCodeDto.class)
+                .block();
+        if(geoCodeDto != null && geoCodeDto.getErrCd() == 0) {
+            return new double[]{geoCodeDto.getResult().getPosX(), geoCodeDto.getResult().getPosY()};
+        }
+        else{
+            return new double[]{};
+        }
+    }
+
+    @Override
+    public OpenWeatherCurrentDto getCurrentWeatherInfo(double lat, double lon) {
+        WebClient webClient = WebClient.builder().baseUrl("https://api.openweathermap.org/data/2.5/").build();
+        return webClient
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/weather")
+                        .queryParam("lon", lon)
+                        .queryParam("lat", lat)
+                        .queryParam("appid", OPENWEATHERAPI_KEY)
+                        .build()
+                )
+                .retrieve()
+                .bodyToMono(OpenWeatherCurrentDto.class)
+                .map(response -> {
+                    response.getMain().setTempMin(
+                            (float) ((float) Math.round((response.getMain().getTempMin() - 273.15)*100)/100.0)
+                    );
+                    response.getMain().setTempMax(
+                            (float) ((float) Math.round((response.getMain().getTempMax() - 273.15)*100)/100.0)
+                    );
+                    response.getMain().setTemp(
+                            (float) ((float) Math.round((response.getMain().getTemp() - 273.15)*100)/100.0)
+                    );
+                    response.getMain().setFeelsLike(
+                            (float) ((float) Math.round((response.getMain().getFeelsLike() - 273.15)*100)/100.0)
+                    );
+                    return response;
+                })
+                .block();
+    }
+
+    @Override
+    public OpenWeatherForecastDto getForecastWeatherInfo(double lat, double lon) {
+        WebClient webClient = WebClient.builder().baseUrl("https://api.openweathermap.org/data/2.5/").build();
+        return webClient
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/forecast")
+                        .queryParam("lon", lon)
+                        .queryParam("lat", lat)
+                        .queryParam("appid", OPENWEATHERAPI_KEY)
+                        .build()
+                )
+                .retrieve()
+                .bodyToMono(OpenWeatherForecastDto.class)
+                .map(response -> {
+                    for(OpenWeatherForecastItemDto dto : response.getList()){
+                        dto.getMain().setTempMin(
+                                (float) ((float) Math.round((dto.getMain().getTempMin() - 273.15)*100)/100.0)
+                        );
+                        dto.getMain().setTempMax(
+                                (float) ((float) Math.round((dto.getMain().getTempMax() - 273.15)*100)/100.0)
+                        );
+                        dto.getMain().setTemp(
+                                (float) ((float) Math.round((dto.getMain().getTemp() - 273.15)*100)/100.0)
+                        );
+                        dto.getMain().setFeelsLike(
+                                (float) ((float) Math.round((dto.getMain().getFeelsLike() - 273.15)*100)/100.0)
+                        );
+                    }
+                    return response;
+                })
+                .block();
+    }
+
+    @Override
+    public OpenWeatherCurrentDto getCurrentWeatherInfoByCoordinate(int x, int y) {
+        double[] lonLat = convertCoordinate(x, y);
+        if(lonLat == null) return null;
+        return getCurrentWeatherInfo(lonLat[1], lonLat[0]);
+    }
+
+    @Override
+    public OpenWeatherForecastDto getForecastWeatherInfoByCoordinate(int x, int y) {
+        double[] lonLat = convertCoordinate(x, y);
+        if(lonLat == null) return null;
+        return getForecastWeatherInfo(lonLat[1], lonLat[0]);
+    }
+
+    @Override
+    public List<ForecastDayDto> get5DayAverageWeatherInfo(double lat, double lon) {
+        List<ForecastDayDto> list = new ArrayList<>();
+        List<OpenWeatherForecastItemDto> itemList = getForecastWeatherInfo(lat, lon).getList();
+        float min = 1000, max = 0;
+        int weatherMax = 0, point = 0;
+
+        int[] weatherCount = new int[7];
+        for(int i=0;i<40;i++){
+            OpenWeatherForecastItemWeatherDto weatherDto = itemList.get(i).getWeather().get(0);
+            OpenWeatherForecastItemMainDto weatherMainDto = itemList.get(i).getMain();
+            switch(weatherDto.getMain()){
+                case "Clear":
+                    weatherCount[0]++;
+                    break;
+                case "Clouds":
+                    weatherCount[1]++;
+                    break;
+                case "Atmosphere":
+                    weatherCount[2]++;
+                    break;
+                case "Rain":
+                    weatherCount[3]++;
+                    break;
+                case "Snow":
+                    weatherCount[4]++;
+                    break;
+                case "Drizzle":
+                    weatherCount[5]++;
+                    break;
+                case "ThunderStorm":
+                    weatherCount[6]++;
+                    break;
+            }
+            min = Math.min(min, weatherMainDto.getTempMin());
+            max = Math.max(max, weatherMainDto.getTempMax());
+            if((i + 1) % 8 == 0){
+                for(int c=0;c<7;c++){
+                    int count = weatherCount[c];
+                    if(count > weatherMax){
+                        weatherMax = count;
+                        point = c;
+                    }
+                }
+                int dt = itemList.get(i).getDt();
+                Instant instant = Instant.ofEpochSecond(dt);
+                LocalDateTime localDateTime = LocalDateTime.ofInstant(instant, ZoneId.of("UTC"));
+
+                DayOfWeek dayOfWeek = localDateTime.getDayOfWeek();
+                String dayOfWeekString = switch (dayOfWeek.name()) {
+                    case "MONDAY" -> "월";
+                    case "TUESDAY" -> "화";
+                    case "WEDNESDAY" -> "수";
+                    case "THURSDAY" -> "목";
+                    case "FRIDAY" -> "금";
+                    case "SATURDAY" -> "토";
+                    case "SUNDAY" -> "일";
+                    default -> "";
+                };
+                String monthStr = localDateTime.getMonthValue() < 10 ? "0"+localDateTime.getMonthValue() : String.valueOf(localDateTime.getMonthValue());
+                String dayStr = localDateTime.getDayOfMonth() < 10 ? "0"+localDateTime.getDayOfMonth() : String.valueOf(localDateTime.getDayOfMonth());
+
+                ForecastDayDto dayDto = new ForecastDayDto(
+                        openWeatherAPIWeatherHash.get(point),
+                        dayOfWeekString,
+                        monthStr + dayStr,
+                        Math.round(min*100)/100.0,
+                        Math.round(max*100)/100.0
+                );
+                list.add(dayDto);
+                min = 1000;
+                max = 0;
+                Arrays.fill(weatherCount, 0);
+            }
+        }
+        return list;
+    }
+
+    @Override
+    public List<ForecastDayDto> get5DayAverageWeatherInfoByCoordinate(int x, int y) {
+        List<ForecastDayDto> list;
+        double[] lonLat = convertCoordinate(x, y);
+        if(lonLat == null) return null;
+        list = get5DayAverageWeatherInfo(lonLat[1], lonLat[1]);
+//        List<OpenWeatherForecastItemDto> itemList = getForecastWeatherInfoByCoordinate(x, y).getList();
+//        float min = 1000, max = 0;
+//        int weatherMax = 0, point = 0;
+//
+//        int[] weatherCount = new int[7];
+//        for(int i=0;i<40;i++){
+//            OpenWeatherForecastItemWeatherDto weatherDto = itemList.get(i).getWeather().get(0);
+//            OpenWeatherForecastItemMainDto weatherMainDto = itemList.get(i).getMain();
+//            switch(weatherDto.getMain()){
+//                case "Clear":
+//                    weatherCount[0]++;
+//                    break;
+//                case "Clouds":
+//                    weatherCount[1]++;
+//                    break;
+//                case "Atmosphere":
+//                    weatherCount[2]++;
+//                    break;
+//                case "Rain":
+//                    weatherCount[3]++;
+//                    break;
+//                case "Snow":
+//                    weatherCount[4]++;
+//                    break;
+//                case "Drizzle":
+//                    weatherCount[5]++;
+//                    break;
+//                case "ThunderStorm":
+//                    weatherCount[6]++;
+//                    break;
+//            }
+//            min = Math.min(min, weatherMainDto.getTempMin());
+//            max = Math.max(max, weatherMainDto.getTempMax());
+//            if((i + 1) % 8 == 0){
+//                for(int c=0;c<7;c++){
+//                    int count = weatherCount[c];
+//                    if(count > weatherMax){
+//                        weatherMax = count;
+//                        point = c;
+//                    }
+//                }
+//                int dt = itemList.get(i).getDt();
+//                Instant instant = Instant.ofEpochSecond(dt);
+//                LocalDateTime localDateTime = LocalDateTime.ofInstant(instant, ZoneId.of("UTC"));
+//
+//                DayOfWeek dayOfWeek = localDateTime.getDayOfWeek();
+//                String dayOfWeekString = switch (dayOfWeek.name()) {
+//                    case "MONDAY" -> "월";
+//                    case "TUESDAY" -> "화";
+//                    case "WEDNESDAY" -> "수";
+//                    case "THURSDAY" -> "목";
+//                    case "FRIDAY" -> "금";
+//                    case "SATURDAY" -> "토";
+//                    case "SUNDAY" -> "일";
+//                    default -> "";
+//                };
+//                String monthStr = localDateTime.getMonthValue() < 10 ? "0"+localDateTime.getMonthValue() : String.valueOf(localDateTime.getMonthValue());
+//                String dayStr = localDateTime.getDayOfMonth() < 10 ? "0"+localDateTime.getDayOfMonth() : String.valueOf(localDateTime.getDayOfMonth());
+//
+//                int time = Integer.parseInt(monthStr + dayStr);
+//                ForecastDayDto dayDto = new ForecastDayDto(
+//                        openWeatherAPIWeatherHash.get(point),
+//                        dayOfWeekString,
+//                        time,
+//                        Math.round(min*100)/100.0,
+//                        Math.round(max*100)/100.0
+//                );
+//                list.add(dayDto);
+//                min = 1000;
+//                max = 0;
+//                Arrays.fill(weatherCount, 0);
+//            }
+//        }
+        return list;
+    }
 }
+

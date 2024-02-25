@@ -1,23 +1,23 @@
 package com.myhome.server.db.entity;
 
 import com.myhome.server.api.dto.FileServerPrivateDto;
-import com.myhome.server.api.dto.FileServerPublicDto;
+import jakarta.persistence.*;
+import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
 
 @Getter
 @Entity
 @Table(name = "FILE_PRIVATE_TB")
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class FileServerPrivateEntity {
     @Id
-    @Column(name = "UUID_PK")
+    @Column(name = "ID_PK")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private int id;
+    @Column(name = "UUID_CHAR")
     private String uuid;
     @Column(name = "PATH_CHAR")
     private String path;

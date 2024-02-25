@@ -1,39 +1,34 @@
 package com.myhome.server.db.entity;
 
 import com.myhome.server.api.dto.FileServerThumbNailDto;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
-
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
+import jakarta.persistence.*;
+import lombok.*;
 
 @Getter
 @Entity
 @ToString
 @Table(name = "FILE_THUMBNAIL_TB")
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class FileServerThumbNailEntity {
     @Id
-    @Column(name = "UUID_PK")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "ID_PK")
+    private long id;
+    @Column(name = "UUID_CHAR")
     private String uuid;
     @Column(name = "PATH_CHAR")
     private String path;
     @Column(name = "ORIGIN_FILENAME_CHAR")
     private String originName;
-
-//    @Builder
-//    public FileServerThumbNailEntity(){
-//
-//    }
+    @Column(name = "TYPE_CHAR")
+    private String type;
 
     @Builder
     public FileServerThumbNailEntity(FileServerThumbNailDto dto){
+        this.id = dto.getId();
         this.uuid = dto.getUuid();
         this.path = dto.getPath();
         this.originName = dto.getOriginName();
+        this.type = dto.getType();
     }
 }
