@@ -7,6 +7,7 @@ import com.myhome.server.db.entity.LightReserveEntity;
 import com.myhome.server.db.repository.LightReserveRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -71,18 +72,31 @@ public class LightReserveServiceImpl implements LightReserveService{
         }
     }
 
+    @Transactional
     @Override
     public void updateReserve(LightReserveDto dto) {
         LightReserveEntity entity = repository.findByPk(dto.getPk());
-        entity.builder()
-                .name(dto.getName())
-                .roomKor(dto.getRoomKor())
-                .reiteration(dto.getReiteration())
-                .day(dto.getDay())
-                .action(dto.getAction())
-                .activated(dto.getActivated())
-                .time(dto.getTime())
-                .build();
+        entity.updateContent(
+                dto.getName(),
+                dto.getRoom(),
+                dto.getRoomKor(),
+                dto.getTime(),
+                dto.getAction(),
+                dto.getDay(),
+                dto.getActivated(),
+                dto.getReiteration(),
+                dto.isHoliday()
+                );
+//        entity.builder()
+//                .name(dto.getName())
+//                .roomKor(dto.getRoomKor())
+//                .reiteration(dto.getReiteration())
+//                .day(dto.getDay())
+//                .action(dto.getAction())
+//                .activated(dto.getActivated())
+//                .time(dto.getTime())
+//                .build();
+
         producer.sendReserveMessage();
         logComponent.sendLog("Reserve", "[updateReserve] reserve is updated (dto) : "+dto, true, TOPIC_RESERVE_LOG);
     }
