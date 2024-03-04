@@ -63,7 +63,7 @@ public class FileServerCustomRepository {
                 "value(?, ?, ?, ?, ?, ?, ?, ?)", new BatchPreparedStatementSetter() {
             @Override
             public void setValues(@NonNull PreparedStatement ps, int i) throws SQLException {
-                ps.setString(1, list.get(i).getUuidName());
+                ps.setString(1, list.get(i).getUuid());
                 ps.setString(2, list.get(i).getPath());
                 ps.setString(3, list.get(i).getName());
                 ps.setString(4, list.get(i).getType());

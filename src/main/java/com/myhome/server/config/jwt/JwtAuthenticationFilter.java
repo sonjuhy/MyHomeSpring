@@ -2,6 +2,7 @@ package com.myhome.server.config.jwt;
 
 import jakarta.servlet.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,8 +17,10 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Arrays;
 
 
+@Slf4j
 @Configuration
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -26,7 +29,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private JwtTokenProvider jwtTokenProvider;
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        String[] excludePath = {"/auth/",
+                "/file/downloadPublicMedia/",
+                "/file/downloadPrivateMedia/",
+                "/file/downloadThumbNail/",
+                "/swagger-ui/"
+        };
+        String path = request.getRequestURI();
+        // 제외할 url 을 설정합니다.
+        return Arrays.stream(excludePath).anyMatch(path::startsWith);
+    }
+
+    @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+        log.info("doFilterInternal request url : {}", request.getRequestURI());
         try{
             // 헤더에서 JWT 를 받아옵니다.
             String token = jwtTokenProvider.resolveToken(request);
@@ -38,17 +55,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     // SecurityContext 에 Authentication 객체를 저장합니다.
                     SecurityContextHolder.getContext().setAuthentication(authentication);
 
+                    filterChain.doFilter(request, response);
                 }
                 else {
-                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED,"AccessDenied");
+                    log.info("doFilterInternal token validate result is false");
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 }
             }
-
-            filterChain.doFilter(request, response);
+            else{
+                log.info("doFilterInternal token is null");
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            }
         }
         catch (Exception e){
-            e.printStackTrace();
-            response.setStatus(401);
+            log.info("doFilterInternal exception");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json;charset=UTF-8");
         }
     }
