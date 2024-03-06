@@ -14,7 +14,6 @@ public class FileServerThumbNailDto {
     private String type;
 
     @Builder
-
     public FileServerThumbNailDto(long id, String uuid, String path, String originName, String type) {
         this.id = id;
         this.uuid = uuid;
