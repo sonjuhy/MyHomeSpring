@@ -11,7 +11,7 @@ import lombok.*;
 @Getter
 @Entity
 @ToString
-@Table(name = "FILE_THUMBNAIL_TB")
+@Table(name = "FILE_VIDEO_INFO_TB")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class FileServerVideoEntity {
     @Id

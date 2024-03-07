@@ -40,7 +40,6 @@ public class CloudPublicTasklet implements Tasklet {
 
         List<File> fileList = publicService.filesWalkWithReturnMediaFileList();
         List<FileInfoDto> dtoList = new ArrayList<>();
-        List<FileServerVideoEntity> videoEntityList = new ArrayList<>();
 
         for(File file : fileList){
             FileInfoDto dto = new FileInfoDto();
@@ -54,7 +53,7 @@ public class CloudPublicTasklet implements Tasklet {
         int partitionSize = (int) Math.ceil((double) dtoList.size() / divNum);
         chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().putInt("PublicCloudPartition", partitionSize);
 
-        videoEntityList = dtoList.stream().map(FileServerVideoEntity::new).collect(Collectors.toList());
+        List<FileServerVideoEntity> videoEntityList = dtoList.stream().map(FileServerVideoEntity::new).collect(Collectors.toList());
         videoRepository.saveAll(videoEntityList);
 //        int divNum = 3;
 //        int partitionSize = (int) Math.ceil((double) dtoList.size() / divNum);
