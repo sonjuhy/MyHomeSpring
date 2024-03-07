@@ -50,4 +50,16 @@ public class LightReserveEntity {
         this.reiteration = reiteration;
         this.holiday = holiday;
     }
+
+    public void updateContent(String name, String room, String roomKor, String time, String action, String day, String activated, String reiteration, boolean holiday){
+        this.name = name;
+        this.room = room;
+        this.roomKor = roomKor;
+        this.time = time;
+        this.action = action;
+        this.day = day;
+        this.activated = activated;
+        this.reiteration = reiteration;
+        this.holiday = holiday;
+    }
 }
