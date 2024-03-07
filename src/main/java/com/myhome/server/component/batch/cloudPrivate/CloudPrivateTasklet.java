@@ -1,12 +1,14 @@
 package com.myhome.server.component.batch.cloudPrivate;
 
 import com.myhome.server.api.dto.FileInfoDto;
+import com.myhome.server.api.enums.BatchEnum;
 import com.myhome.server.api.service.FileServerCommonService;
 import com.myhome.server.api.service.FileServerPrivateService;
 import com.myhome.server.api.service.UserService;
-import com.myhome.server.db.entity.FileDefaultPathEntity;
+import com.myhome.server.db.entity.FileServerVideoEntity;
 import com.myhome.server.db.entity.UserEntity;
 import com.myhome.server.db.repository.FileDefaultPathRepository;
+import com.myhome.server.db.repository.FileServerVideoRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.StepContribution;
@@ -15,13 +17,14 @@ import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.IntStream;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -34,10 +37,16 @@ public class CloudPrivateTasklet implements Tasklet {
     @Autowired
     private FileDefaultPathRepository defaultPathRepository;
     @Autowired
+    private FileServerVideoRepository videoRepository;
+    @Autowired
     private UserService userService;
 
+    @Transactional
     @Override
     public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
+        privateService.deleteThumbNail();
+        videoRepository.deleteAll();
+
         String diskPath = commonService.changeUnderBarToSeparator(defaultPathRepository.findByPathName("store").getPrivateDefaultPath());
         File defaultPath = new File(diskPath);
         File[] files = defaultPath.listFiles();
@@ -47,10 +56,9 @@ public class CloudPrivateTasklet implements Tasklet {
             log.info("CloudPrivateTasklet execute files length : " + files.length);
             List<File> fileList = new ArrayList<>();
             List<UserEntity> userList = userService.findAll();
-            StringBuilder sb = new StringBuilder();
+
             for (File file : files) {
                 String fileName = file.getName();
-                sb.append(fileName).append("\n");
                 for(UserEntity entity : userList){
                     if(entity.getId().equals(fileName)){
                         String owner = entity.getId();
@@ -65,7 +73,7 @@ public class CloudPrivateTasklet implements Tasklet {
                 contribution.setExitStatus(ExitStatus.STOPPED);
                 return RepeatStatus.FINISHED;
             }
-            log.info("CloudPrivateTasklet execute fileList size : " + fileList.size());
+
             List<FileInfoDto> dtoList = new ArrayList<>();
             for(File file : fileList){
                 FileInfoDto dto = new FileInfoDto();
@@ -78,22 +86,10 @@ public class CloudPrivateTasklet implements Tasklet {
 
             int divNum = 3;
             int partitionSize = (int) Math.ceil((double) dtoList.size() / divNum);
-            List<List<FileInfoDto>> groups = IntStream.range(0, divNum)
-                    .mapToObj(i -> dtoList.subList(i * partitionSize, Math.min((i + 1) * partitionSize, dtoList.size())))
-                    .toList();
+            chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().putInt(BatchEnum.CLOUD_PRIVATE_CHUNK_PARTITION_NAME.getTarget(), partitionSize);
 
-            divNum = groups.size();
-            for(int i=0;i<divNum;i++){
-                List<FileInfoDto> group = groups.get(i);
-                log.info("CloudPrivateTasklet execute group list : "+group);
-                chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().put("PrivateCloudFlow-"+(i+1), new ArrayList<>(group));
-            }
-            FileDefaultPathEntity entity = defaultPathRepository.findByPathName("thumbnail");
-            String uploadPath = commonService.changeUnderBarToSeparator(entity.getPublicDefaultPath());
-            chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().putString("uploadPath", uploadPath);
-        }
-        else{
-            contribution.setExitStatus(ExitStatus.STOPPED);
+            List<FileServerVideoEntity> videoEntityList = dtoList.stream().map(FileServerVideoEntity::new).collect(Collectors.toList());
+            videoRepository.saveAll(videoEntityList);
         }
         return RepeatStatus.FINISHED;
     }

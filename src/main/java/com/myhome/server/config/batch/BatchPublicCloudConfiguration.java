@@ -92,6 +92,7 @@ public class BatchPublicCloudConfiguration {
     public Step publicCloudStep(JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
         return new StepBuilder("PublicCloudCheckStep-"+dateTime, jobRepository)
                 .tasklet(cloudPublicTasklet, platformTransactionManager)
+                .transactionManager(platformTransactionManager)
                 .build();
     }
 
