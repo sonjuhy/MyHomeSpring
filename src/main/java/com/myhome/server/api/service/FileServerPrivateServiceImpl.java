@@ -757,4 +757,10 @@ public class FileServerPrivateServiceImpl implements FileServerPrivateService {
             }
         }
     }
+
+    @Override
+    public void setDBBeforeBatch() {
+        repository.deleteAll();
+        repository.setPKOne();
+    }
 }

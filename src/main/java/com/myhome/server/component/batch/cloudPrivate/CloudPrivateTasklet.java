@@ -56,6 +56,8 @@ public class CloudPrivateTasklet implements Tasklet {
             List<File> fileList = new ArrayList<>();
             List<UserEntity> userList = userService.findAll();
 
+            privateService.setDBBeforeBatch();
+
             for (File file : files) {
                 String fileName = file.getName();
                 for(UserEntity entity : userList){
