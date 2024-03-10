@@ -5,6 +5,7 @@ import com.myhome.server.api.service.FileServerCommonService;
 import com.myhome.server.api.service.FileServerPublicService;
 import com.myhome.server.db.entity.FileServerVideoEntity;
 import com.myhome.server.db.repository.FileServerVideoRepository;
+import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
@@ -37,6 +38,10 @@ public class CloudPublicTasklet implements Tasklet {
         videoRepository.deleteAll();
 
         List<File> fileList = publicService.filesWalkWithReturnMediaFileList();
+        if(fileList.isEmpty()){
+            contribution.setExitStatus(ExitStatus.STOPPED);
+            return RepeatStatus.FINISHED;
+        }
         List<FileInfoDto> dtoList = new ArrayList<>();
 
         for(File file : fileList){

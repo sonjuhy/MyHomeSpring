@@ -44,7 +44,6 @@ public class CloudPrivateTasklet implements Tasklet {
     @Transactional
     @Override
     public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
-        privateService.deleteThumbNail();
         videoRepository.deleteAll();
 
         String diskPath = commonService.changeUnderBarToSeparator(defaultPathRepository.findByPathName("store").getPrivateDefaultPath());
