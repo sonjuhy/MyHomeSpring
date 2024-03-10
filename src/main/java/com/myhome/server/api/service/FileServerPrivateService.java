@@ -46,4 +46,5 @@ public interface FileServerPrivateService {
     void filesWalk(String pathUrl, String owner);
     void filesWalkTrash(String pathUrl, String owner);
     void deleteThumbNail();
+    void setDBBeforeBatch();
 }

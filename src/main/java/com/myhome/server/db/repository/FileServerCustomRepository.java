@@ -42,8 +42,8 @@ public class FileServerCustomRepository {
 
     @Transactional
     public void saveBatchPrivate(List<FileServerPrivateDto> list){
-        jdbcTemplate.execute("DELETE FROM FILE_PRIVATE_TB");
-        jdbcTemplate.execute("ALTER TABLE FILE_PRIVATE_TB AUTO_INCREMENT=1");
+//        jdbcTemplate.execute("DELETE FROM FILE_PRIVATE_TB");
+//        jdbcTemplate.execute("ALTER TABLE FILE_PRIVATE_TB AUTO_INCREMENT=1");
         int batchCount = 0;
         List<FileServerPrivateDto> subList;
         for(int i=0;i<list.size();i=batchCount*batchSize){
