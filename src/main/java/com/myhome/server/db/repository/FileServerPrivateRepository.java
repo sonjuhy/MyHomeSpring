@@ -57,6 +57,6 @@ public interface FileServerPrivateRepository extends JpaRepository<FileServerPri
 
     @Transactional
     @Modifying(clearAutomatically = true)
-    @Query(value = "ALTER TABLE FILE_PRIVATE_TB AUTO_INCREMENT=1")
+    @Query(value = "ALTER TABLE FILE_PRIVATE_TB AUTO_INCREMENT=1", nativeQuery = true)
     void setPKOne();
 }
