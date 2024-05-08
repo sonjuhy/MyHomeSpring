@@ -5,6 +5,7 @@ import com.myhome.server.api.dto.LightReserveDto;
 import com.myhome.server.api.service.*;
 import com.myhome.server.config.jwt.JwtTokenProvider;
 import com.myhome.server.db.entity.LightEntity;
+import com.myhome.server.db.entity.LightRecordEntity;
 import com.myhome.server.db.entity.LightReserveEntity;
 import com.myhome.server.db.entity.UserEntity;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +25,9 @@ public class LightController {
 
     @Autowired
     LightReserveService lightReserveService;
+
+    @Autowired
+    LightRecordService lightRecordService;
 
     @Autowired
     UserService userService;
@@ -70,6 +74,12 @@ public class LightController {
         List<LightReserveEntity> list = lightReserveService.findAll();
         if(list != null && list.size() > 0) return new ResponseEntity<>(list, HttpStatus.OK);
         else return new ResponseEntity<>(list, HttpStatus.NOT_FOUND);
+    }
+
+    @GetMapping("/getLast10Record/{room}")
+    public ResponseEntity<List<LightRecordEntity>> getTop10Record(@PathVariable String room){
+        List<LightRecordEntity> list = lightRecordService.findTop10ByRoomOrderByPkDesc(room);
+        return new ResponseEntity<>(list, HttpStatus.OK);
     }
 
     @PostMapping("/control/{accessToken}")
