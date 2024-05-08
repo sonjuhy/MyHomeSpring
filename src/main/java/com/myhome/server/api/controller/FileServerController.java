@@ -72,11 +72,24 @@ public class FileServerController {
 
     /*
      * COMMON PART
+     * activate server disk : O
      * check File(Public, Private both) : O
      * downloadThumbnail : O
      * checkThumbnail : O
      * getDefaultPath : O
      */
+
+    @Operation(description = "클라우드 디스크 활성화 API")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "정상 활성화"),
+            @ApiResponse(responseCode = "500", description = "백엔드 에러")
+    })
+    @GetMapping("/activateServerDisk/{accessToken}")
+    public ResponseEntity<Resource> activateServerDisk(@PathVariable String accessToken){
+        Resource successIconResource = commonService.activateServerDisk();
+        return new ResponseEntity<>(successIconResource, HttpStatus.OK);
+    }
+
     @Operation(description = "Cloud 파일 전체 탐색 시작하는 API")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "정상 완료"),
@@ -189,10 +202,11 @@ public class FileServerController {
     })
     @GetMapping("/downloadThumbNail/{uuid}/{accessToken}")
     public ResponseEntity<Resource> downloadThumbNail(@PathVariable String uuid, @PathVariable String accessToken){
-        if(authService.validateAccessToken(accessToken)) {
-            return commonService.downloadThumbNail(uuid);
-        }
-        else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+        return commonService.downloadThumbNail(uuid);
+//        if(authService.validateAccessToken(accessToken)) {
+//            return commonService.downloadThumbNail(uuid);
+//        }
+//        else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
     }
 
     @Operation(description = "썸네일 파일 존재하는지 확인하는 API")
@@ -297,8 +311,9 @@ public class FileServerController {
     @CrossOrigin(origins = "*")
     @GetMapping("/downloadPublicMedia/{uuid}/{accessToken}")
     public ResponseEntity<Resource> downloadPublicMedia(@PathVariable String uuid, @PathVariable String accessToken){
-        if(authService.validateAccessToken(accessToken)) return service.downloadPublicMedia(uuid);
-        else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+        return service.downloadPublicMedia(uuid);
+//        if(authService.validateAccessToken(accessToken)) return service.downloadPublicMedia(uuid);
+//        else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
     }
 
     @Operation(description = "Public 파일 중 이미지 파일을 낮은 퀄리티로 다운로드 하는 API")
@@ -309,8 +324,9 @@ public class FileServerController {
     @CrossOrigin(origins = "*")
     @GetMapping("/downloadPublicImageLowQuality/{uuid}/{accessToken}")
     public ResponseEntity<Resource> downloadPublicImageLowQuality(@PathVariable String uuid, @PathVariable String accessToken){
-        if(authService.validateAccessToken(accessToken)) return service.downloadPublicImageLowQuality(uuid);
-        else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+        return service.downloadPublicImageLowQuality(uuid);
+//        if(authService.validateAccessToken(accessToken)) return service.downloadPublicImageLowQuality(uuid);
+//        else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
     }
 
     @Operation(description = "Public 파일 중 미디어(영상) 파일 스트리밍 하는 API")
@@ -321,8 +337,9 @@ public class FileServerController {
     @CrossOrigin(origins = "*")
     @GetMapping("/streamingPublicVideo/{uuid}/{accessToken}")
     public ResponseEntity<ResourceRegion> streamingPublicVideo(@RequestHeader HttpHeaders httpHeaders, @PathVariable String uuid, @PathVariable String accessToken){
-        if(authService.validateAccessToken(accessToken)) return service.streamingPublicVideo(httpHeaders, uuid);
-        else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+        return service.streamingPublicVideo(httpHeaders, uuid);
+//        if(authService.validateAccessToken(accessToken)) return service.streamingPublicVideo(httpHeaders, uuid);
+//        else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
     }
 
     @Operation(description = "Public 휴지통 파일 목록 중 원하는 폴더 기준으로 다 받아 오는 API")
@@ -479,8 +496,9 @@ public class FileServerController {
     @CrossOrigin(origins = "*")
     @GetMapping("/downloadPrivateMedia/{uuid}/{accessToken}")
     public ResponseEntity<Resource> downloadPrivateMedia(@PathVariable String uuid, @PathVariable String accessToken){
-        if(authService.validateAccessToken(accessToken)) return privateService.downloadPrivateMedia(uuid);
-        else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+        return privateService.downloadPrivateMedia(uuid);
+//        if(authService.validateAccessToken(accessToken)) return privateService.downloadPrivateMedia(uuid);
+//        else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
     }
 
     @Operation(description = "Private 파일 중 미디어 파일 받는(영상 스트리밍) API")
@@ -490,8 +508,9 @@ public class FileServerController {
     @CrossOrigin(origins = "*")
     @GetMapping("/downloadPrivateImageLowQuality/{uuid}/{accessToken}")
     public ResponseEntity<Resource> downloadPrivateImageLowQuality(@PathVariable String uuid, @PathVariable String accessToken){
-        if(authService.validateAccessToken(accessToken)) return privateService.downloadPrivateImageLowQuality(uuid);
-        else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+        return privateService.downloadPrivateImageLowQuality(uuid);
+//        if(authService.validateAccessToken(accessToken)) return privateService.downloadPrivateImageLowQuality(uuid);
+//        else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
     }
 
     @Operation(description = "Public 파일 중 미디어(영상) 파일 스트리밍 하는 API")
@@ -502,8 +521,9 @@ public class FileServerController {
     @CrossOrigin(origins = "*")
     @GetMapping("/streamingPrivateVideo/{uuid}/{accessToken}")
     public ResponseEntity<ResourceRegion> streamingPrivateVideo(@RequestHeader HttpHeaders httpHeaders, @PathVariable String uuid, @PathVariable String accessToken){
-        if(authService.validateAccessToken(accessToken)) return privateService.streamingPrivateVideo(httpHeaders, uuid);
-        else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+        return privateService.streamingPrivateVideo(httpHeaders, uuid);
+//        if(authService.validateAccessToken(accessToken)) return privateService.streamingPrivateVideo(httpHeaders, uuid);
+//        else return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
     }
 
     @Operation(description = "Private 의 휴지통(개인)에서 원하는 폴더 내 파일 리스트 불러오는 API")

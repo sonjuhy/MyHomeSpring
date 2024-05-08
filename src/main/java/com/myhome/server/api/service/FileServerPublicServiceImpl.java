@@ -668,8 +668,10 @@ public class FileServerPublicServiceImpl implements FileServerPublicService {
     @Override
     public void deleteThumbNail(){
         File[] thumbnailList = new File(thumbnailPath).listFiles();
-        for(File file : thumbnailList){
-            file.delete();
+        if(thumbnailList != null) {
+            for (File file : thumbnailList) {
+                file.delete();
+            }
         }
         thumbNailRepository.deleteAll();
 //        List<FileServerThumbNailEntity> thumbNailEntityList = thumbNailRepository.findAllNotInPublic();

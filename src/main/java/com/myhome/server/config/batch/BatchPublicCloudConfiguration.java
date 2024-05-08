@@ -2,14 +2,20 @@ package com.myhome.server.config.batch;
 
 import com.myhome.server.api.dto.FileInfoDto;
 import com.myhome.server.api.dto.FileServerThumbNailDto;
+import com.myhome.server.api.enums.BatchEnum;
 import com.myhome.server.api.service.FileServerCommonService;
 import com.myhome.server.api.service.FileServerPublicService;
 import com.myhome.server.api.service.FileServerThumbNailService;
 import com.myhome.server.component.batch.cloudPublic.CloudPublicFailedTasklet;
 import com.myhome.server.component.batch.cloudPublic.CloudPublicTasklet;
+import com.myhome.server.db.entity.FileDefaultPathEntity;
 import com.myhome.server.db.entity.FileServerThumbNailEntity;
+import com.myhome.server.db.entity.FileServerVideoEntity;
+import com.myhome.server.db.repository.FileDefaultPathRepository;
 import com.myhome.server.db.repository.FileServerThumbNailRepository;
+import com.myhome.server.db.repository.FileServerVideoRepository;
 import lombok.RequiredArgsConstructor;
+import org.apache.tomcat.jni.FileInfo;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -28,6 +34,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.core.task.TaskExecutor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.parameters.P;
 import org.springframework.transaction.PlatformTransactionManager;
 
@@ -43,6 +51,7 @@ import java.util.UUID;
 public class BatchPublicCloudConfiguration {
 
     private final long dateTime = new Date().getTime();
+    private String uploadPath;
 
     @Autowired
     private FileServerPublicService publicService;
@@ -52,6 +61,10 @@ public class BatchPublicCloudConfiguration {
     private FileServerCommonService commonService;
     @Autowired
     private FileServerThumbNailRepository thumbNailRepository;
+    @Autowired
+    private FileServerVideoRepository videoRepository;
+    @Autowired
+    private FileDefaultPathRepository defaultPathRepository;
 
     private final CloudPublicTasklet cloudPublicTasklet;
     private final CloudPublicFailedTasklet cloudPublicFailedTasklet;
@@ -79,6 +92,7 @@ public class BatchPublicCloudConfiguration {
     public Step publicCloudStep(JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
         return new StepBuilder("PublicCloudCheckStep-"+dateTime, jobRepository)
                 .tasklet(cloudPublicTasklet, platformTransactionManager)
+                .transactionManager(platformTransactionManager)
                 .build();
     }
 
@@ -92,12 +106,15 @@ public class BatchPublicCloudConfiguration {
 
     @Bean
     public Flow publicCloudSplitFlow(JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
+        FileDefaultPathEntity entity = defaultPathRepository.findByPathName("thumbnail");
+        uploadPath = commonService.changeUnderBarToSeparator(entity.getPublicDefaultPath());
+
         return new FlowBuilder<SimpleFlow>("PublicCloudSplitFlow-" + dateTime)
                 .split(new SimpleAsyncTaskExecutor())
                 .add(
-                        publicCloudFlow1("PublicCloudFlow-1", jobRepository, platformTransactionManager),
-                        publicCloudFlow2("PublicCloudFlow-2", jobRepository, platformTransactionManager),
-                        publicCloudFlow3("PublicCloudFlow-3", jobRepository, platformTransactionManager)
+                        publicCloudFlow1(BatchEnum.CLOUD_PRIVATE_PARALLEL_FLOW_NAME.getPublicParallelFlowName(1), jobRepository, platformTransactionManager),
+                        publicCloudFlow2(BatchEnum.CLOUD_PRIVATE_PARALLEL_FLOW_NAME.getPublicParallelFlowName(2), jobRepository, platformTransactionManager),
+                        publicCloudFlow3(BatchEnum.CLOUD_PRIVATE_PARALLEL_FLOW_NAME.getPublicParallelFlowName(3), jobRepository, platformTransactionManager)
                 )
                 .build();
     }
@@ -113,9 +130,19 @@ public class BatchPublicCloudConfiguration {
     public Step publicCloudParallelStep1(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
         return new StepBuilder(name, jobRepository)
                 .tasklet(((contribution, chunkContext) -> {
-                    List<FileInfoDto> fileList = (List<FileInfoDto>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
-                    if(fileList != null && !fileList.isEmpty()){
-                        String uploadPath = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getString("uploadPath");
+                    int partitionSize = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getInt(BatchEnum.CLOUD_PUBLIC_CHUNK_PARTITION_NAME.getTarget());
+                    Pageable pageable = PageRequest.of(0, partitionSize);
+                    List<FileServerVideoEntity> videoEntityList = videoRepository.findAllBy(pageable);
+                    List<FileInfoDto> fileList = new ArrayList<>();
+                    for(FileServerVideoEntity entity : videoEntityList){
+                        FileInfoDto tmpDto = new FileInfoDto();
+                        tmpDto.setName(entity.getName());
+                        tmpDto.setUuid(entity.getUuid());
+                        tmpDto.setPath(entity.getPath());
+                        fileList.add(tmpDto);
+                    }
+
+                    if(!fileList.isEmpty()){
                         thumbNailSequence(fileList, uploadPath);
                     }
                     else{
@@ -137,9 +164,19 @@ public class BatchPublicCloudConfiguration {
     public Step publicCloudParallelStep2(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
         return new StepBuilder(name, jobRepository)
                 .tasklet(((contribution, chunkContext) -> {
-                    List<FileInfoDto> fileList = (List<FileInfoDto>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
-                    if(fileList != null && !fileList.isEmpty()){
-                        String uploadPath = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getString("uploadPath");
+                    int partitionSize = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getInt(BatchEnum.CLOUD_PUBLIC_CHUNK_PARTITION_NAME.getTarget());
+                    Pageable pageable = PageRequest.of(1, partitionSize);
+                    List<FileServerVideoEntity> videoEntityList = videoRepository.findAllBy(pageable);
+                    List<FileInfoDto> fileList = new ArrayList<>();
+                    for(FileServerVideoEntity entity : videoEntityList){
+                        FileInfoDto tmpDto = new FileInfoDto();
+                        tmpDto.setName(entity.getName());
+                        tmpDto.setUuid(entity.getUuid());
+                        tmpDto.setPath(entity.getPath());
+                        fileList.add(tmpDto);
+                    }
+
+                    if(!fileList.isEmpty()){
                         thumbNailSequence(fileList, uploadPath);
                     }
                     else{
@@ -161,9 +198,19 @@ public class BatchPublicCloudConfiguration {
     public Step publicCloudParallelStep3(String name, JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
         return new StepBuilder(name, jobRepository)
                 .tasklet(((contribution, chunkContext) -> {
-                    List<FileInfoDto> fileList = (List<FileInfoDto>) chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().get(name);
-                    if(fileList != null && !fileList.isEmpty()){
-                        String uploadPath = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getString("uploadPath");
+                    int partitionSize = chunkContext.getStepContext().getStepExecution().getJobExecution().getExecutionContext().getInt(BatchEnum.CLOUD_PUBLIC_CHUNK_PARTITION_NAME.getTarget());
+                    Pageable pageable = PageRequest.of(2, partitionSize);
+                    List<FileServerVideoEntity> videoEntityList = videoRepository.findAllBy(pageable);
+                    List<FileInfoDto> fileList = new ArrayList<>();
+                    for(FileServerVideoEntity entity : videoEntityList){
+                        FileInfoDto tmpDto = new FileInfoDto();
+                        tmpDto.setName(entity.getName());
+                        tmpDto.setUuid(entity.getUuid());
+                        tmpDto.setPath(entity.getPath());
+                        fileList.add(tmpDto);
+                    }
+
+                    if(!fileList.isEmpty()){
                         thumbNailSequence(fileList, uploadPath);
                     }
                     else{
