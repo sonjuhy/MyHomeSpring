@@ -24,6 +24,7 @@ public class FileServerCommonServiceImpl implements FileServerCommonService{
 
     private final static String defaultVideoIconPath = "__home__disk1__home__setting__video.png";
     private final static String defaultImageIconPath = "__home__disk1__home__setting__image.png";
+    private final static String defaultSuccessIconPath = "__home__disk1__home__setting__icon_success.png";
 
     @Autowired
     private FileDefaultPathRepository defaultPathRepository;
@@ -53,6 +54,25 @@ public class FileServerCommonServiceImpl implements FileServerCommonService{
                 break;
         }
         return usage;
+    }
+
+    @Override
+    public Resource activateServerDisk() {
+        try {
+            Path path = Paths.get(changeUnderBarToSeparator(defaultSuccessIconPath));
+            String fileName = "defaultSuccessIcon";
+            HttpHeaders httpHeaders = new HttpHeaders();
+            httpHeaders.setContentDisposition(ContentDisposition
+                    .builder("attachment") //builder type
+                    .filename(fileName)
+                    .build()
+            );
+            httpHeaders.add(HttpHeaders.CONTENT_TYPE, Files.probeContentType(path));
+            return new InputStreamResource(Files.newInputStream(path));
+        }
+        catch (Exception e){
+            return null;
+        }
     }
 
     @Override
