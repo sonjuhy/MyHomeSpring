@@ -7,6 +7,7 @@ import java.io.File;
 
 public interface FileServerCommonService {
     int[] getStorageUsage(String mode);
+    Resource activateServerDisk();
     Resource getDefaultVideoIconFile();
     Resource getDefaultImageIconFile();
     String changeUnderBarToSeparator(String path);

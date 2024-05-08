@@ -72,11 +72,24 @@ public class FileServerController {
 
     /*
      * COMMON PART
+     * activate server disk : O
      * check File(Public, Private both) : O
      * downloadThumbnail : O
      * checkThumbnail : O
      * getDefaultPath : O
      */
+
+    @Operation(description = "클라우드 디스크 활성화 API")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "정상 활성화"),
+            @ApiResponse(responseCode = "500", description = "백엔드 에러")
+    })
+    @GetMapping("/activateServerDisk/{accessToken}")
+    public ResponseEntity<Resource> activateServerDisk(@PathVariable String accessToken){
+        Resource successIconResource = commonService.activateServerDisk();
+        return new ResponseEntity<>(successIconResource, HttpStatus.OK);
+    }
+
     @Operation(description = "Cloud 파일 전체 탐색 시작하는 API")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "정상 완료"),
