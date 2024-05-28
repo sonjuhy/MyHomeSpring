@@ -9,6 +9,7 @@ import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
@@ -20,8 +21,9 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import java.security.Key;
 import java.util.*;
 
+@Slf4j
 @Configuration
-public class JwtTokenProvider implements InitializingBean {
+public class JwtTokenProvider {
     private String secretKey = "MyHomeProjectHS256AlgorithmPrivateSecretKey"; //must over 256 bit
     private Key key;
 
@@ -29,20 +31,31 @@ public class JwtTokenProvider implements InitializingBean {
     private final static long accessTokenValidTime = 10 * 3600 * 60 * 1000L; // 10일
     private final static long refreshTokenValidTime = 20 * 3600 * 60 * 1000L; // 10일
 
-    @Autowired
     UserRepository userRepository;
 
-    // 객체 초기화, secretKey를 Base64로 인코딩한다.
-    @PostConstruct
-    protected void init() {
+    @Autowired
+    public JwtTokenProvider(UserRepository userRepository) {
+        log.info("JwtTokenProvider Constructor");
+        this.userRepository = userRepository;
         secretKey = Base64.getEncoder().encodeToString(secretKey.getBytes());
-    }
-
-    @Override
-    public void afterPropertiesSet() throws Exception {
         byte[] keyBytes = Decoders.BASE64.decode(secretKey);
         this.key = Keys.hmacShaKeyFor(keyBytes);
     }
+
+    // 객체 초기화, secretKey를 Base64로 인코딩한다.
+//    @PostConstruct
+//    protected void init() {
+//        log.info("JwtTokenProvider init is running");
+//        secretKey = Base64.getEncoder().encodeToString(secretKey.getBytes());
+//    }
+//
+//    @Override
+//    public void afterPropertiesSet() throws Exception {
+//        log.info("JwtTokenProvider afterPropertiesSet is running");
+//        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+//        this.key = Keys.hmacShaKeyFor(keyBytes);
+//    }
+
     // JWT 토큰 생성
     public String createToken(String userPk, String roles, boolean choice) {
         Claims claims = Jwts.claims().setSubject(userPk); // JWT payload 에 저장되는 정보단위, 보통 여기서 user를 식별하는 값을 넣는다.

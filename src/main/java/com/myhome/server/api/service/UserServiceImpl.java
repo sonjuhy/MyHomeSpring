@@ -32,23 +32,40 @@ import java.util.UUID;
 @Service
 //public class UserServiceImpl implements UserService, UserDetailsService {
 public class UserServiceImpl implements UserService {
-    @Autowired
+//    @Autowired
+//    UserRepository repository;
+//
+//    @Autowired
+//    FileServerPrivateRepository fileServerPrivateRepository;
+//
+//    @Autowired
+//    LogComponent logComponent;
+//
+//    @Autowired
+//    FileServerCommonService fileServerCommonService;
+//
+//    @Autowired
+//    FileDefaultPathRepository fileDefaultPathRepository;
+//
+//    @Autowired
+//    JwtTokenProvider jwtTokenProvider;
+
     UserRepository repository;
-
-    @Autowired
     FileServerPrivateRepository fileServerPrivateRepository;
-
-    @Autowired
     LogComponent logComponent;
-
-    @Autowired
     FileServerCommonService fileServerCommonService;
-
-    @Autowired
     FileDefaultPathRepository fileDefaultPathRepository;
+    JwtTokenProvider jwtTokenProvider;
 
     @Autowired
-    JwtTokenProvider jwtTokenProvider;
+    public UserServiceImpl(UserRepository repository, FileServerPrivateRepository fileServerPrivateRepository, LogComponent logComponent, FileServerCommonService fileServerCommonService, FileDefaultPathRepository fileDefaultPathRepository, JwtTokenProvider jwtTokenProvider) {
+        this.repository = repository;
+        this.fileServerPrivateRepository = fileServerPrivateRepository;
+        this.logComponent = logComponent;
+        this.fileServerCommonService = fileServerCommonService;
+        this.fileDefaultPathRepository = fileDefaultPathRepository;
+        this.jwtTokenProvider = jwtTokenProvider;
+    }
 
     @Override
     public UserEntity findByUserId(long userId) {
@@ -98,7 +115,7 @@ public class UserServiceImpl implements UserService {
         Gson gson = new Gson();
         JsonObject jsonObject = new JsonObject();
         Optional<UserEntity> userEntity = findById(dto.getId());
-        if(!userEntity.isPresent()){ // not user in this service
+        if(userEntity.isEmpty()){ // not user in this service
             jsonObject.addProperty("error","this Id is not user");
         }
         else {

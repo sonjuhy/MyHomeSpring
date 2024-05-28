@@ -1,10 +1,7 @@
 package com.myhome.server.api.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.ToString;
+import lombok.*;
 
 @Getter
 @Setter
@@ -25,4 +22,14 @@ public class UserDto {
     private String refreshToken;
     @Schema(description = "계정 권한", defaultValue = "")
     private String auth;
+
+    @Builder
+    public UserDto(String id, String name, String password, String accessToken, String refreshToken, String auth) {
+        this.id = id;
+        this.name = name;
+        this.password = password;
+        this.accessToken = accessToken;
+        this.refreshToken = refreshToken;
+        this.auth = auth;
+    }
 }

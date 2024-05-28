@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class testController {
     @Autowired
-    UserService service = new UserServiceImpl();
+    UserService service;
     @GetMapping("/test/{number}")
     public String testfun(@PathVariable int number){
         UserEntity entity = service.findByUserId(number);

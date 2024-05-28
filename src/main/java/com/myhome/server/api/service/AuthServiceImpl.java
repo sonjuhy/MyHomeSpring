@@ -15,12 +15,23 @@ import java.util.Optional;
 @Service
 public class AuthServiceImpl implements AuthService{
 
-    @Autowired
+//    @Autowired
+//    JwtTokenProvider jwtTokenProvider;
+//    @Autowired
+//    UserDetailsService userDetailsService;
+//    @Autowired
+//    UserService userService;
+
     JwtTokenProvider jwtTokenProvider;
-    @Autowired
     UserDetailsService userDetailsService;
-    @Autowired
     UserService userService;
+
+    @Autowired
+    public AuthServiceImpl(JwtTokenProvider jwtTokenProvider, UserDetailsService userDetailsService, UserService userService) {
+        this.jwtTokenProvider = jwtTokenProvider;
+        this.userDetailsService = userDetailsService;
+        this.userService = userService;
+    }
 
     @Override
     public void updateTokens(String accessToken, String refreshToken, String id) {
@@ -94,6 +105,7 @@ public class AuthServiceImpl implements AuthService{
         }
         catch(Exception e){
 //            logComponent.sendErrorLog("serviceName", "[validateAuth] content : ", e, "topic");
+            jsonObject = new JsonObject();
             jsonObject.addProperty("error", "failed to update token info");
             return gson.toJson(jsonObject);
         }
@@ -115,6 +127,7 @@ public class AuthServiceImpl implements AuthService{
         }
         catch(Exception e){
 //            logComponent.sendErrorLog("serviceName", "[reissueAccessToken] content : ", e, "topic");
+            jsonObject = new JsonObject();
             jsonObject.addProperty("error", "failed");
             return gson.toJson(jsonObject);
         }
@@ -138,6 +151,7 @@ public class AuthServiceImpl implements AuthService{
         }
         catch(Exception e){
 //            logComponent.sendErrorLog("serviceName", "[reissueRefreshToken] content : ", e, "topic");
+            jsonObject = new JsonObject();
             jsonObject.addProperty("error", "failed");
             return gson.toJson(jsonObject);
         }
