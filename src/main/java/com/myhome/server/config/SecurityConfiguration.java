@@ -52,6 +52,7 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 new AntPathRequestMatcher("/auth/**"),
+                                new AntPathRequestMatcher("/weather/**"),
                                 new AntPathRequestMatcher("/file/downloadPublicMedia/**"),
                                 new AntPathRequestMatcher("/file/downloadPrivateMedia/**"),
                                 new AntPathRequestMatcher("/file/downloadThumbNail/**"),
