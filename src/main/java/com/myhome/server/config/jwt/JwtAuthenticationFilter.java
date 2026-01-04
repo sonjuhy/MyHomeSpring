@@ -42,7 +42,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
         String[] excludePath = {"/auth/",
                 "/swagger-ui/",
-                "/v3/"
+                "/v3/",
+                "/weather/"
         };
         String path = request.getRequestURI();
         // 제외할 url 을 설정합니다.
@@ -64,7 +65,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
             else{
                 log.info("doFilterInternal token validate result is false");
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+//                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                filterChain.doFilter(request, response);
             }
         }
         else{
